@@ -253,7 +253,7 @@ static inline void yield(void)
 
 /* lcd.c */
 
-extern int lcd_menu(const char **, unsigned, unsigned, int, unsigned);
+extern int lcd_menu(const char **, unsigned, unsigned);
 
 /* env.c */
 

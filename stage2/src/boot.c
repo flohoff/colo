@@ -12,8 +12,9 @@
 
 static const char *option[] =
 {
-/*  |-------------| */
+/*  |------------| */
 
+	"BOOT SELECTION",
 	"Disk    (hda)",
 	"Network (NFS)",
 	"Network (TFTP)",
@@ -62,11 +63,7 @@ void boot(int which)
 
 		DPUTS("boot: running boot menu");
 
-		which = nv_store.boot - 1;
-		if((unsigned) which >= elements(option))
-			which = 0;
-
-		which = lcd_menu(option, elements(option), which, 1, MENU_TIMEOUT);
+		which = lcd_menu(option, elements(option), MENU_TIMEOUT);
 		if(which < 0) {
 			which = nv_store.boot - 1;
 			if(which < 0)
