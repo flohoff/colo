@@ -271,7 +271,7 @@ void *elf_load(const void *image, size_t size)
 
 int cmnd_execute(int opsz)
 {
-	extern unsigned launch(void *, void *, int, char **, char **, int *);
+	extern unsigned launch(long long, long long, int, int, int, int);
 	extern char __text;
 
 	void *image, *targ, *func, *initrd;
@@ -336,7 +336,13 @@ int cmnd_execute(int opsz)
 
 	/* relocate stack to top of RAM and call target */
 
-	code = launch(&__text, func, (int) KSEG0(ram_restrict) | (argc > 1 ? argc : 0), argv, NULL, NULL);
+	code = launch(
+			(int) &__text,			/* sign extend to 64-bits */
+			(int) func,				/* sign extend to 64-bits */
+			(int) KSEG0(ram_restrict) | (argc > 1 ? argc : 0),
+			(int) argv,
+			0,
+			0);
 
 	printf("exited #%08x\n", code);
 
