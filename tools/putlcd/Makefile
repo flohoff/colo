@@ -11,6 +11,6 @@ CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-str
 putlcd:
 
 clean:
-	rm -rf putlcd
+	rm -f putlcd
 
 .PHONY: clean

@@ -254,6 +254,10 @@ static inline void yield(void)
 
 /* lcd.c */
 
+#define LCD_MENU_TIMEOUT					(-1)
+#define LCD_MENU_CANCEL						(-2)
+#define LCD_MENU_ABORT						(-3)
+
 extern int lcd_menu(const char **, unsigned, unsigned);
 
 /* env.c */

@@ -119,10 +119,11 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 		for(done = 0;; done += BUTTON_DEBOUNCE) {
 
 			if(timeout && done > timeout)
-				return top + row - 1;
+				return LCD_MENU_TIMEOUT;
 
 			for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < ((CP0_COUNT_RATE + 500) / 1000) * BUTTON_DEBOUNCE;)
-				yield();
+				if(BREAK())
+					return LCD_MENU_ABORT;
 
 			btn = BUTTONS();
 
@@ -134,7 +135,7 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 				return top + row - 1;
 
 			if(btn & BUTTON_LEFT)
-				return -1;
+				return LCD_MENU_CANCEL;
 
 			if(btn & BUTTON_UP) {
 				if(top) {

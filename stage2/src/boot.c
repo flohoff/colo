@@ -59,17 +59,30 @@ void boot(int which)
 	if(which < 0)
 		which = nv_store.boot;
 
-	if(--which < 0) {
+	if(!which) {
 
 		DPUTS("boot: running boot menu");
 
 		which = lcd_menu(option, elements(option), MENU_TIMEOUT);
-		if(which < 0) {
-			which = nv_store.boot - 1;
-			if(which < 0)
-				which = 0;
+
+		switch(which) {
+
+			case LCD_MENU_TIMEOUT:
+			case LCD_MENU_CANCEL:
+				which = nv_store.boot;
+				break;
+
+			case LCD_MENU_ABORT:
+				puts("aborted");
+				return;
+
+			default:
+				++which;
 		}
 	}
+
+	if(which)
+		--which;
 
 	sprintf(buf, "%d", which);
 	env_put("boot-option", buf, VAR_OTHER);

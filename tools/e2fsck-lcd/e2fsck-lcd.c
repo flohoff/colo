@@ -34,17 +34,18 @@
 #define LCD_WRITE(r,v)				do{lcd[!!(r)*4]=(unsigned)(v)<<24;}while(0)
 
 #define LCD_BUSY						(1 << 7)
+#define LCD_CLEAR						0x01
 #define LCD_DDRAM_ADDR				0x80
 #define LCD_ROW_OFFSET				0x40
 
 static const char spaces[] = { [0 ... (LCD_WIDTH - 1)] = ' ' };
 static volatile uint32_t *lcd;
-static unsigned column, thumb;
+static unsigned thumb;
 
 static void lcd_write(int reg, unsigned val)
 {
 	while(LCD_READ(0) & LCD_BUSY)
-		;
+		usleep(1);
 	
 	usleep(10);
 
@@ -52,14 +53,22 @@ static void lcd_write(int reg, unsigned val)
 }
 
 /*
- * write data to display driver
+ * clear display
  */
-static void disp_write(const void *data, int size)
+static void disp_clear(void)
+{
+	lcd_write(0, LCD_CLEAR);
+}
+
+/*
+ * write text to display
+ */
+static void disp_text(const char *str, unsigned size)
 {
 	unsigned indx;
 
-	for(indx = 0; indx < size; ++indx)
-		lcd_write(1, ((uint8_t *) data)[indx]);
+	for(indx = 0; str[indx] && indx < size; ++indx)
+		lcd_write(1, str[indx]);
 }
 
 /*
@@ -93,22 +102,21 @@ static void disp_init(const char *devn)
 
 	close(fd);
 
-	column = LCD_WIDTH - 6;
+	disp_clear();
 
 	if(devn) {
 
-		column -= strlen(devn) + 1;
-		if((int) column < 0)
-			column = 0;
-
-		disp_cursor_move(0, column + 7);
-		disp_write(devn, LCD_WIDTH - (column + 7));
+		disp_cursor_move(0, 0);
+		disp_text(devn, LCD_WIDTH - 7);
 	}
 
+	disp_cursor_move(0, LCD_WIDTH - 4);
+	disp_text("0.0%", -1);
+
 	disp_cursor_move(1, 0);
-	disp_write("[>", 2);
-	disp_write(spaces, LCD_WIDTH - 3);
-	disp_write("]", 1);
+	disp_text("[>", -1);
+	disp_cursor_move(1, LCD_WIDTH - 1);
+	disp_text("]", -1);
 
 	thumb = 0;
 }
@@ -120,14 +128,8 @@ static void disp_cleanup(void)
 {
 	usleep(500 * 1000);
 
-	if(lcd) {
-
-		disp_cursor_move(0, column);
-		disp_write(spaces, LCD_WIDTH - column);
-
-		disp_cursor_move(1, 0);
-		disp_write(spaces, LCD_WIDTH);
-	}
+	if(lcd)
+		disp_clear();
 
 	fputs("       \r", stdout);
 	fflush(stdout);
@@ -152,16 +154,16 @@ static void disp_update(int pass, unsigned where, unsigned limit)
 
 	if(lcd) {
 
-		disp_cursor_move(0, column);
-		disp_write(text, 6);
+		disp_cursor_move(0, LCD_WIDTH - 6);
+		disp_text(text, 6);
 
 		prog = ((LCD_WIDTH - 2) * prog + 500) / 1000;
 		if(prog > thumb) {
 			disp_cursor_move(1, thumb + 1);
-			disp_write(bar, prog - thumb);
+			disp_text(bar, prog - thumb);
 			thumb = prog;
 			if(thumb < LCD_WIDTH - 2)
-				disp_write(">", 1);
+				disp_text(">", -1);
 		}
 	}
 

@@ -32,7 +32,7 @@ static volatile uint32_t *lcd;
 static void lcd_write(int reg, unsigned val)
 {
 	while(LCD_READ(0) & LCD_BUSY)
-		;
+		usleep(1);
 	
 	usleep(10);
 
