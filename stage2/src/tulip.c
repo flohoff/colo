@@ -380,6 +380,12 @@ void tulip_init(void)
 
 	/* without this Tulip bus mastering doesn't work correctly */
 
+		/* apparently early Galileos require the read *
+		 * before the write else they lock up. info   *
+		 * picked up from kernel source               */
+
+	BRDG_REG_WORD(BRDG_REG_TIMEOUT_RETRY);
+
 	BRDG_REG_WORD(BRDG_REG_TIMEOUT_RETRY) = 0xffff;
 
 	if(!nic_avail)

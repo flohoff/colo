@@ -1,5 +1,15 @@
 # $Id$
 
+CoLo 1.14 (xxxx-xx-xx)
+----------------------
+
+*	Ensure we read from Galileo PCI RETRY/TIMEOUT register before writing to
+	it. A comment in the kernel source indicates this might be necessary to
+	stop Galileo locking up on early units.
+
+*	Added a '-n' command line option to 'putlcd' which allows the user to write
+	to a single line of the LCD without affecting the other line.
+
 CoLo 1.13 (2004-08-30)
 ----------------------
 

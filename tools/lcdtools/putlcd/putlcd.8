@@ -13,7 +13,7 @@ putlcd \- display text on Cobalt's LCD display
 
 .SH SYNOPSIS
 .B putlcd
-[\fISTRING\fR] [\fISTRING\fR]
+[\fI-n\fR] [\fISTRING\fR] [\fISTRING\fR]
 
 .SH DESCRIPTION
 .PP
@@ -27,6 +27,11 @@ assumed and that line of the LCD will be cleared.  If you want to display
 text containing white space, you have to properly quote the text, otherwise
 .B putlcd
 will interpret the text as separate arguments.
+
+If
+.B putlcd
+is run with the \fI-n\fR switch the LCD line will not be cleared if the
+corresponding string is empty.
 
 .SH EXAMPLES
 
