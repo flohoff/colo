@@ -89,7 +89,7 @@ static int ext2_read_block_raw(struct volume *v, void *data, unsigned long block
 
 	if(!block) {
 		memset(data, 0, v->block_size);
-		return 0;
+		return 1;
 	}
 
 	return !!block_read_raw(v->device, data, block, v->block_size, v->sector_size);
