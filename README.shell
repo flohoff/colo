@@ -325,6 +325,12 @@ default value set at compile time.
 
 If called with no arguments the saved baud rate setting is printed.
 
+restrict [megabytes]
+--------------------
+
+Restricts the memory used by the boot loader and the memory size passed to the
+kernel to simulate systems with less memory.
+
 -- Peter Horton, pdh@colonel-panic.org --
 
 # vi:set ts=3 sw=3 tw=78:

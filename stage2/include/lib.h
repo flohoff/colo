@@ -217,6 +217,7 @@ extern void tulip_init(void);
 /* main.c */
 
 extern size_t ram_size;
+extern size_t ram_restrict;
 
 /* heap.c */
 
@@ -258,6 +259,7 @@ static inline void yield(void)
 #define LCD_MENU_CANCEL						(-2)
 #define LCD_MENU_ABORT						(-3)
 
+extern void lcd_line(int, const char *);
 extern int lcd_menu(const char **, unsigned, unsigned);
 
 /* env.c */

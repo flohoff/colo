@@ -336,7 +336,7 @@ int cmnd_execute(int opsz)
 
 	/* relocate stack to top of RAM and call target */
 
-	code = launch(&__text, func, (int) KSEG0(ram_size) | (argc > 1 ? argc : 0), argv, NULL, NULL);
+	code = launch(&__text, func, (int) KSEG0(ram_restrict) | (argc > 1 ? argc : 0), argv, NULL, NULL);
 
 	printf("exited #%08x\n", code);
 

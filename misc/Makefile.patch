@@ -1,0 +1,35 @@
+#
+# Makefile improvements from Thiemo Seufer
+#
+# possibly use -Os too
+#
+--- Makefile.old	2004-06-04 01:42:40.000000000 +0200
++++ Makefile	2004-06-04 20:54:46.000000000 +0200
+@@ -49,14 +49,13 @@ OBJS=	main.o\
+ LOADADDR=0x80000000
+ 
+ CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&\
+-	echo "-mcpu=r5000 -EL" ||\
+-	echo "-mtune=r5000 -G0")
++	echo "-mips2 -mcpu=r5000" ||\
++	echo "-march=r5000")
+ 
+-MIPSFLAGS= -mno-abicalls -fno-pic -mips2 $(CC_DEP)
++MIPSFLAGS= -mno-abicalls -fno-PIC -G0 -EL $(CC_DEP)
+ 
+-LDFLAGS= -T $(TARG).lnk -Map $(TARG).map --emit-relocs --section-start .text=$(LOADADDR)
+-CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-builtin -nostdlib -fno-strict-aliasing $(MIPSFLAGS)
+-ASFLAGS= $(MIPSFLAGS)
++LDFLAGS= -T $(TARG).lnk -Map $(TARG).map --emit-relocs --section-start .text=$(LOADADDR) -G0 -EL
++CFLAGS= -Werror -Wall -Wstrict-prototypes -O2 -ffreestanding $(MIPSFLAGS)
+ CPPFLAGS= -nostdinc -Iinclude -I../include -I$(shell dirname `$(CC) --print-libgcc-file-name`)/include -D_DEBUG
+ 
+ all:
+@@ -90,7 +89,7 @@ $(TARG): $(OBJS)
+ 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
+ 
+ %.o: src/%.S
+-	$(CC) $(ASFLAGS) $(CPPFLAGS) -c -o $@ $^
++	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
+ 
+ .PHONY: all binary clean test-rfx

@@ -7,8 +7,11 @@
  */
 
 #include "lib.h"
+#include "version.h"
 
 #define MENU_TIMEOUT						(10 * 1000)
+
+#define SCRIPT_BOOT_SHELL				0
 
 static const char *option[] =
 {
@@ -50,6 +53,10 @@ static const char *script[] =
 	"tftp {dhcp-next-server} {dhcp-boot-file}\n"
 	"-script\n"
 	"execute",
+
+	/* Boot shell */
+
+	(void *) SCRIPT_BOOT_SHELL,
 };
 
 void boot(int which)
@@ -87,10 +94,20 @@ void boot(int which)
 	sprintf(buf, "%d", which);
 	env_put("boot-option", buf, VAR_OTHER);
 
-	if(which < elements(script))
-		script_exec(script[which]);
-	else
+	if(which >= elements(script)) {
 		DPRINTF("boot: no script #%d\n", which);
+		return;
+	}
+
+	switch((int) script[which]) {
+
+		case SCRIPT_BOOT_SHELL:
+			lcd_line(0, "Running");
+			lcd_line(1, "boot shell");
+			return;
+	}
+	
+	script_exec(script[which]);
 }
 
 int cmnd_boot(int opsz)

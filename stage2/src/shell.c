@@ -38,6 +38,7 @@ extern int cmnd_environ(int);
 extern int cmnd_boot(int);
 extern int cmnd_nfs(int);
 extern int cmnd_serial(int);
+extern int cmnd_restrict(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
@@ -91,6 +92,7 @@ static struct
 	{ "boot",			cmnd_boot,			0,					"[list | default] [option]",							},
 	{ "nfs",				cmnd_nfs,			0,					"host root [path [path]]",								},
 	{ "serial",			cmnd_serial,		0,					"[rate | default]",										},
+	{ "restrict",		cmnd_restrict,		0,					"[megabytes]",												},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",										},

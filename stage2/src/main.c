@@ -13,7 +13,7 @@
 #include "galileo.h"
 #include "version.h"
 
-size_t ram_size;
+size_t ram_size, ram_restrict;
 
 void loader(size_t bank0, size_t bank1, unsigned switches)
 {
@@ -22,6 +22,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 	unsigned long mark;
 
 	ram_size = bank0 + bank1;
+	ram_restrict = ram_size;
 
 	pci_init(bank0, bank1);
 

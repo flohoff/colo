@@ -1,6 +1,6 @@
 # $Id$
 
-CoLo 1.11 (xxxx-xx-xx)
+CoLo 1.11 (2004-07-28)
 ----------------------
 
 *	Build all the tools.
@@ -15,6 +15,10 @@ CoLo 1.11 (xxxx-xx-xx)
 *	Fixed LCD second row offset (all over).
 
 *	Make shell refuse to load chain loader.
+
+*  Added simple front panel daemon 'paneld'.
+
+*  Added 'restrict' command to shell.
 
 CoLo 1.10 (2004-05-23)
 ----------------------

@@ -8,9 +8,13 @@
 
 CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
 
-putlcd:
+all: putlcd paneld
+
+putlcd: putlcd.o panel.o
+
+paneld: paneld.o panel.o
 
 clean:
-	rm -f putlcd
+	rm -f putlcd putlcd.o paneld paneld.o panel.o
 
-.PHONY: clean
+.PHONY: all clean

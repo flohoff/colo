@@ -11,7 +11,7 @@ TARGET2= colo-chain.elf
 STAGE1= stage1/$(TARGET1)
 CHAIN= chain/$(TARGET2)
 SUBDIRS= tools/elf2rfx stage2 stage1 chain
-TOOLDIRS= tools/flash-tool tools/putlcd tools/e2fsck-lcd
+TOOLDIRS= tools/flash-tool tools/lcdtools tools/e2fsck-lcd
 BINDIR= binaries
 
 all: binary tooldirs

@@ -25,11 +25,16 @@ static size_t next_size;
 void heap_reset(void)
 {
 	extern char __text;
+	void *restrict;
 
 	assert(!((unsigned long) &__text & 15));
 
 	free_lo = KSEG0(0);
-	free_hi = KSEG0(&__text) - (32 << 10); // XXX
+	free_hi = KSEG0(&__text) - (32 << 10);			// XXX
+
+	restrict = KSEG0(ram_restrict) - (16 << 10);	// XXX
+	if(free_hi > restrict)
+		free_hi = restrict;
 
 	image_size = 0;
 	image_size_mark = 0;
@@ -150,6 +155,46 @@ int cmnd_heap(int opsz)
 				image_size_mark, image_size_mark);
 	} else
 		printf("no image loaded (%uKB)\n", heap_space() >> 10);
+
+	return E_NONE;
+}
+
+int cmnd_restrict(int opsz)
+{
+	unsigned long val;
+	unsigned ram, cap;
+	char *ptr;
+
+	ram = ram_size >> 20;
+	cap = ram_restrict >> 20;
+
+	if(argc > 1) {
+
+		if(argc > 2)
+			return E_ARGS_OVER;
+
+		val = strtoul(argv[1], &ptr, 10);
+		if(*ptr)
+			return E_BAD_VALUE;
+
+		if(val != cap) {
+
+			cap = val;
+			if(cap > ram) {
+				cap = ram;
+				printf("memory size is only %uMB\n", ram);
+			}
+
+			ram_restrict = cap << 20;
+
+			heap_reset();
+		}
+	}
+
+	if(cap == ram)
+		printf("not restricted (%uMB)\n", ram);
+	else
+		printf("restricted to %uMB (of %uMB)\n", cap, ram);
 
 	return E_NONE;
 }
