@@ -12,6 +12,9 @@
 static size_t image_size;
 static void *image_base;
 
+static size_t image_size_mark;
+static void *image_base_mark;
+
 static void *free_lo;
 static void *free_hi;
 
@@ -26,9 +29,10 @@ void heap_reset(void)
 	assert(!((unsigned long) &__heap & 15));
 
 	free_lo = &__heap;
-	free_hi = KSEG0(ram_size);
+	free_hi = KSEG0(ram_size) - (32 << 10);
 
 	image_size = 0;
+	image_size_mark = 0;
 }
 
 size_t heap_space(void)
@@ -68,7 +72,12 @@ void *heap_reserve_hi(size_t size)
 
 void heap_info(void)
 {
-	printf(image_size ? "%08x %ut\n" : "no image loaded\n", image_size, image_size);
+	if(image_size) {
+		printf("%08x %ut\n", image_size, image_size);
+		if(image_size_mark)
+			printf("%08x %ut\n", image_size_mark, image_size_mark);
+	} else
+		puts("no image loaded");
 }
 
 void heap_alloc(void)
@@ -95,16 +104,34 @@ void *heap_image(size_t *size)
 	return image_base;
 }
 
+void heap_mark(void)
+{
+	image_base_mark = image_base;
+	image_size_mark = image_size;
+}
+
+void *heap_mark_image(size_t *size)
+{
+	if(size)
+		*size = image_size_mark;
+
+	return image_base_mark;
+}
+
 int cmnd_heap(int opsz)
 {
 	if(argc > 1)
 		return E_ARGS_OVER;
 
-	if(image_size)
+	if(image_size) {
 		printf("%08lx - %08lx (%08x %ut)\n",
 			(unsigned long) image_base, (unsigned long) image_base + image_size - 1,
 			image_size, image_size);
-	else
+		if(image_size_mark)
+			printf("%08lx - %08lx (%08x %ut)\n",
+				(unsigned long) image_base_mark, (unsigned long) image_base_mark + image_size_mark - 1,
+				image_size_mark, image_size_mark);
+	} else
 		puts("no image loaded");
 
 	return E_NONE;

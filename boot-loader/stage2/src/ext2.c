@@ -48,6 +48,7 @@ struct volume
 
 struct find_item
 {
+	const char			*glob;
 	struct ext2_inode	*dir;
 	unsigned				offset;
 	unsigned				inode;
@@ -264,6 +265,7 @@ int ext2_find_next(struct volume *v, struct find_item *find)
 	struct ext2_dir_entry_2 *entry;
 	unsigned block, offset;
 	char *direct;
+	int match;
 
 	do {
 
@@ -298,28 +300,33 @@ int ext2_find_next(struct volume *v, struct find_item *find)
 				return -1;
 			}
 
+			match = !!entry->inode;
+			if(match) {
+
+				memcpy(find->name, entry->name, entry->name_len);
+				find->name[entry->name_len] = '\0';
+
+				if(find->glob)
+					match = glob(find->name, find->glob);
+			}
+
 			offset += entry->rec_len;
 
-			/* ignore entries with inode value of 0 */
-
-		} while(!entry->inode && offset < v->block_size);
+		} while(!match && offset < v->block_size);
 
 		find->offset += offset;
 
-	} while(!entry->inode);
+	} while(!match);
 
 	find->inode = entry->inode;
 
-	memcpy(find->name, entry->name, entry->name_len);
-	find->name[entry->name_len] = '\0';
-	
 	return 1;
 }
 
 /*
  * find first entry in directory
  */
-int ext2_find_first(struct volume *v, struct find_item *find, struct ext2_inode *inode)
+int ext2_find_first(struct volume *v, struct find_item *find, struct ext2_inode *inode, const char *glob)
 {
 	if(!S_ISDIR(inode->i_mode)) {
 		DPUTS("ext2: not a directory");
@@ -338,6 +345,7 @@ int ext2_find_first(struct volume *v, struct find_item *find, struct ext2_inode 
 
 	find->dir = inode;
 	find->offset = 0;
+	find->glob = glob;
 
 	return ext2_find_next(v, find);
 }
@@ -404,6 +412,8 @@ int ext2_readlink(struct volume *v, char *link, size_t size, struct ext2_inode *
 
 /*
  * follow path from inode returning target inode
+ *
+ * FIXME replace with non-recursive algorithm
  */
 unsigned ext2_lookup(struct volume *v, unsigned inum, const char *path)
 {
@@ -436,7 +446,7 @@ unsigned ext2_lookup(struct volume *v, unsigned inum, const char *path)
 		for(size = 0; path[size] && path[size] != '/'; ++size)
 			;
 
-		for(stat = ext2_find_first(v, &find, &inode); stat > 0; stat = ext2_find_next(v, &find))
+		for(stat = ext2_find_first(v, &find, &inode, NULL); stat > 0; stat = ext2_find_next(v, &find))
 			if(!memcmp(path, find.name, size) && !find.name[size]) {
 				path += size;
 				break;
@@ -502,7 +512,7 @@ int ext2_dirpath(struct volume *v, char *path, size_t max, unsigned inum)
 		parent = 0;
 		size = 0;
 
-		for(stat = ext2_find_first(v, &find, &inode); stat > 0; stat = ext2_find_next(v, &find))
+		for(stat = ext2_find_first(v, &find, &inode, NULL); stat > 0; stat = ext2_find_next(v, &find))
 		{
 			if(find.name[0] == '.' && find.name[1] == '.' && find.name[2] == '\0') {
 				parent = find.inode;
@@ -601,7 +611,7 @@ static int list_inode(unsigned inum, const char *name, int descend)
 
 		if(S_ISDIR(inode.i_mode)) {
 
-			for(stat = ext2_find_first(&vol, &find, &inode); stat > 0; stat = ext2_find_next(&vol, &find))
+			for(stat = ext2_find_first(&vol, &find, &inode, NULL); stat > 0; stat = ext2_find_next(&vol, &find))
 				list_inode(find.inode, find.name, 0);
 
 			return !stat;
@@ -644,21 +654,28 @@ static int list_inode(unsigned inum, const char *name, int descend)
 int cmnd_ls(int opsz)
 {
 	unsigned indx, inum;
+	char *path;
 
 	if(!vol.mounted) {
 		puts("not mounted");
 		return E_UNSPEC;
 	}
 
-	if(argc == 1)
-		argv[argc++] = ".";
+	path = ".";
 
-	for(indx = 1; indx < argc; ++indx) {
-		inum = ext2_lookup(&vol, curdir, argv[indx]);
+	for(indx = 1;; ++indx) {
+
+		if(indx < argc)
+			path = argv[indx];
+
+		inum = ext2_lookup(&vol, curdir, path);
 		if(inum)
-			list_inode(inum, argv[indx], 1);
+			list_inode(inum, path, 1);
 		else
-			printf("file not found \"%s\"\n", argv[indx]);
+			printf("file not found \"%s\"\n", path);
+
+		if(indx >= argc)
+			break;
 	}
 
 	return E_NONE;
@@ -789,27 +806,52 @@ int file_load(void *hdl, void *where, unsigned long size)
  */
 int cmnd_load(int opsz)
 {
-	unsigned long size;
-	void *hdl, *base;
+	unsigned long imagesz, initrdsz;
+	void *himage, *hinitrd, *base;
 
 	if(argc < 2)
 		return E_ARGS_UNDER;
 
-	if(argc > 2)
-		return E_ARGS_OVER;
+	hinitrd = NULL;
 
-	hdl = file_open(argv[1], &size);
-	if(!hdl)
+	if(argc > 2) {
+
+		if(argc > 3)
+			return E_ARGS_OVER;
+
+		hinitrd = file_open(argv[2], &initrdsz);
+		if(!hinitrd)
+			return E_UNSPEC;
+	}
+
+	himage = file_open(argv[1], &imagesz);
+	if(!himage)
 		return E_UNSPEC;
 
 	heap_reset();
-	base = heap_reserve_hi(size);
+
+	if(hinitrd) {
+
+		base = heap_reserve_hi(initrdsz);
+		if(!base) {
+			puts("file too big");
+			return E_UNSPEC;
+		}
+
+		if(!file_load(hinitrd, base, initrdsz))
+			return E_UNSPEC;
+
+		heap_alloc();
+		heap_mark();
+	}
+
+	base = heap_reserve_hi(imagesz);
 	if(!base) {
-		puts("file too large");
+		puts("file too big");
 		return E_UNSPEC;
 	}
 
-	if(!file_load(hdl, base, size))
+	if(!file_load(himage, base, imagesz))
 		return E_UNSPEC;
 
 	heap_alloc();

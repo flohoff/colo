@@ -16,7 +16,9 @@
 
 			.globl	_start
 
-_start:			la	sp, __stack - 16
+_start:			move	a1, sp
+
+			la	sp, __stack - 16
 			lui	gp, %hi(_gp)
 			jal	chain
 			 addiu	gp, %lo(_gp)

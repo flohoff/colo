@@ -71,7 +71,7 @@ static struct
 	{ "mount",			cmnd_mount,			0,					"[partition]",					},
 	{ "ls",				cmnd_ls,				0,					"[path ...]",					},
 	{ "cd",				cmnd_cd,				0,					"[path]",						},
-	{ "load",			cmnd_load,			0,					"path",							},
+	{ "load",			cmnd_load,			0,					"path [path]",					},
 	{ "script",			cmnd_script,		0,					"path",							},
 
 #ifdef _DEBUG
@@ -238,6 +238,21 @@ static int cmnd_eval(int opsz)
 	printf((long) value < 0 ? "%08lx %lut (-%08lx -%lut)\n" : "%08lx %lut\n", value, value, -value, -value);
 
 	return E_NONE;
+}
+
+/*
+ * add argument to command line
+ */
+int argv_add(const char *str)
+{
+	if(argc == elements(argv) - 1)
+		return 0;
+
+	argv[argc] = (char *) str;
+	argsz[argc++] = strlen(str);
+	argv[argc] = NULL;
+
+	return 1;
 }
 
 /*

@@ -23,7 +23,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	serial_init();
 
-	puts("\n-=<[ Qube2/RaQ2 boot loader v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]>=-");
+	puts("\n-=<[ \"CoLo\" Qube2/RaQ2 boot loader v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]>=-");
 
 	ram_size = bank0 + bank1;
 
