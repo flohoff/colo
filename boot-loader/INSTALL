@@ -1,0 +1,86 @@
+# $Header: /export1/cvs/cobalt-boot/boot-loader/INSTALL,v 1.2 2004/02/15 12:48:40 pdh Exp $
+
+INSTALLING THE REPLACEMENT BOOT LOADER
+======================================
+
+***********************************************************
+*                                                         *
+*                -------------------------                *
+*                !!!  BIG FAT WARNING  !!!                *
+*                -------------------------                *
+*                                                         *
+*  REPLACING THE ORIGINAL BOOT LOADER ON YOUR QUBE/RAQ    *
+*  MEANS ERASING AND REPROGRAMMING THE FLASH MEMORY CHIP  *
+*  THAT BOOTS YOUR UNIT. IF THE REPROGRAMMING FAILS OR    *
+*  OR THE NEW BOOT LOADER DOESN'T WORK ON YOUR UNIT YOU   *
+*  WILL HAVE TO REMOVE AND REPROGRAM THE FLASH CHIP WITH  *
+*  AN EXTERNAL PROGRAMMER. THIS MIGHT MEAN DESOLDERING    *
+*  THE CHIP AS WELL AS FINDING A SUITABLE PROGRAMMER !!   *
+*                                                         *
+***********************************************************
+
+Step 1 - safety check
+---------------------
+
+Check that the Flash chip on your unit is socketed. Don't proceed unless this
+is the case (unless you're a skilled solderer).
+
+Step 2 - saving the old boot loader
+-----------------------------------
+
+Take a copy of the original boot loader
+
+	flash-tool cobalt-original-boot.bin
+
+This should create a file called 'cobalt-original-boot.bin' that is 512KB in
+size.
+
+	!!  SAVE THIS FILE SOMEWHERE VERY SAFE  !!
+	
+Save the file somewhere safe, not on your Qube/RaQ. You will need this file to
+restore your unit to it's original state.
+
+Step 3 - check disk partition table
+-----------------------------------
+
+The new boot loader will attempt to load '/boot/vmlinux.gz' from the boot
+partition on the disk. If no partition is marked as bootable, or if the boot
+partition is not a Linux partition, it will attempt to boot from the first
+Linux partition it finds in the partition table. Booting will fail if the
+selected partition does not contain an EXT2/3 filing system.
+
+You can ensure the correct partition is booted by using 'fdisk' to mark your
+boot partition bootable.
+
+Step 4 - install the new boot loader
+------------------------------------
+
+Write the new boot loader into the Flash. Don't interrupt the programming
+process or you will probably land up with a unit that doesn't boot!
+
+	flash-tool -w boot.bin
+
+If for any reason programming fails you might just be able to write the
+original boot loader back into the Flash
+
+	flash-tool -w cobalt-original-boot.bin
+
+Step 5 - moment of truth
+------------------------
+
+Cross your fingers and reboot.
+
+PROBLEMS
+--------
+
+If for some reason the boot loader runs okay but you can't get it to boot a
+kernel from disk it is possible to boot a compressed kernel loaded over the
+serial port (S-record format) using the boot loader shell. It is also possible
+to restore the original boot loader from the shell (either by loading the
+original boot loader code from disk or by transferring it to the boot loader
+shell as an S-record file). See the files README.shell and README.restore for
+information on the boot loader shell.
+
+-- Peter Horton, pdh@colonel-panic.org --
+
+# vi:set ts=3 sw=3 tw=78:
