@@ -72,7 +72,7 @@
 #define CSR12_ANS_MASK					(7 << 12)
 # define CSR12_ANS_COMPLETE			(5 << 12)
 #define CSR12_LPN							(1 << 15)
-#define CSR12_LPC_SHIFT					16
+#define CSR12_LPC_10FDX					(0x10000 << 6)
 
 #define CSR13_SRL							(1 << 0)
 #define CSR13_SDM							(0xef0 << 4)
@@ -571,13 +571,10 @@ static void setup_phy_sia(void)
 
 	if(phy_state == PHY_LINK_UP) {
 
-		static char word[16];
-
-		word[0] = '\0';
-		if(info & CSR12_LPN)
-			sprintf(word, " (#%04x)", info >> CSR12_LPC_SHIFT);
-
-		DPRINTF("tulip: link up%s\n", word);
+		if((info & (CSR12_LPC_10FDX | CSR12_LPN)) == (CSR12_LPC_10FDX | CSR12_LPN))
+			DPUTS("tulip: link up (10Mbps full-duplex)");
+		else
+			DPUTS("tulip: link up (10Mbps)");
 	}
 
 #endif
