@@ -1,28 +1,58 @@
 # $Id$
 
 colo-perm
-=========
+---------
+
+A simple utility to discover whether the original Cobalt firmware has been
+replaced with CoLo.
 
 flash-tool
-==========
+----------
+
+Tool to re-Flash the Cobalt firmware. Can be used to replace the original
+firmware with CoLo.
 
 copy-rom
-========
+--------
+
+A simple utility to copy the contents of the Cobalt ROM to a file. Also
+provides an MD5 sum of the ROM's contents. Can be used to back up the original
+firmware.
 
 ncon
-====
+----
 
-lcdtools/e2fsck-lcd
-===================
-
-lcdtools/paneld
-===============
-
-lcdtools/putlcd
-===============
+A network console client for connecting to CoLo and the kernel's netconsole.
+Mainly of use for units which don't have a serial port (Qube2700).
 
 elf2rfx
-=======
+-------
+
+Tool used in building of CoLo. Converts the stage2 executable into a simple
+relocatable format which is loaded by stage1 or chain. The stage2 executable
+has to be loaded to the top of RAM so that we can support loading kernels with
+load addresses at the bottom of KSEG0.
+
+LCD TOOLS
+=========
+
+putlcd
+------
+
+Simple tool to write text to the unit's LCD display.
+
+e2fsck-lcd
+----------
+
+A wrapper around e2fsck which displays a friendly progress bar on the unit's
+LCD whilst a file system check is in progress.
+
+paneld
+------
+
+A small daemon which allows shutting down / rebooting of the unit from the
+front panel buttons and LCD. Can also display user supplied messages on the
+display.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

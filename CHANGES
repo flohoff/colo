@@ -1,9 +1,11 @@
 # $Id$
 
-CoLo 1.19 (xxxx-xx-xx)
+CoLo 1.19 (2005-04-03)
 ----------------------
 
-*	Fixed stupid bug in ordering of LCD initialisation.
+*	Fixed stupid bug in ordering of LCD initialisation. This would cause
+	installs of 1.17 or 1.18 which weren't an upgrade from 1.16 to crash
+	early in stage2.
 
 *	Added "README.tools" to tools directory.
 
