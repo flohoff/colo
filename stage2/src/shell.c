@@ -79,7 +79,7 @@ static struct
 	{ "ls",				cmnd_ls,				0,					"[path ...]",												},
 	{ "cd",				cmnd_cd,				0,					"[path]",													},
 	{ "load",			cmnd_load,			0,					"path [path]",												},
-	{ "script",			cmnd_script,		0,					NULL,															},
+	{ "script",			cmnd_script,		0,					"[show]",													},
 	{ "net",				cmnd_net,			0,					"[{address netmask [gateway]} | down]",			},
 	{ "tftp",			cmnd_tftp,			0,					"host path [path]",										},
 	{ "ping",			cmnd_ping,			0,					"host",														},
@@ -439,9 +439,6 @@ static int execute(void)
 	if(!argc)
 		return E_ARGS_UNDER;
 
-	if(argsz[0] && argv[0][0] == '#')
-		return E_NONE;
-
 	/* strip size suffix from command */
 
 	opsz = 0;
@@ -498,8 +495,8 @@ void shell(void)
 		[E_NO_SUCH_VAR]	= "no such variable",
 	};
 	static char line[256], hist[256];
+	int error, skip, escp;
 	unsigned indx;
-	int error;
 
 	assert(elements(argv) == elements(argsz));
 
@@ -507,11 +504,14 @@ void shell(void)
 
 		putstring("> ");
 
+		indx = 0;
+
 		if(script) {
 
-			/* fetch line from script */
+			skip = 0;
+			escp = 0;
 
-			for(indx = 0; indx < sizeof(line) - 1;) {
+			while(indx < sizeof(line) - 1) {
 
 				line[indx] = *script++;
 
@@ -520,27 +520,41 @@ void shell(void)
 					break;
 				}
 
-				if(indx && (line[indx] == '\n' || line[indx] == '\r'))
-					break;
+				if(line[indx] == '\n' || line[indx] == '\r') {
+					if(indx)
+						break;
+					skip = 0;
+					escp = 0;
+				}
 
-				if(line[indx] >= ' ' && line[indx] < '~')
+				if(escp)
+					escp = 0;
+				else {
+					if(line[indx] == '#')
+						skip = 1;
+					if(line[indx] == '\\')
+						escp = 1;
+				}
+
+				if(!skip && (indx || !isspace(line[indx])) && isprint(line[indx]))
 					putchar(line[indx++]);
 			}
 
 			line[indx] = '\0';
+		}
 
-		} else
-
+		if(!indx)
 			line_edit(line, sizeof(line));
 
 		putchar('\n');
 
-		/* add non-blank non-repeated lines to history */
-
 		for(indx = 0; isspace(line[indx]); ++indx)
 			;
 
-		if(line[indx] && (!history_fetch(hist, sizeof(hist), 0) || strcmp(line, hist)))
+		if(!line[indx])
+			continue;
+
+		if(!script && (!history_fetch(hist, sizeof(hist), 0) || strcmp(line, hist)))
 			history_add(line);
 
 		error = split_line(line);
@@ -574,11 +588,17 @@ static int cmnd_script(int opsz)
 #	define SCRIPT_SIGN_SZ		(sizeof(SCRIPT_SIGN) - 1)
 
 	static char buf[2048];
+	unsigned indx;
 	size_t size;
 	void *ptr;
 
-	if(argc > 1)
+	if(argc > 2)
 		return E_ARGS_OVER;
+
+	if(argc > 1 && strncasecmp(argv[1], "show", strlen(argv[1]))) {
+		puts("invalid argument");
+		return E_UNSPEC;
+	}
 
 	ptr = heap_image(&size);
 
@@ -601,7 +621,19 @@ static int cmnd_script(int opsz)
 	
 	buf[size] = '\0';
 
-	script_exec(buf);
+	if(argc == 1) {
+		script_exec(buf);
+		return E_NONE;
+	}
+
+	for(indx = 0; buf[indx]; ++indx) {
+		if(buf[indx] == '\r' && buf[indx + 1] == '\n')
+			++indx;
+		putchar((buf[indx] == '\n' || isprint(buf[indx])) ? buf[indx] : '?');
+	}
+
+	if(indx && buf[indx - 1] != '\n')
+		putchar('\n');
 
 	return E_NONE;
 }

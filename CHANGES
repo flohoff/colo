@@ -1,11 +1,18 @@
 # $Id$
 
-CoLo 1.9 (xxxx-xx-xx)
+CoLo 1.9 (2004-05-02)
 ---------------------
 
+*	CTRL-C now acts as a break key (in addition to SPACE).
+
+*	Comments are now only supported in scripts.
+
 *	The 'script' command has been changed to execute a script already loaded
- 	into memory via the 'load', 'tftp' or 'download' commands. To be executed a
-	script must begin with the text "#:CoLo:#".
+ 	into memory via the 'load', 'tftp' or 'download' commands.
+
+	** NOTE **
+
+		Scripts must now begin with the line '#:CoLo:#'.
 
 *	Automatic insertion of the kernel 'initrd=' command line argument has been
  	removed. All initrd parameters are now available in variables.

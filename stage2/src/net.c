@@ -108,14 +108,26 @@ int net_up(void)
 	udp_close_all();
 	net_alive = tulip_up();
 
+	env_remove_tag(VAR_NET);
+
 	if(net_alive) {
+
 		DPUTS("net: interface up");
-		if(ip_addr)
+
+		if(ip_addr) {
+			env_put("ip-address", inet_ntoa(ip_addr), VAR_NET);
 			DPRINTF("  address %s\n", inet_ntoa(ip_addr));
-		if(ip_mask)
+		}
+
+		if(ip_mask) {
+			env_put("ip-netmask", inet_ntoa(ip_mask), VAR_NET);
 			DPRINTF("  netmask %s\n", inet_ntoa(ip_mask));
-		if(ip_gway)
+		}
+
+		if(ip_gway) {
+			env_put("ip-gateway", inet_ntoa(ip_gway), VAR_NET);
 			DPRINTF("  gateway %s\n", inet_ntoa(ip_gway));
+		}
 	}
 
 	return net_alive;

@@ -22,8 +22,24 @@ static const char *option[] =
 
 static const char *script[] =
 {
-	"mount\n-load /boot/default.colo\n-script\nload /boot/vmlinux.gz\nexecute",
-	"net\ntftp {dhcp-next-server} {dhcp-boot-file}\n-script\nexecute",
+	/* Disk (hda) */
+
+	"lcd 'Booting ...'\n"
+	"mount\n"
+	"lcd 'Booting ...' /dev/{mounted-volume}\n"
+	"-load /boot/default.colo\n"
+	"-script\n"
+	"load /boot/vmlinux.gz\n"
+	"execute",
+
+	/* Network (TFTP) */
+
+	"lcd 'Booting ...'\n"
+	"net\n"
+	"lcd 'Booting ...' {ip-address}\n"
+	"tftp {dhcp-next-server} {dhcp-boot-file}\n"
+	"-script\n"
+	"execute",
 };
 
 void boot(int which)

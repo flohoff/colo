@@ -1,4 +1,9 @@
+#:CoLo:# $Id
+#
 # load default Debian kernel from hda2
+#
+lcd 'Booting ...'
 mount hda2
+lcd 'Booting ...' /dev/{mounted-volume}
 load /vmlinux
-execute root=/dev/hda2 console=ttyS0,115200
+execute root=/dev/{mounted-volume} console=ttyS0,{console-speed}

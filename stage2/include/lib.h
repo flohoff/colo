@@ -236,8 +236,9 @@ extern int lcd_menu(const char **, unsigned, unsigned, int, unsigned);
 /* env.c */
 
 #define VAR_OTHER								0
-#define VAR_DHCP								1
-#define VAR_INITRD							2
+#define VAR_NET								1
+#define VAR_DHCP								2
+#define VAR_INITRD							3
 
 extern int env_put(const char *, const char *, unsigned);
 extern const char *env_get(const char *);
