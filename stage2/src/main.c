@@ -15,7 +15,6 @@
 #define VER_MAJOR					1
 #define VER_MINOR					9
 
-unsigned debug_flags;
 size_t ram_size;
 
 void loader(size_t bank0, size_t bank1, unsigned switches)
@@ -34,6 +33,9 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	pci_init(bank0, bank1);
 
+	if(switches & BUTTON_CLEAR)
+		nv_get();
+
 	tulip_init();
 
 	ide_init();
@@ -42,7 +44,9 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	heap_reset();
 
-	if((switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
+	env_put("console-speed", _STR(BAUD_RATE), 0);
+
+	if(!(nv_store.flags & NVFLAG_DISABLE_BOOT_MENU) || (switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
 		boot(-1);
 
 	for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE * 3 / 2;)

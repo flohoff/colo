@@ -3,6 +3,10 @@
 CoLo 1.9 (xxxx-xx-xx)
 ---------------------
 
+*	Added non-volatile storage using RTC RAM.
+
+*	Renamed 'dflags' command 'nvflags' and made them non-volatile.
+
 *	Added boot menu and 'boot' command.
 
 *	Added 'variable' command.

@@ -4,11 +4,19 @@ REPLACEMENT COBALT Qube2/RaQ2 BOOT LOADER SHELL
 ===============================================
 
 The replacement boot loader implements a command shell that can be entered by
-pressing SPACE on a serial terminal connected to the serial port on the unit,
-just before the unit starts the boot process.
+pressing CTRL-C or SPACE on a serial terminal connected to the serial port on
+the unit, just before the unit starts the boot process (115200 baud).
 
-If no SPACE character is detected the boot loader starts the boot process
-using the default script :-
+The shell can also be entered from the LCD boot menu (hold "ENTER" and
+"SELECT" whilst booting to force the boot menu to appear).
+
+*note*
+
+	By default the boot menu will appear on every boot. This behaviour can be
+	changed using the 'nvflags' command detailed below.
+
+If the boot process is not intercepted the unit will boot using the default
+"Disk (hda)" option which will execute the internal script :-
 
 	mount
 	-script /boot/default.colo
@@ -172,11 +180,11 @@ help
 
 List available commands and their usage.
 
-dflags [number ...]
--------------------
+nvflags [number ...]
+--------------------
 
-Toggles the specified debug flags and then lists state of all the debug flags.
-Active flags are marked with a '*', inactive ones with a '.'.
+Toggles the specified configuration flags and then lists state of all the
+debug flags.  Active flags are marked with a '*', inactive ones with a '.'.
 
 The flags currently defined are
 
@@ -188,6 +196,8 @@ The flags currently defined are
 	3 - enable IDE slave detection. Normally the boot loader does not bother
 	    checking for the prescence of an IDE slave device. This flag must be
 		 set before the first 'mount' command for slave detection to work.
+	4 - disable boot menu. If this flag is not set the boot menu will be shown
+		 every boot.
 
 net [{address netmask [gateway]} | down]
 ----------------------------------------

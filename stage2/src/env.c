@@ -124,6 +124,11 @@ int cmnd_environ(int opsz)
 
 		case 3:
 
+			if(strchr(argv[1], '=')) {
+				puts("invalid variable name");
+				return E_UNSPEC;
+			}
+
 			if(!env_put(argv[1], argv[2], VAR_OTHER)) {
 				puts("out of variable space");
 				return E_UNSPEC;

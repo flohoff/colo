@@ -380,11 +380,11 @@ static int ide_ata_identify(struct ide_device *dev, const void *info)
 #endif
 
 	if((data.h[49] & (1 << 9)) &&
-		!(debug_flags & DFLAG_IDE_DISABLE_LBA))
+		!(nv_store.flags & NVFLAG_IDE_DISABLE_LBA))
 	{
 		dev->flags |= FLAG_LBA;
 		if((data.h[83] & ((1 << 15) | (1 << 14) | (1 << 10))) == ((1 << 14) | (1 << 10)) &&
-			!(debug_flags & DFLAG_IDE_DISABLE_LBA48))
+			!(nv_store.flags & NVFLAG_IDE_DISABLE_LBA48))
 		{
 			dev->flags |= FLAG_LBA_48;
 			if(data.w[102 / 2]) {
@@ -856,7 +856,7 @@ void *ide_open(const char *name)
 
 		ide_reset();
 		ide_identify(&ide_bus[0]);
-		if(debug_flags & DFLAG_IDE_ENABLE_SLAVE)
+		if(nv_store.flags & NVFLAG_IDE_ENABLE_SLAVE)
 			ide_identify(&ide_bus[1]);
 
 		if(!((ide_bus[0].flags | ide_bus[1].flags) & FLAG_IDENTIFIED)) {
@@ -869,7 +869,7 @@ void *ide_open(const char *name)
 			if((ide_bus[indx].flags & FLAG_IDENTIFIED) && ide_bus[indx].mode < mode)
 					mode = ide_bus[indx].mode;
 
-		if(!(debug_flags & DFLAG_IDE_DISABLE_TIMING))
+		if(!(nv_store.flags & NVFLAG_IDE_DISABLE_TIMING))
 			ide_timing(mode);
 	}
 

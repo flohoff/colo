@@ -191,12 +191,6 @@ extern void tulip_init(void);
 
 /* main.c */
 
-#define DFLAG_IDE_DISABLE_LBA				(1 << 0)
-#define DFLAG_IDE_DISABLE_LBA48			(1 << 1)
-#define DFLAG_IDE_DISABLE_TIMING			(1 << 2)
-#define DFLAG_IDE_ENABLE_SLAVE			(1 << 3)
-
-extern unsigned debug_flags;
 extern size_t ram_size;
 
 /* heap.c */
@@ -240,6 +234,7 @@ extern int lcd_menu(const char **, unsigned, unsigned, unsigned);
 
 #define VAR_OTHER								0
 #define VAR_DHCP								1
+#define VAR_INITRD							2
 
 extern int env_put(const char *, const char *, unsigned);
 extern const char *env_get(const char *);
@@ -248,6 +243,31 @@ extern void env_remove_tag(unsigned);
 /* boot.c */
 
 extern void __attribute__((noreturn)) boot(int);
+
+/* nv.c */
+
+#define NVFLAG_IDE_DISABLE_LBA			(1 << 0)
+#define NVFLAG_IDE_DISABLE_LBA48			(1 << 1)
+#define NVFLAG_IDE_DISABLE_TIMING		(1 << 2)
+#define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
+#define NVFLAG_DISABLE_BOOT_MENU			(1 << 4)
+
+#define NV_STORE_VERSION					1
+
+struct nv_store
+{
+	uint8_t	vers;
+	uint8_t	size;
+	uint8_t	crc;
+
+	uint8_t	flags;
+
+} __attribute__((packed));
+
+extern struct nv_store nv_store;
+
+extern int nv_get(void);
+extern void nv_put(void);
 
 #endif
 

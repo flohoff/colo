@@ -23,18 +23,19 @@ static const char *option[] =
 static const char *script[] =
 {
 	"mount\n-script /boot/default.colo\nload /boot/vmlinux.gz\nexecute",
+	NULL,
+	NULL,
+	NULL,
 };
 
 void boot(int which)
 {
 	if(which < 0) {
+		DPUTS("boot: running boot menu");
 		which = lcd_menu(option, elements(option), 0, MENU_TIMEOUT);
 		if(which < 0)
 			which = 0;
 	}
-
-	if(which >= elements(script))
-		DPRINTF("boot: no script #%d\n", which);
 
 	shell(which < elements(script) ? script[which] : NULL);
 }
@@ -59,7 +60,7 @@ int cmnd_boot(int opsz)
 
 		if(list) {
 			for(indx = 0; indx < elements(option); ++indx)
-				printf("%u: %s\n", indx, option[indx]);
+				printf("%x: %s\n", indx, option[indx]);
 			return E_NONE;
 		}
 
@@ -67,7 +68,7 @@ int cmnd_boot(int opsz)
 			boot(-1);
 	}
 
-	which = strtoul(argv[argc - 1], &ptr, 10);
+	which = evaluate(argv[argc - 1], &ptr);
 	if(*ptr || which < 0 || which >= elements(script))
 		return E_BAD_VALUE;
 

@@ -42,6 +42,7 @@ OBJS=	main.o\
 		lcd.o\
 		env.o\
 		boot.o\
+		nv.o\
 		start.o\
 
 LOADADDR=0x80000000

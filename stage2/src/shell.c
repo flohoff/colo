@@ -41,7 +41,7 @@ static int cmnd_arguments(int);
 static int cmnd_help(int);
 static int cmnd_eval(int);
 static int cmnd_reboot(int);
-static int cmnd_dflags(int);
+static int cmnd_nvflags(int);
 static int cmnd_script(int);
 
 static const char *script;
@@ -73,7 +73,7 @@ static struct
 	{ "image",			cmnd_heap,			0,					NULL,													},
 	{ "showkey",		cmnd_keyshow,		0,					NULL,													},
 	{ "unzip",			cmnd_unzip,			0,					NULL,													},
-	{ "dflags",			cmnd_dflags,		0,					"[number ...]",									},
+	{ "nvflags",		cmnd_nvflags,		0,					"[number ...]",									},
 	{ "execute",		cmnd_execute,		0,					"[arguments ...]",								},
 	{ "mount",			cmnd_mount,			0,					"[partition]",										},
 	{ "ls",				cmnd_ls,				0,					"[path ...]",										},
@@ -115,15 +115,16 @@ static int cmnd_arguments(int opsz)
 #endif
 
 /*
- * toggle debug flags
+ * toggle NV flags
  */
-static int cmnd_dflags(int opsz)
+static int cmnd_nvflags(int opsz)
 {
 	static const char *msg[] = {
 		"IDE LBA disabled",
 		"IDE LBA48 disabled",
 		"IDE timing disabled",
 		"IDE slave enabled",
+		"Disable boot menu",
 	};
 	unsigned indx, mask;
 	unsigned long bit;
@@ -142,10 +143,13 @@ static int cmnd_dflags(int opsz)
 		mask |= 1 << bit;
 	}
 
-	debug_flags ^= mask;
+	if(mask) {
+		nv_store.flags ^= mask;
+		nv_put();
+	}
 
 	for(indx = 0; indx < elements(msg); ++indx)
-		printf("%2u: %c %s\n", indx, (debug_flags & (1 << indx)) ? '*' : '.', msg[indx]);
+		printf("%x: %c %s\n", indx, (nv_store.flags & (1 << indx)) ? '*' : '.', msg[indx]);
 
 	return E_NONE;
 }

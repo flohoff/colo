@@ -12,6 +12,8 @@
 
 #define BUFFER_COUNT						16
 
+#define FRAME_PADDED						((sizeof(struct frame)+DCACHE_LINE_SIZE-1)&~(DCACHE_LINE_SIZE-1))
+
 int net_alive;
 
 static struct frame *pool;
@@ -42,7 +44,7 @@ void frame_free(struct frame *frame)
 
 static void net_init(void)
 {
-	static uint8_t store[BUFFER_COUNT * ((sizeof(struct frame) + 31) & ~31) + 31];
+	static uint8_t store[(DCACHE_LINE_SIZE - 1) + BUFFER_COUNT * FRAME_PADDED];
 
 	unsigned curr, indx;
 	struct frame *prev;
@@ -203,6 +205,8 @@ int cmnd_net(int opsz)
 		puts("invalid IP address");
 		return E_UNSPEC;
 	}
+
+	env_remove_tag(VAR_DHCP);
 
 	net_down();
 
