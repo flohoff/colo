@@ -333,6 +333,27 @@ restrict [megabytes]
 Restricts the memory used by the boot loader and the memory size passed to the
 kernel to simulate systems with less memory.
 
+menu title timeout {text value} ...
+-----------------------------------
+
+Presents the user with a menu on the LCD. The title of the menu will be
+'title' and the menu options are taken from the 'text' field of the text/value
+pairs.  Once a menu option is selected the variable 'menu-option' will be set
+to the 'value' field from the corresponding text/value pair. The menu is shown
+for a maximum period of 'timeout' tenths of a second (a value of 0 disables
+the timeout). If the menu times out or is dismissed with left button then the
+first option is implicitly selected.
+
+Example:
+
+The following script produces a menu titled "BOOT KERNEL" with options of
+"Linux" and "Linux-prev". The script /boot/default.colo is executed if "Linux"
+is selected and /boot/backup.colo is executed if "Linux-prev" is selected.
+
+	menu "BOOT KERNEL" 50 Linux default Linux-prev backup
+	load /boot/{menu-option}.colo
+	script
+
 -- Peter Horton, pdh@colonel-panic.org --
 
 # vi:set ts=3 sw=3 tw=78:

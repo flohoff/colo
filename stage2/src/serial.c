@@ -56,7 +56,7 @@ static const unsigned rates[] =
 };
 
 static unsigned queue_in, queue_out;
-static char out_queue[8192];
+static char out_queue[1024];
 static int initialised;
 static unsigned baud;
 

@@ -2,10 +2,6 @@
 
 In no particular order ...
 
-* Make boot menu interruptible from console port.
-
-* Don't load chain loader in a loop.
-
 * Remove excess debugging messages.
 
 * Add support for booting from LVM setups.
@@ -15,8 +11,6 @@ In no particular order ...
 * Sort out exactly where $sp should point during the various stages.
 
 * Set $sp when chain loading kernel.
-
-* Add boot menu using LCD. [partially done]
 
 * Add support for booting from logical (extended) partitions.
 

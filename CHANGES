@@ -3,13 +3,17 @@
 CoLo 1.12 (xxxx-xx-xx)
 ----------------------
 
+*	Added 'menu' command for implementing LCD menus in scripts. Makes it
+	possible to choose from a list of multiple kernels/configurations.
+
 *	Fixed a couple of off by one errors in the 'boot' command.
 
 *	Added 'console disable' to the non-volatile flags. This defers initialising
 	the serial port until the boot shell is entered and should make it possible
 	to use CoLo on units which don't have a serial port. This flag will be set
 	by default on new installs, but will be clear on units which have a recent
-	CoLo install already.
+	CoLo install already. Might also be useful where the serial port is used
+	for a modem etc.
 
 *	Added man pages for 'paneld' and 'e2fsck-lcd'.
 	[Martin Michlmayr]

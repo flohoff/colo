@@ -178,4 +178,48 @@ int cmnd_lcd(int opsz)
 	return E_NONE;
 }
 
+static int run_menu(unsigned timeout)
+{
+	const char *opts[argc / 2];
+	unsigned indx;
+
+	opts[0] = argv[1];
+	for(indx = 3; indx < argc; indx += 2)
+		opts[indx / 2] = argv[indx];
+
+	return lcd_menu(opts, argc / 2, timeout);
+}
+
+/*
+ * 'menu' shell command
+ */
+int cmnd_menu(int opsz)
+{
+	unsigned long timeout;
+	int which;
+	char *ptr;
+
+	if(argc < 5 || !(argc & 1))
+		return E_ARGS_UNDER;
+
+	timeout = strtoul(argv[2], &ptr, 10);
+	if(*ptr || ptr == argv[2])
+		return E_BAD_VALUE;
+
+	switch(which = run_menu(timeout * 100))
+	{
+		case LCD_MENU_ABORT:
+			env_put("menu-option", NULL, 0);
+			return E_UNSPEC;
+
+		case LCD_MENU_TIMEOUT:
+		case LCD_MENU_CANCEL:
+			which = 0;
+	}
+
+	env_put("menu-option", argv[which * 2 + 4], VAR_OTHER);
+
+	return E_NONE;
+}
+
 /* vi:set ts=3 sw=3 cin path=include,../include: */
