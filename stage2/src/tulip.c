@@ -16,7 +16,11 @@
 #define IO_BASE_ETH1						0x10101000
 
 #define TULIP_VND_ID						0x1011
-#define TULIP_DEV_ID						0x0019
+#define TULIP_DEV_ID_21041				0x0014
+#define TULIP_DEV_ID_21143				0x0019
+
+#define CHIP_ID_21041					0
+#define CHIP_ID_21143					1
 
 #define RX_RING_SIZE						4
 #define TX_RING_SIZE						4
@@ -28,15 +32,16 @@
 #define CSR0_SWR							(1 << 0)
 #define CSR0_PBL							(0 << 8)			/* unlimited burst length */
 #define CSR0_CAL							(3 << 14)		/* 32 byte cache line     */
-#define CSR0_RME							(1 << 21)
-#define CSR0_RLE							(1 << 23)
-#define CSR0_WIE							(1 << 24)
+#define CSR0_21143_RME					(1 << 21)
+#define CSR0_21143_RLE					(1 << 23)
+#define CSR0_21143_WIE					(1 << 24)
 
 #define CSR6_SR							(1 << 1)
+#define CSR6_FD							(1 << 9)
 #define CSR6_ST							(1 << 13)
-#define CSR6_PS							(1 << 18)
-#define CSR6_HBD							(1 << 19)
-#define CSR6_MBO							(1 << 25)
+#define CSR6_21143_PS					(1 << 18)
+#define CSR6_21143_HBD					(1 << 19)
+#define CSR6_21143_MBO					(1 << 25)
 
 #define CSR9_SROM_CS						(1 << 0)
 #define CSR9_SROM_CK						(1 << 1)
@@ -44,6 +49,25 @@
 #define CSR9_SROM_DO						(1 << 3)
 #define CSR9_SR							(1 << 11)
 #define CSR9_RD							(1 << 14)
+
+#define CSR13_SRL							(1 << 0)
+#define CSR13_SDM							(0xef0 << 4)
+#define CSR14_ECEN						(1 << 0)
+#define CSR14_LBK							(1 << 1)
+#define CSR14_DREN						(1 << 2)
+#define CSR14_LSE							(1 << 3)
+#define CSR14_CPEN_NORMAL				(3 << 4)
+#define CSR14_MBO							(1 << 6)
+#define CSR14_ANE							(1 << 7)
+#define CSR14_RSQ							(1 << 8)
+#define CSR14_CSQ							(1 << 9)
+#define CSR14_CLD							(1 << 10)
+#define CSR14_SQE							(1 << 11)
+#define CSR14_LTE							(1 << 12)
+#define CSR14_APE							(1 << 13)
+#define CSR14_SPP							(1 << 14)
+
+#define CSR15_ABM							(1 << 3)
 
 #define RX_DESC_STATUS_LS				(1 << 8)
 #define RX_DESC_STATUS_FS				(1 << 9)
@@ -83,6 +107,7 @@ static unsigned rx_curr;
 static unsigned rx_fill;
 
 static int nic_avail;
+static int chip_id;
 
 /*
  * refill receive ring
@@ -346,8 +371,24 @@ static void read_hw_addr(void)
  */
 static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 {
-	if(pcicfg_read_word(dev, fnc, 0x00) != ((TULIP_DEV_ID << 16) | TULIP_VND_ID))
+	static const unsigned chip_dev[] = {
+		TULIP_DEV_ID_21041, TULIP_DEV_ID_21143,
+	};
+	static const char *chip_name[] = {
+		"21041", "21143",
+	};
+	unsigned id;
+
+	id = pcicfg_read_word(dev, fnc, 0x00);
+	if((id & 0xffff) != TULIP_VND_ID)
 		return 0;
+	id >>= 16;
+
+	for(chip_id = 0; id != chip_dev[chip_id]; ++chip_id)
+		if(chip_id >= elements(chip_dev))
+			return 0;
+
+	DPRINTF("tulip: device %s\n", chip_name[chip_id]);
 
 	pcicfg_write_word(dev, fnc, 0x10, iob);
 
@@ -369,7 +410,7 @@ static void tulip_reset(void)
 	CSR(0) = 0;
 	udelay(1000);
 
-	CSR(6) = CSR6_MBO | CSR6_HBD | CSR6_PS;
+	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
 	udelay(1000);
 }
 
@@ -410,6 +451,19 @@ int tulip_up(void)
 
 	tulip_reset();
 
+	CSR(13) = 0;
+
+	if(chip_id == CHIP_ID_21041) {
+
+		CSR(14) = CSR14_SPP | CSR14_APE | CSR14_LTE | CSR14_SQE | CSR14_CLD |
+			CSR14_CSQ | CSR14_RSQ | CSR14_ANE | CSR14_MBO | CSR14_CPEN_NORMAL |
+			CSR14_LSE | CSR14_DREN | CSR14_LBK | CSR14_ECEN;
+		CSR(15) = CSR15_ABM;
+		CSR(13) = CSR13_SDM | CSR13_SRL;
+
+		udelay(10 * 1000);
+	}
+
 	rx_ring_init();
 	tx_ring_init();
 
@@ -417,7 +471,8 @@ int tulip_up(void)
 		pcicfg_read_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) | (1 << 2));
 	udelay(1000);
 
-	CSR(6) = CSR6_MBO | CSR6_HBD | CSR6_PS | CSR6_ST | CSR6_SR;
+	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
+	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD | CSR6_ST | CSR6_SR;
 
 	rx_filter_init();
 

@@ -4,33 +4,51 @@
  * $Id$
  *
  * This code is covered by the GNU General Public License. For details see the file "COPYING".
+ *
+ * NOTE
+ *
+ * There is support for Timedia PCI serial I/O cards, however the cards
+ * will probably not work without hardware modification. The Qube2 does
+ * not supply -12v to the PCI bus, and the Qube doesn't supply +12v
+ * either :-(
  */
 
 #include "lib.h"
 #include "galileo.h"
 #include "cobalt.h"
+#include "pci.h"
+#include "cpu.h"
+
+#define TIMEDIA_VND_ID				0x1409
+#define TIMEDIA_DEV_ID				0x7168
+
+#define TIMEDIA_BASE					0x10108000
+#define TIMEDIA_CLOCK				14745600
+
+#define TIMEDIA_REGISTER			((volatile uint8_t *) KSEG1(TIMEDIA_BASE))
 
 #define UART_REGISTER				((volatile uint8_t *) BRDG_NCS1_BASE)
+#define UART_CLOCK					18432000
 
-#define UART_THR						(UART_REGISTER[0])
-#define UART_RHR						(UART_REGISTER[0])
-#define UART_FCR						(UART_REGISTER[2])
+#define UART_THR						(uart_base[0])
+#define UART_RHR						(uart_base[0])
+#define UART_FCR						(uart_base[2])
 # define UART_FCR_FIFO_EN			(1 << 0)
-#define UART_LCR						(UART_REGISTER[3])
+#define UART_LCR						(uart_base[3])
 # define UART_LCR_DATA8				(3 << 0)
 # define UART_LCR_STOP2				(1 << 2)
 # define UART_LCR_DL_EN				(1 << 7)
-#define UART_MCR						(UART_REGISTER[4])
+#define UART_MCR						(uart_base[4])
 # define UART_MCR_DTR				(1 << 0)
 # define UART_MCR_RTS				(1 << 1)
 # define UART_MCR_OP1				(1 << 2)
-#define UART_LSR						(UART_REGISTER[5])
+#define UART_LSR						(uart_base[5])
 # define UART_LSR_RDR				(1 << 0)
 # define UART_LSR_THRE				(1 << 5)
 # define UART_LSR_TEMPTY			(1 << 6)
 
-#define UART_BRL						(UART_REGISTER[0])
-#define UART_BRH						(UART_REGISTER[1])
+#define UART_BRL						(uart_base[0])
+#define UART_BRH						(uart_base[1])
 
 static const unsigned rates[] =
 {
@@ -59,6 +77,8 @@ static unsigned queue_in, queue_out;
 static char out_queue[1024];
 static unsigned baud;
 static enum { ST_UNINIT = 0, ST_DISABLED, ST_ENABLED } state;
+static volatile uint8_t *uart_base;
+static unsigned uart_clock;
 
 static unsigned stored_baud(void)
 {
@@ -98,8 +118,26 @@ void serial_enable(int enable)
 	
 	if(state == ST_UNINIT) {
 
+		uart_base = UART_REGISTER;
+		uart_clock = UART_CLOCK;
+
+#ifdef PCI_SERIAL
+
+		if(pcicfg_read_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x00) == ((TIMEDIA_DEV_ID << 16) | TIMEDIA_VND_ID)) {
+
+			pcicfg_write_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x10, TIMEDIA_BASE);
+
+			pcicfg_write_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04,
+				pcicfg_read_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04) | (1 << 0));
+
+			uart_base = TIMEDIA_REGISTER;
+			uart_clock = TIMEDIA_CLOCK;
+		}
+
+#endif
+
 		baud = stored_baud();
-		div = (18432000 + baud * 8) / (baud * 16);
+		div = (uart_clock + baud * 8) / (baud * 16);
 
 		UART_MCR = UART_MCR_OP1 | UART_MCR_RTS | UART_MCR_DTR;
 		UART_LCR = UART_LCR_DL_EN | UART_LCR_STOP2 | UART_LCR_DATA8;
