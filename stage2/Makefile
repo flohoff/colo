@@ -55,6 +55,8 @@ LDFLAGS= -nostdlib -Wl,-T,$(TARG).lnk,-Map,$(TARG).map,--emit-relocs
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-strict-aliasing $(CFLAGS_CPU) $(CFLAGS_COLO)
 CPPFLAGS= -nostdinc -Iinclude -I../include -D_DEBUG $(CPPFLAGS_GCC)
 
+LOADADDR= $(shell $(CROSS_COMPILE)readelf -l $(TARG) | awk '$$1 ~ /^LOAD$$/ { print $$3 }')
+
 all:
 	$(MAKE) -C .. binary
 
