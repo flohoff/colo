@@ -26,8 +26,8 @@
 #define FLASH_TOTAL_SIZE		(512 << 10)
 #define FLASH_BASE_OFFSET		0x1fc00000
 
-#define UNLOCK1(v)				do{FLASH_P[0x555]=(v);}while(0)
-#define UNLOCK2(v)				do{FLASH_P[0x2aa]=(v);}while(0)
+#define UNLOCK1(v)				do{FLASH_P[0x5555]=(v);}while(0)
+#define UNLOCK2(v)				do{FLASH_P[0x2aaa]=(v);}while(0)
 #define UNLOCK1_VALUE			0xaa
 #define UNLOCK2_VALUE			0x55
 
@@ -39,7 +39,7 @@
 
 #define ERASE_TIMEOUT			5
 
-#define DEVICE_AM29F040			0x01a4
+#define DEVICE_AM29F040			0x01a4	/* and TMS29F040 */
 
 #define __STR(x)					#x
 #define _STR(x)					__STR(x)

@@ -12,8 +12,8 @@
 #define FLASH_BASE				0x1fc00000
 #define FLASH_P					((volatile uint8_t *) KSEG1(FLASH_BASE))
 
-#define UNLOCK1(v)				do{FLASH_P[0x555]=(v);}while(0)
-#define UNLOCK2(v)				do{FLASH_P[0x2aa]=(v);}while(0)
+#define UNLOCK1(v)				do{FLASH_P[0x5555]=(v);}while(0)
+#define UNLOCK2(v)				do{FLASH_P[0x2aaa]=(v);}while(0)
 #define UNLOCK1_VALUE			0xaa
 #define UNLOCK2_VALUE			0x55
 
@@ -26,10 +26,11 @@
 #define AUTOSELECT_VENDOR		0
 #define AUTOSELECT_DEVICE		1
 
-#define ERASE_TIMEOUT			15000		// 15s
-#define PROGRAM_TIMEOUT			10000		// 10ms
+#define ERASE_TIMEOUT			15000		/* 15s  */
+#define PROGRAM_TIMEOUT			10000		/* 10ms */
 
-#define DEVICE_AM29F040			0x01a4
+#define DEVICE_AM29F040			0x01a4	/* and TMS29F040 */
+
 #define FLASH_SIZE				(512 << 10)
 
 /*
