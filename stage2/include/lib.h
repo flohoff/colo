@@ -82,6 +82,8 @@ union double_word
 #define double_word_lo(v)	(double_word_ptr(v)->w.l)
 #define double_word_hi(v)	(double_word_ptr(v)->w.h)
 
+#define SIGN_EXTEND_64(v)	((long long)(long)(v))
+
 /* ext2.c & nfs.c */
 
 #define S_IFMT					0170000
@@ -156,6 +158,8 @@ extern void line_edit(char *, size_t);
 
 /* shell.c */
 
+#define MAX_CMND_ARGS					32
+
 enum {
 	E_NONE,
 	E_UNSPEC,
@@ -220,6 +224,7 @@ struct elf_info
 	unsigned long			load_phys;
 	unsigned					load_size;
 	unsigned long long	entry_point;
+	unsigned long long	data_sect;
 };
 
 extern int elf32_validate(const void *, size_t, struct elf_info *);
@@ -228,7 +233,7 @@ extern void elf32_load(const void *);
 /* elf64.c */
 
 extern int elf64_validate(const void *, size_t, struct elf_info *);
-extern void elf64_load(const void *, long);
+extern void elf64_load(const void *);
 
 /* inflate.c */
 

@@ -53,8 +53,8 @@ static int cmnd_reboot(int);
 static int cmnd_nvflags(int);
 static int cmnd_noop(int);
 
-size_t argsz[32];
-char *argv[32];
+size_t argsz[MAX_CMND_ARGS];
+char *argv[MAX_CMND_ARGS];
 unsigned argc;
 
 static struct

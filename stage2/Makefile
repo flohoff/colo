@@ -27,6 +27,7 @@ OBJS=	main.o\
 		pci.o\
 		cache.o\
 		elf32.o\
+		elf64.o\
 		exec.o\
 		inflate.o\
 		tulip.o\

@@ -3,7 +3,7 @@
 CoLo 1.14 (xxxx-xx-xx)
 ----------------------
 
-*	Cleaned up build system and add ability to cross compile
+*	Cleaned up build system and added cross compile support.
 	[cross compile suggestion / gcc-3.4 link fix - Sebastien Vajda]
 	[compiler flag suggestions - Thiemo Seufer]
 

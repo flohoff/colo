@@ -11,12 +11,29 @@
 #include "linux/elf.h"
 
 /*
+ * convert mapped address to physical
+ */
+static long phys_addr(unsigned long long addr)
+{
+	if(~double_word_hi(addr)) {
+
+		if((double_word_hi(addr) & 0xc7ffffff) == 0x80000000 && (long) double_word_lo(addr) >= 0)
+			return double_word_lo(addr);
+
+	} else if((double_word_lo(addr) >> 30) == 2)
+
+		return (long) KPHYS(double_word_lo(addr));
+
+	return -1;
+}
+
+/*
  * validate ELF64 image
  */
 int elf64_validate(const void *image, size_t imagesz, struct elf_info *info)
 {
 	unsigned indx, phoff, offset, filesz, memsz;
-	unsigned long vaddr;
+	unsigned long phys;
 	Elf64_Ehdr *eh;
 	Elf64_Phdr *ph;
 
@@ -37,99 +54,70 @@ int elf64_validate(const void *image, size_t imagesz, struct elf_info *info)
 		return 0;
 	}
 
-	if(eh->e_phoff >> 32)
-		return 0;
-
 	phoff = eh->e_phoff;
 
-	if(!eh->e_phnum || eh->e_phentsize != sizeof(Elf64_Phdr))
-		return 0;
+	if(double_word_hi(eh->e_phoff) ||
+		!eh->e_phnum ||
+		eh->e_phentsize != sizeof(Elf64_Phdr) ||
+		phoff < sizeof(Elf64_Ehdr) ||
+		phoff > imagesz ||
+		imagesz - phoff < eh->e_phnum * sizeof(Elf64_Phdr)) {
 
-	if(phoff < sizeof(Elf64_Ehdr) || phoff > imagesz || imagesz - phoff < eh->e_phnum * sizeof(Elf64_Phdr))
-		return 0;
-
-	info->r.region = eh->e_entry;
-	info->entry_point = info->r.w.region_lo;
-	info->r.w.region_lo = 0;
-	
-	/* region must be CKSEG or XKPHYS */
-
-	if(~info->r.w.region_hi && (info->r.w.region_hi >> 30) != 2) {
-
-		DPRINTF("elf64: invalid region %08x\n", info->r.w.region_hi);
 		return 0;
 	}
-			
+
 	ph = (void *) eh + phoff;
 
-	info->load_addr = 0xffffffff;
+	info->load_phys = 0xffffffff;
 	info->load_size = 0;
+	info->data_sect = SIGN_EXTEND_64(KSEG0(0));
 
 	for(indx = 0; indx < eh->e_phnum; ++indx)
 
 		if(ph[indx].p_type == PT_LOAD) {
 
-			if((ph[indx].p_offset >> 32) ||
-				(ph[indx].p_filesz >> 32) ||
-				(ph[indx].p_vaddr >> 32) != info->r.w.region_hi ||
-				(ph[indx].p_memsz >> 32)) {
+			if(double_word_hi(ph[indx].p_offset) ||
+				double_word_hi(ph[indx].p_filesz) ||
+				double_word_hi(ph[indx].p_memsz)) {
 
 				return 0;
 			}
 
+			phys = phys_addr(ph[indx].p_vaddr);
+
+			if((long) phys < 0 || (phys & 3))
+				return 0;
+
 			offset = ph[indx].p_offset;
 			filesz = ph[indx].p_filesz;
-			vaddr = ph[indx].p_vaddr;
 			memsz = ph[indx].p_memsz;
-
-			if(vaddr + memsz < vaddr)
-				return 0;
 
 			if(offset > imagesz || imagesz - offset < filesz)
 				return 0;
 
-			if(vaddr < info->load_addr)
-				info->load_addr = vaddr;
+			if(phys < info->load_phys)
+				info->load_phys = phys;
 
-			if(vaddr + memsz > info->load_addr + info->load_size)
-				info->load_size = vaddr + memsz - info->load_addr;
+			if(phys + memsz > info->load_phys + info->load_size)
+				info->load_size = phys + memsz - info->load_phys;
+
+			info->data_sect = ph[indx].p_vaddr - phys;
 		}
 
-	if(info->load_addr & 3) {
+	phys = phys_addr(eh->e_entry);
 
-		DPUTS("elf64: load address invalid");
+	if((long) phys < 0 || (phys & 3) || phys < info->load_phys || phys > info->load_phys + info->load_size)
 		return 0;
-	}
 
-	if((info->entry_point & 3) || info->entry_point < info->load_addr || info->entry_point >= info->load_addr + info->load_size) {
+	info->entry_point = eh->e_entry;
 
-		DPUTS("elf64: entry point invalid");
-		return 0;
-	}
-
-	DPRINTF("elf64: %08lx - %08lx (%08x:%08lx)\n",
-			info->load_addr,
-			info->load_addr + info->load_size - 1,
-			info->r.w.region_hi,
-			info->entry_point);
-
-	/* map XKPHYS or CKSEG1 load address to KSEG0 */
-
-	info->load_offset = 0;
-
-	if(~info->r.w.region_hi)
-
-		info->load_offset = (long) KSEG0(0);
-
-	else if(info->load_addr >= (unsigned long) KSEG1(0))
-
-		info->load_offset = (long) KSEG0(0) - (long) KSEG1(0);
-
-	else
-
-		return 1;
-
-	DPRINTF("elf64: @%08lx\n", info->load_addr + info->load_offset);
+	DPRINTF("elf64: %08lx - %08lx (%08x.%08x) (%08x.%08x)\n",
+		info->load_phys,
+		info->load_phys + info->load_size - 1,
+		double_word_hi(info->entry_point),
+		double_word_lo(info->entry_point),
+		double_word_hi(info->data_sect),
+		double_word_lo(info->data_sect));
 
 	return 1;
 }
@@ -137,17 +125,16 @@ int elf64_validate(const void *image, size_t imagesz, struct elf_info *info)
 /*
  * load ELF64 image
  */
-void elf64_load(const void *image, long offset)
+void elf64_load(const void *image)
 {
-	unsigned indx, phoff, fileofs, filesz, memsz;
-	unsigned long vaddr, entry;
+	unsigned indx, phoff, filesz, memsz;
 	Elf64_Ehdr *eh;
 	Elf64_Phdr *ph;
+	void *vaddr;
 
 	eh = (Elf64_Ehdr *) image;
 
 	phoff = eh->e_phoff;
-	entry = eh->e_entry;
 
 	ph = (void *) eh + phoff;
 
@@ -155,23 +142,19 @@ void elf64_load(const void *image, long offset)
 
 		if(ph[indx].p_type == PT_LOAD) {
 
-			vaddr = ph[indx].p_vaddr;
-			fileofs = ph[indx].p_offset;
+			vaddr = KSEG0(phys_addr(ph[indx].p_vaddr));
 			filesz = ph[indx].p_filesz;
 			memsz = ph[indx].p_memsz;
 
-			vaddr += offset;
+			memcpy(vaddr, (void *) eh + (unsigned long) ph[indx].p_offset, filesz);
+			memset(vaddr + filesz, 0, memsz - filesz);
 
-			DPRINTF("elf64: %08lx (%08lx) <-- %08x %ut + %ut\n",
-				vaddr - offset,
-				vaddr,
-				fileofs,
-				filesz,
-				memsz - filesz);
-
-			memcpy((void *) vaddr, (void *) eh + fileofs, filesz);
-
-			memset((void *) vaddr + filesz, 0, memsz - filesz);
+			DPRINTF("elf64: %08x.%08x (%08lx) %ut + %ut\n",
+					double_word_hi(ph[indx].p_vaddr),
+					double_word_lo(ph[indx].p_vaddr),
+					(unsigned long) vaddr,
+					filesz,
+					memsz - filesz);
 		}
 }
 

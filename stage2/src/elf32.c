@@ -13,9 +13,9 @@
 /*
  * convert mapped address to physical
  */
-static inline int phys_addr(unsigned long addr)
+static long phys_addr(unsigned long addr)
 {
-	return (addr >> 30) == 2 ? (int) KPHYS(addr) : -1;
+	return (addr >> 30) == 2 ? (long) KPHYS(addr) : -1;
 }
 
 /*
@@ -23,10 +23,10 @@ static inline int phys_addr(unsigned long addr)
  */
 int elf32_validate(const void *image, size_t imagesz, struct elf_info *info)
 {
+	unsigned long phys, base;
 	Elf32_Ehdr *eh;
 	Elf32_Phdr *ph;
 	unsigned indx;
-	int phys;
 
 	if(imagesz < sizeof(Elf32_Ehdr) || ((unsigned long) image & 3))
 		return 0;
@@ -57,6 +57,8 @@ int elf32_validate(const void *image, size_t imagesz, struct elf_info *info)
 	info->load_phys = 0xffffffff;
 	info->load_size = 0;
 
+	base = (unsigned long) KSEG0(0);
+
 	ph = (void *) eh + eh->e_phoff;
 
 	for(indx = 0; indx < eh->e_phnum; ++indx)
@@ -68,7 +70,7 @@ int elf32_validate(const void *image, size_t imagesz, struct elf_info *info)
 
 			phys = phys_addr(ph[indx].p_vaddr);
 
-			if(phys < 0 || (phys & 3))
+			if((long) phys < 0 || (phys & 3))
 				return 0;
 
 			if(phys < info->load_phys)
@@ -76,17 +78,25 @@ int elf32_validate(const void *image, size_t imagesz, struct elf_info *info)
 
 			if(phys + ph[indx].p_memsz > info->load_phys + info->load_size)
 				info->load_size = phys + ph[indx].p_memsz - info->load_phys;
+
+			base = ph[indx].p_vaddr - phys;
 		}
 
 	phys = phys_addr(eh->e_entry);
 
-	if(phys < 0 || (phys & 3) || phys < info->load_phys || phys > info->load_phys + info->load_size)
+	if((long) phys < 0 || (phys & 3) || phys < info->load_phys || phys > info->load_phys + info->load_size)
 		return 0;
 
-	double_word_hi(info->entry_point) = (long) eh->e_entry >> 31;
-	double_word_lo(info->entry_point) = eh->e_entry;
+	info->entry_point = SIGN_EXTEND_64(eh->e_entry);
 
-	DPRINTF("elf32: %08lx - %08lx\n", info->load_phys, info->load_phys + info->load_size - 1);
+	info->data_sect = SIGN_EXTEND_64(base);
+
+	DPRINTF("elf32: %08lx - %08lx (%08x) (%08x.%08x)\n",
+		info->load_phys,
+		info->load_phys + info->load_size - 1,
+		eh->e_entry,
+		double_word_hi(info->data_sect),
+		double_word_lo(info->data_sect));
 
 	return 1;
 }
@@ -114,7 +124,7 @@ void elf32_load(const void *image)
 			memcpy(vaddr, (void *) eh + ph[indx].p_offset, ph[indx].p_filesz);
 			memset(vaddr + ph[indx].p_filesz, 0, ph[indx].p_memsz - ph[indx].p_filesz);
 
-			DPRINTF("elf32: %08lx (%08lx) %ut + %ut\n",
+			DPRINTF("elf32: %08x (%08lx) %ut + %ut\n",
 					ph[indx].p_vaddr,
 					(unsigned long) vaddr,
 					ph[indx].p_filesz,

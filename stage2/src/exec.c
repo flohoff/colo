@@ -11,10 +11,11 @@
 #include "galileo.h"
 #include "cobalt.h"
 
-#define KSEG_TO_CKSEG(p)			((long long)(long)(p))
-
 extern void *initrd_image(size_t *);
 
+/*
+ * launch the loaded image
+ */
 static int launch_kernel(uint64_t *parm)
 {
 	extern int launch(void *);
@@ -29,20 +30,37 @@ static int launch_kernel(uint64_t *parm)
 
 	code = func(parm);
 
-	printf("\nExited (%d)\n", code);
+	icache_flush_all();
+	dcache_flush_all();
+
+	/* disable 64-bit addressing */
+
+	MTC0(CP0_STATUS, MFC0(CP0_STATUS) & ~CP0_STATUS_KX);
+
+	printf("\nprogram exited (%d)\n", code);
 
 	return code;
 }
 
+/*
+ * shell command - execute
+ */
 int cmnd_execute(int opsz)
 {
 	extern char __text;
 
-	void *image, *load, *initrd, *top;
+	static union
+	{
+		unsigned long long	d[MAX_CMND_ARGS];
+		unsigned long			w[1];
+	} args;
+
+	void *image, *load, *initrd;
 	size_t imagesz, initrdsz;
 	struct elf_info info;
+	unsigned long memsz;
 	uint64_t parm[6];
-	int elf32;
+	int elf32, indx;
 
 	image = heap_image(&imagesz);
 
@@ -60,7 +78,7 @@ int cmnd_execute(int opsz)
 
 	elf32 = elf32_validate(image, imagesz, &info);
 
-	if(!elf32 /*&& !elf64_validate(image, imagesz, &info)*/) {
+	if(!elf32 && !elf64_validate(image, imagesz, &info)) {
 		puts("ELF image invalid");
 		return E_UNSPEC;
 	}
@@ -84,13 +102,11 @@ int cmnd_execute(int opsz)
 
 	if(elf32)
 		elf32_load(image);
-	/*
 	else
 		elf64_load(image);
-	*/
 
 	if(info.load_size >= 12 && unaligned_load(load + 8) == unaligned_load("CoLo")) {
-		puts("Refusing to load \"CoLo\" chain loader");
+		puts("refusing to load \"CoLo\" chain loader");
 		return E_UNSPEC;
 	}
 
@@ -98,38 +114,46 @@ int cmnd_execute(int opsz)
 
 	net_down(0);
 
+	/* copy / adjust argument array */
+
+	assert(argc < MAX_CMND_ARGS);
+
+	if(elf32) {
+
+		for(indx = 0; indx < argc; ++indx)
+			args.w[indx] = (unsigned long) info.data_sect | (unsigned long) KPHYS(argv[indx]);
+		args.w[indx] = 0;
+
+	} else {
+
+		for(indx = 0; indx < argc; ++indx)
+			args.d[indx] = info.data_sect | (unsigned long) KPHYS(argv[indx]);
+		args.d[indx] = 0;
+	}
+
 	/* set up parameter block */
 
-	top = KSEG0(ram_restrict);
+	memsz = (1 << 31) | ram_restrict;
 	if(argc > 1)
-		top += argc;
+		memsz |= argc;
 
-	parm[0] = KSEG_TO_CKSEG(&__text);
+	parm[0] = info.data_sect | (unsigned long) KPHYS(&__text);
 	parm[1] = info.entry_point;
-	parm[2] = KSEG_TO_CKSEG(top);
-	parm[3] = KSEG_TO_CKSEG(argv);
+	parm[2] = memsz;
+	parm[3] = info.data_sect | (unsigned long) KPHYS(&args);
 	parm[4] = 0;
 	parm[5] = 0;
-
-#ifdef _DEBUG
-	{
-		int indx;
-
-		for(indx = 0; indx < 6; ++indx)
-			printf("%d: %08x.%08x\n", indx, double_word_hi(parm[indx]), double_word_lo(parm[indx]));
-	}
-#endif
-
-	/* turn on the light bar on the Qube FIXME */
-
-	*(volatile uint8_t *) BRDG_NCS0_BASE = LED_QUBE_LEFT | LED_QUBE_RIGHT;
 
 	/* enable 64-bit addressing */
 
 	if(!elf32)
 		MTC0(CP0_STATUS, MFC0(CP0_STATUS) | CP0_STATUS_KX);
 
-	/* relocate stack to top of RAM and call target */
+	/* turn on the light bar on the Qube FIXME */
+
+	*(volatile uint8_t *) BRDG_NCS0_BASE = LED_QUBE_LEFT | LED_QUBE_RIGHT;
+
+	/* go do the thing */
 
 	launch_kernel(parm);
 
