@@ -304,8 +304,9 @@ static inline void yield(void)
 #define LCD_MENU_ABORT						(-3)
 #define LCD_MENU_BAD_ARGS					(-4)
 
+extern void lcd_init(void);
 extern void lcd_line(int, const char *);
-extern int lcd_menu(const char **, unsigned, unsigned);
+extern int (*lcd_menu)(const char **, unsigned, unsigned);
 
 /* env.c */
 
@@ -332,6 +333,7 @@ extern int boot(int);
 #define NVFLAG_IDE_DISABLE_TIMING		(1 << 2)
 #define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
 #define NVFLAG_CONSOLE_DISABLE			(1 << 4)
+#define NVFLAG_HORZ_MENU					(1 << 5)
 
 #define NV_STORE_VERSION					2
 

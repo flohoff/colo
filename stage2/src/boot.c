@@ -18,7 +18,7 @@ static const char *option[] =
 /*  |------------| */
 
 	"BOOT SELECTION",
-	"Disk    (hda)",
+	"Disk (hda)",
 	"Network (NFS)",
 	"Network (TFTP)",
 	"Boot shell",

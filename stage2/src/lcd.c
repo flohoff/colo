@@ -30,6 +30,8 @@
 #define LCD_CGRAM_ADDR				0x40
 #define LCD_DDRAM_ADDR				0x80
 
+int (*lcd_menu)(const char **, unsigned, unsigned);
+
 /*
  * wait for LCD ready
  */
@@ -76,8 +78,8 @@ void lcd_line(int row, const char *str)
 static void lcd_prog_chars(void)
 {
 	static uint8_t data[] = {
-		0x01, 0x03, 0x07, 0x0f, 0x07, 0x03, 0x01, 0x00,		/* right arrow */
-		0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10, 0x00,		/* left arrow  */
+		0x01, 0x03, 0x07, 0x0f, 0x07, 0x03, 0x01, 0x00,		/* left arrow */
+		0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10, 0x00,		/* right arrow  */
 	};
 	static unsigned indx;
 
@@ -91,15 +93,152 @@ static void lcd_prog_chars(void)
 }
 
 /*
- * run menu on front panel
+ * centre string in buffer (pad with spaces)
  */
-int lcd_menu(const char **options, unsigned count, unsigned timeout)
+static void lcd_centre(char *buf, const char *str, unsigned siz)
+{
+	unsigned ofs, len, idx;
+
+	ofs = 0;
+	len = strlen(str);
+	if(len < siz)
+		ofs = (siz - len) / 2;
+
+	for(idx = 0; idx < siz; ++idx) {
+
+		buf[idx] = ' ';
+		if(idx >= ofs && idx < ofs + len)
+			buf[idx] = *str++;
+	}
+}
+
+/*
+ * scroll display replacing current contents
+ */
+static void lcd_scroll(const char *str, int dir)
+{
+	static char lcd[LCD_COLUMNS - 2];
+	char buf[LCD_COLUMNS - 2];
+	unsigned idx, num, mark;
+
+	lcd_centre(buf, str, sizeof(buf));
+
+	if(!dir) {
+
+		memcpy(lcd, buf, sizeof(lcd));
+
+		lcd_prog_chars();
+
+		LCD_WRITE(0, LCD_DDRAM_ADDR | LCD_ROW_OFFSET);
+		LCD_WRITE(1, '\001');
+		lcd_text(lcd, LCD_COLUMNS - 2);
+		LCD_WRITE(1, '\002');
+
+		return;
+	}
+
+	for(num = sizeof(lcd);;) {
+
+		if(dir < 0) {
+
+			for(idx = 1; idx < sizeof(lcd); ++idx)
+				lcd[idx - 1] = lcd[idx];
+			lcd[sizeof(lcd) - 1] = buf[sizeof(lcd) - num];
+
+		} else {
+
+			for(idx = sizeof(lcd); --idx;)
+				lcd[idx] = lcd[idx - 1];
+			lcd[0] = buf[num - 1];
+		}
+
+		LCD_WRITE(0, (LCD_DDRAM_ADDR | LCD_ROW_OFFSET) + 1);
+		lcd_text(lcd, LCD_COLUMNS - 2);
+
+		if(!--num)
+			break;
+
+		for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE / 33;)
+			;
+	}
+}
+
+/*
+ * run scrolling horizontal menu on front panel
+ */
+static int lcd_menu_horz(const char **options, unsigned count, unsigned timeout)
+{
+	unsigned done, mark, sel, btn, prv;
+	char buf[LCD_COLUMNS];
+	int dir;
+
+	if(count < 2)
+		return LCD_MENU_ABORT;
+
+	lcd_centre(buf, options[0], sizeof(buf));
+	LCD_WRITE(0, LCD_DDRAM_ADDR);
+	lcd_text(buf, sizeof(buf));
+
+	lcd_scroll(options[1], 0);
+
+	prv = -1;
+	sel = 1;
+
+	for(done = 0;; done += BUTTON_DEBOUNCE) {
+
+		if(timeout && done > timeout)
+			return LCD_MENU_TIMEOUT;
+
+		for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < ((CP0_COUNT_RATE + 500) / 1000) * BUTTON_DEBOUNCE;)
+			if(BREAK())
+				return LCD_MENU_ABORT;
+
+		btn = ~BUTTONS() & BUTTON_MASK;
+
+		if(prv < 0) {
+			if(btn)
+				continue;
+			prv = btn;
+		}
+
+		btn ^= prv;
+		prv ^= btn;
+		btn &= prv;
+
+		if(btn)
+			done = 0;
+
+		if(btn & (BUTTON_ENTER | BUTTON_SELECT))
+			return sel - 1;
+
+		if(btn & (BUTTON_UP | BUTTON_DOWN))
+			return LCD_MENU_CANCEL;
+
+		if(btn & (BUTTON_LEFT | BUTTON_RIGHT)) {
+
+			dir = 1;
+			if(btn & BUTTON_RIGHT)
+				dir = -1;
+
+			sel -= dir;
+			if(sel < 1 || sel >= count)
+				sel = count - sel - dir;
+
+			lcd_scroll(options[sel], dir);
+		}
+	}
+}
+
+/*
+ * run vertical menu on front panel
+ */
+static int lcd_menu_vert(const char **options, unsigned count, unsigned timeout)
 {
 	unsigned mark, done, row, top, btn;
 	int prv;
 
 	if(count < 2)
-		return -1;
+		return LCD_MENU_ABORT;
 
 	lcd_prog_chars();
 
@@ -141,6 +280,9 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 			prv ^= btn;
 			btn &= prv;
 
+			if(btn)
+				done = 0;
+
 			if(btn & (BUTTON_RIGHT | BUTTON_ENTER | BUTTON_SELECT))
 				return top + row - 1;
 
@@ -175,6 +317,14 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 }
 
 /*
+ * select menu type from NV
+ */
+void lcd_init(void)
+{
+	lcd_menu = (nv_store.flags & NVFLAG_HORZ_MENU) ? lcd_menu_horz : lcd_menu_vert;
+}
+
+/*
  * 'lcd' shell command
  */
 int cmnd_lcd(int opsz)
@@ -189,7 +339,7 @@ int cmnd_lcd(int opsz)
 }
 
 /*
- * 'menu' shell command
+ * 'select' shell command
  */
 int cmnd_menu(int opsz)
 {

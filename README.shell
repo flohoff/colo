@@ -144,7 +144,8 @@ Starts executing the ELF image that is in memory. If the image is compressed
 with 'gzip' it will be uncompressed automatically.
 
 To enable the kernel to load an initrd image you should pass a command line of
-the form 'initrd={initrd-size}@{initrd-start}'.
+the form 'initrd={initrd-size}@{initrd-start}' or 'rd_start={initrd-start}
+rd_size={initrd-size}' (depending on kernel version).
 
 Any arguments given will be passed to the executed program (the kernel needs
 to be patched for this to work). The passed 'argc' value is the argument count
@@ -238,8 +239,8 @@ debug flags.  Active flags are marked with a '*', inactive ones with a '.'.
 
 The flags currently defined are
 
-	0 - disable IDE drivers use of LBA (ie force CHS).
-	1 - disable IDE drivers use of LBA48 (ie force 24-bit LBA).
+	0 - disable IDE driver's use of LBA (ie force CHS).
+	1 - disable IDE driver's use of LBA48 (ie force 24-bit LBA).
 	2 - disable IDE timing change (by default the IDE driver will set the IDE
 	    interface timing to PIO mode 4 timings if the drive(s) supports PIO mode
 		 4, this flag will leave the timings set at their default, slow, values).
@@ -247,6 +248,7 @@ The flags currently defined are
 	    checking for the prescence of an IDE slave device. This flag must be
 		 set before the first 'mount' command for slave detection to work.
 	4 - disable serial console boot messages.
+	5 - use horizontal scrolling menus rather than vertical menus.
 
 net [{address netmask [gateway]} | down]
 ----------------------------------------

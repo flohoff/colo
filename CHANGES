@@ -1,11 +1,11 @@
 # $Id$
 
-CoLo 1.17 (xxxx-xx-xx)
+CoLo 1.17 (2005-02-20)
 ----------------------
 
 *	DHCP client now broadcasts DHCPREQUEST packets. It also includes the
-	"server identifier" option from the server in the request. Fixed minor bug
-	where we weren't appending an "end options" tag to the options. [RFC2131]
+	"server identifier" option from the server in the request. Fixed bug where
+	we weren't appending an "end options" tag to the options. [RFC2131]
 
 *	Dropped "no matching socket" diagnostic.
 
@@ -13,8 +13,13 @@ CoLo 1.17 (xxxx-xx-xx)
 
 *	Added "Cancel" option to 'paneld' menus.
 
-*	Added horizontal scrolling menus to 'paneld' (controlled by the '-h'
-	parameter).
+*	Added horizontal scrolling menus to 'paneld' (Controlled by the '-h'
+	option).
+
+*	Added horizontal scrolling menus to shell. Controlled by an NV flag (see
+	'nvflags' command in README.shell).
+
+*	Reset menu timeout when a button is pressed.
 
 CoLo 1.16 (2004-12-16)
 ----------------------

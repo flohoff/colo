@@ -182,6 +182,7 @@ static int cmnd_nvflags(int opsz)
 		"IDE timing disabled",
 		"IDE slave enabled",
 		"Console disabled",
+		"Horizontal menus",
 	};
 	unsigned indx, mask;
 	unsigned long bit;
