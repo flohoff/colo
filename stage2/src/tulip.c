@@ -24,6 +24,8 @@
 
 #define PHY_ID								1
 
+#define PHY_REG_CTRL						0
+# define PHY_REG_CTRL_RESET			(1 << 15)
 #define PHY_REG_CSTAT					20
 # define PHY_REG_CSTAT_100MBPS		(1 << 11)
 # define PHY_REG_CSTAT_DUPLEX			(1 << 12)
@@ -191,6 +193,56 @@ static unsigned phy_read_mii(unsigned phy, unsigned reg)
 	CSR(9) = 0;
 
 	return (data >> 1) & 0xffff;
+}
+
+/*
+ * write MII PHY register
+ */
+static void phy_write_mii(unsigned phy, unsigned reg, unsigned value)
+{
+	unsigned data;
+	int indx;
+
+	reg = (5 << 12) | (phy << 7) | (reg << 2) | 2;
+
+	for(indx = 0; indx < 32; ++indx) {
+
+		CSR(9) = CSR9_MDO;
+		bit_bang_delay();
+
+		CSR(9) = CSR9_MDO | CSR9_MDC;
+		bit_bang_delay();
+	}
+
+	for(indx = 0; indx < 16; ++indx) {
+
+		data = 0;
+		if(reg & (1 << 15))
+			data = CSR9_MDO;
+		reg <<= 1;
+
+		CSR(9) = data;
+		bit_bang_delay();
+
+		CSR(9) = data | CSR9_MDC;
+		bit_bang_delay();
+	}
+
+	for(indx = 0; indx < 16; ++indx) {
+
+		data = 0;
+		if(value & (1 << 15))
+			data = CSR9_MDO;
+		value <<= 1;
+
+		CSR(9) = data;
+		bit_bang_delay();
+
+		CSR(9) = data | CSR9_MDC;
+		bit_bang_delay();
+	}
+
+	CSR(9) = 0;
 }
 
 /*
@@ -594,6 +646,10 @@ static void setup_phy_mii(void)
 		CSR(13) = 0;
 		CSR(14) = 0;
 		CSR(15) = CSR15_ABM;
+
+		udelay(10 * 1000);
+
+		phy_write_mii(PHY_ID, PHY_REG_CTRL, PHY_REG_CTRL_RESET);
 
 		udelay(10 * 1000);
 	}
