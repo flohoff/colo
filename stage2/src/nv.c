@@ -84,32 +84,36 @@ void nv_get(void)
 			"Console on",
 		}
 	};
-	struct nv_store copy;
 	unsigned indx;
 	int select;
 
-	for(indx = 0; indx < sizeof(copy); ++indx)
-		((uint8_t *) &copy)[indx] = rtc_read(RTC_ADDR_STORE + indx);
+	memset(&nv_store, 0, sizeof(nv_store));
+	
+	for(indx = 0; indx < sizeof(nv_store); ++indx)
+		((uint8_t *) &nv_store)[indx] = rtc_read(RTC_ADDR_STORE + indx);
 
-	if(copy.vers == NV_STORE_VERSION && copy.size >= 3 && copy.size <= sizeof(copy) && copy.crc == nv_crc(&copy)) {
+	if(nv_store.size < 3 || nv_store.size > sizeof(nv_store) || nv_store.crc != nv_crc(&nv_store))
 		memset(&nv_store, 0, sizeof(nv_store));
-		memcpy(&nv_store, &copy, copy.size);
-	}
 
-	if(!(nv_store.flags & NVFLAG_CONSOLE_CONFIGURED)) {
+	if(nv_store.vers == NV_STORE_VERSION)
+		return;
 
-		nv_store.flags |= NVFLAG_CONSOLE_CONFIGURED | NVFLAG_CONSOLE_DISABLE;
+	if(nv_store.vers < 2) {
+
+		nv_store.flags &= ~NVFLAG_CONSOLE_DISABLE;
 
 		select = (pci_unit_id() == UNIT_ID_QUBE1);
 
 		if(lcd_menu(option[select], 3, 0) == 1)
 			select = !select;
 
-		if(!select)
-			nv_store.flags &= ~NVFLAG_CONSOLE_DISABLE;
+		if(select)
+			nv_store.flags |= NVFLAG_CONSOLE_DISABLE;
 
-		nv_put();
+		nv_store.vers = 2;
 	}
+
+	nv_put();
 }
 
 /*

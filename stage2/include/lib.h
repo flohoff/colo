@@ -332,9 +332,8 @@ extern int boot(int);
 #define NVFLAG_IDE_DISABLE_TIMING		(1 << 2)
 #define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
 #define NVFLAG_CONSOLE_DISABLE			(1 << 4)
-#define NVFLAG_CONSOLE_CONFIGURED		(1 << 7)
 
-#define NV_STORE_VERSION					1
+#define NV_STORE_VERSION					2
 
 struct nv_store
 {
