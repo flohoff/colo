@@ -17,7 +17,7 @@
 #include <sys/mman.h>
 
 #define VER_MAJOR					1
-#define VER_MINOR					3
+#define VER_MINOR					4
 
 #define APP_NAME					"flash-tool"
 
@@ -47,6 +47,11 @@ static volatile uint8_t *FLASH_P;
 static unsigned flash_id(void)
 {
 	unsigned id;
+
+	/* should give invalid ID is FLASH_P is cached */
+
+	FLASH_P[0] = CMND_RESET;
+	FLASH_P[1] = CMND_RESET;
 
 	UNLOCK1(UNLOCK1_VALUE);
 	UNLOCK2(UNLOCK2_VALUE);
@@ -224,14 +229,14 @@ static int key_wait(void)
 
 static void usage(void)
 {
-	puts("\nusage: " APP_NAME " [ -w ] [ -o offset ] file\n\n  version " _STR(VER_MAJOR) "." _STR(VER_MINOR) "\n");
+	puts("\nusage: " APP_NAME " [ -w ] [ -o offset ] [ -f ] file\n\n  version " _STR(VER_MAJOR) "." _STR(VER_MINOR) "\n");
 
 	exit(1);
 }
 
 int main(int argc, char *argv[])
 {
-	int opt, burn, fd, done, force;
+	int opt, burn, fd, done, force, trunc;
 	unsigned long offset;
 	unsigned id, indx;
 	off_t size;
@@ -242,10 +247,11 @@ int main(int argc, char *argv[])
 	force = 0;
 	offset = 0;
 	opterr = 0;
+	trunc = 0;
 
 	for(;;) {
 
-		opt = getopt(argc, argv, "o:wF");
+		opt = getopt(argc, argv, "o:wFf");
 		if(opt == -1)
 			break;
 
@@ -265,6 +271,10 @@ int main(int argc, char *argv[])
 
 			case 'F':
 				force = 1;
+				break;
+
+			case 'f':
+				trunc = 1;
 				break;
 
 			default:
@@ -346,7 +356,7 @@ int main(int argc, char *argv[])
 
 	} else {
 
-		fd = creat(argv[optind], 0664);
+		fd = open(argv[optind], O_CREAT | O_TRUNC | O_WRONLY | (trunc ? 0 : O_EXCL), 0664);
 		if(fd == -1) {
 			fprintf(stderr, APP_NAME ": failed to create %s (%s)\n", argv[optind], strerror(errno));
 			return 1;
