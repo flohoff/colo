@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	time_t wall;
 	int which;
 
-	if(!btn_open() || !lcd_open())
+	if(!lcd_open())
 		return -1;
 
 	for(roller = 0;;) {
@@ -220,7 +220,6 @@ int main(int argc, char *argv[])
 
 				case 0:
 					lcd_close();
-					btn_close();
 
 					execv(menu_actions[which][0], (char **) menu_actions[which]);
 

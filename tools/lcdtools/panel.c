@@ -17,10 +17,12 @@
 #include "panel.h"
 
 #define BTN_PHYS_ADDR			0x1d000000
+#define BTN_PHYS_SIZE			4
 
 #define BTN_READ()				(~btn[0]>>24)
 
 #define LCD_PHYS_ADDR			0x1f000000
+#define LCD_PHYS_SIZE			0x20
 
 #define LCD_READ(r)				(lcd[!!(r)*4]>>24)
 #define LCD_WRITE(r,v)			do{lcd[!!(r)*4]=(unsigned)(v)<<24;}while(0)
@@ -78,42 +80,30 @@ int lcd_open(void)
 		return 0;
 	}
 
-	lcd = mmap(NULL, 32, PROT_READ | PROT_WRITE, MAP_SHARED, fd, LCD_PHYS_ADDR);
-	if(lcd == MAP_FAILED)
+	lcd = mmap(NULL, LCD_PHYS_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, LCD_PHYS_ADDR);
+	if(lcd == MAP_FAILED) {
 		fprintf(stderr, "%s: failed to map /dev/mem (%s)\n", getapp(), strerror(errno));
+		close(fd);
+		return 0;
+	}
+
+	btn = mmap(NULL, BTN_PHYS_SIZE, PROT_READ, MAP_SHARED, fd, BTN_PHYS_ADDR);
+	if(btn == MAP_FAILED) {
+		fprintf(stderr, "%s: failed to map /dev/mem (%s)\n", getapp(), strerror(errno));
+		munmap((void *) lcd, LCD_PHYS_SIZE);
+		close(fd);
+		return 0;
+	}
 
 	close(fd);
 
-	return lcd != MAP_FAILED;
+	return 1;
 }
 
 void lcd_close(void)
 {
-	munmap((void *) lcd, 32);
-}
-
-int btn_open(void)
-{
-	int fd;
-
-	fd = open("/dev/mem", O_RDONLY | O_SYNC);
-	if(fd == -1) {
-		fprintf(stderr, "%s: failed to open /dev/mem (%s)\n", getapp(), strerror(errno));
-		return 0;
-	}
-
-	btn = mmap(NULL, 4, PROT_READ, MAP_SHARED, fd, BTN_PHYS_ADDR);
-	if(btn == MAP_FAILED)
-		fprintf(stderr, "%s: failed to map /dev/mem (%s)\n", getapp(), strerror(errno));
-
-	close(fd);
-
-	return btn != MAP_FAILED;
-}
-
-void btn_close(void)
-{
-	munmap((void *) btn, 4);
+	munmap((void *) lcd, LCD_PHYS_SIZE);
+	munmap((void *) btn, BTN_PHYS_SIZE);
 }
 
 int btn_read(void)
