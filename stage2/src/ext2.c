@@ -576,10 +576,10 @@ int cmnd_mount(int opsz)
 	if(argc > 2)
 		return E_ARGS_OVER;
 
-	env_put("mounted-volume", NULL, VAR_OTHER);
-
 	if(vol.mounted)
 		ext2_umount(&vol);
+
+	env_put("mounted-volume", NULL, VAR_OTHER);
 
 	vol.device = ide_open(argc > 1 ? argv[1] : NULL);
 	if(!vol.device)

@@ -8,12 +8,14 @@
 
 #include "lib.h"
 
+struct item {
+	char		*item;
+	unsigned	tag;
+};
+
 static union {
-	struct {
-		char		*item;
-		unsigned	tag;
-	} p[1];
-	char t[1024];
+	struct item	p[1];
+	char			t[1024];
 } environ;
 
 static unsigned nitems;
@@ -98,6 +100,40 @@ int env_put(const char *name, const char *value, unsigned tag)
 	return 1;
 }
 
+static void env_dump(void)
+{
+	struct item env[nitems];
+	struct item hold;
+	unsigned indx;
+	int swap;
+
+	if(!nitems)
+		return;
+
+	memcpy(env, environ.p, sizeof(env));
+
+	do {
+
+		swap = 0;
+
+		for(indx = 1; indx < nitems; ++indx)
+			if(strcmp(env[indx - 1].item, env[indx].item) > 0) {
+
+				hold = env[indx];
+				env[indx] = env[indx - 1];
+				env[indx - 1] = hold;
+
+				swap = 1;
+			}
+
+	} while(swap);
+
+	for(indx = 0; indx < nitems; ++indx) {
+		putstring_safe(env[indx].item, -1);
+		putchar('\n');
+	}
+}
+
 int cmnd_environ(int opsz)
 {
 	int indx;
@@ -106,10 +142,7 @@ int cmnd_environ(int opsz)
 
 		case 1:
 
-			for(indx = 0; indx < nitems; ++indx) {
-				putstring_safe(environ.p[indx].item, -1);
-				putchar('\n');
-			}
+			env_dump();
 
 			return E_NONE;
 

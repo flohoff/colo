@@ -188,7 +188,7 @@ void tulip_poll(void)
 	unsigned curr, stat, size;
 	struct frame *frame;
 
-	assert(nic_avail);
+	assert(net_is_up());
 
 	while(rx_curr != rx_fill) {
 
@@ -244,6 +244,8 @@ void tulip_out(struct frame *frame)
 {
 	unsigned size, curr;
 	void *data;
+
+	assert(net_is_up());
 
 	if(tx_next - tx_curr >= TX_RING_SIZE) {
 		frame_free(frame);
@@ -395,6 +397,8 @@ void tulip_init(void)
 
 int tulip_up(void)
 {
+	assert(!net_is_up());
+
 	if(!nic_avail)
 		return 0;
 
@@ -416,8 +420,7 @@ int tulip_up(void)
 
 void tulip_down(void)
 {
-	if(!nic_avail)
-		return;
+	assert(net_is_up());
 
 	tulip_reset();
 

@@ -19,7 +19,7 @@ CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&
 
 MIPSFLAGS= -mno-abicalls -fno-pic -mips2 $(CC_DEP)
 
-CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-builtin -nostdlib -fno-strict-aliasing $(MIPSFLAGS)
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-builtin -nostdlib -fno-strict-aliasing $(MIPSFLAGS)
 ASFLAGS= $(MIPSFLAGS)
 CPPFLAGS= -nostdinc -Iinclude -I../include -I$(shell dirname `$(CC) --print-libgcc-file-name`)/include -D_DEBUG
 

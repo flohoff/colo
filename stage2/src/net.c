@@ -106,28 +106,28 @@ int net_up(void)
 	net_init();
 	arp_flush_all();
 	udp_close_all();
-	net_alive = tulip_up();
 
-	env_remove_tag(VAR_NET);
+	net_alive = tulip_up();
 
 	if(net_alive) {
 
 		DPUTS("net: interface up");
 
-		if(ip_addr) {
-			env_put("ip-address", inet_ntoa(ip_addr), VAR_NET);
-			DPRINTF("  address %s\n", inet_ntoa(ip_addr));
-		}
+		env_put("ip-address", inet_ntoa(ip_addr), VAR_NET);
+		if(ip_addr)
+			DPRINTF("  address     %s\n", inet_ntoa(ip_addr));
 
-		if(ip_mask) {
-			env_put("ip-netmask", inet_ntoa(ip_mask), VAR_NET);
-			DPRINTF("  netmask %s\n", inet_ntoa(ip_mask));
-		}
+		env_put("ip-netmask", inet_ntoa(ip_mask), VAR_NET);
+		if(ip_mask)
+			DPRINTF("  netmask     %s\n", inet_ntoa(ip_mask));
 
-		if(ip_gway) {
-			env_put("ip-gateway", inet_ntoa(ip_gway), VAR_NET);
-			DPRINTF("  gateway %s\n", inet_ntoa(ip_gway));
-		}
+		env_put("ip-gateway", inet_ntoa(ip_gway), VAR_NET);
+		if(ip_gway)
+			DPRINTF("  gateway     %s\n", inet_ntoa(ip_gway));
+
+		env_put("ip-name-server", inet_ntoa(ip_nsvr), VAR_NET);
+		if(ip_nsvr)
+			DPRINTF("  name server %s\n", inet_ntoa(ip_nsvr));
 	}
 
 	return net_alive;
@@ -136,13 +136,22 @@ int net_up(void)
 /*
  * shutdown network interface
  */
-void net_down(void)
+void net_down(int dhcp)
 {
 	if(!net_alive)
 		return;
 
-	net_alive = 0;
 	tulip_down();
+	net_alive = 0;
+
+	env_remove_tag(VAR_NET);
+	if(!dhcp)
+		env_remove_tag(VAR_DHCP);
+
+	ip_addr = 0;
+	ip_mask = 0;
+	ip_gway = 0;
+	ip_nsvr = 0;
 
 	DPUTS("net: interface down");
 }
@@ -160,7 +169,7 @@ int cmnd_net(int opsz)
 		if(argc > 2)
 			return E_ARGS_OVER;
 
-		net_down();
+		net_down(0);
 
 		return E_NONE;
 	}
@@ -218,9 +227,7 @@ int cmnd_net(int opsz)
 		return E_UNSPEC;
 	}
 
-	env_remove_tag(VAR_DHCP);
-
-	net_down();
+	net_down(0);
 
 	ip_addr = addr;
 	ip_mask = mask;

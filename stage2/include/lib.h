@@ -216,7 +216,7 @@ extern int file_load(void *, void *, unsigned long);
 /* net.c */
 
 extern int net_up(void);
-extern void net_down(void);
+extern void net_down(int);
 
 #define net_is_up()							({ extern int net_alive; net_alive; })
 

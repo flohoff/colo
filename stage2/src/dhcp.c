@@ -251,7 +251,6 @@ static int dhcp_config(void)
 	ip_nsvr = dhcp_nsvr;
 
 	if(!net_up()) {
-		env_remove_tag(VAR_DHCP);
 		puts("no interface");
 		return 0;
 	}
@@ -268,13 +267,7 @@ int dhcp(void)
 	struct frame *frame;
 	int sock, stat;
 
-	env_remove_tag(VAR_DHCP);
-
-	net_down();
-
-	ip_addr = 0;
-	ip_mask = 0;
-	ip_gway = 0;
+	net_down(0);
 
 	if(!net_up()) {
 		puts("no interface");
@@ -310,7 +303,7 @@ int dhcp(void)
 			if(BREAK()) {
 
 				udp_close(sock);
-				net_down();
+				net_down(0);
 
 				puts("aborted");
 				return 0;
@@ -321,7 +314,7 @@ int dhcp(void)
 				if(++retries == DHCP_SEND_PACKETS_MAX) {
 
 					udp_close(sock);
-					net_down();
+					net_down(0);
 
 					puts("no response");
 					return 0;
@@ -343,9 +336,14 @@ int dhcp(void)
 					if(stat > 0) {
 
 						udp_close(sock);
-						net_down();
+						net_down(1);
 
-						return dhcp_config();
+						if(!dhcp_config()) {
+							env_remove_tag(VAR_DHCP);
+							return 0;
+						}
+
+						return 1;
 					}
 
 					break;

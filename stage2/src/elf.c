@@ -318,7 +318,7 @@ int cmnd_execute(int opsz)
 	if(!func)
 		return E_UNSPEC;
 
-	net_down();
+	net_down(0);
 
 	/* turn on the light bar on the Qube FIXME */
 
