@@ -60,6 +60,7 @@
 
 static struct ide_device
 {
+	const char		*name;
 	unsigned			select;
 	unsigned			flags;
 	unsigned			mode;
@@ -69,7 +70,14 @@ static struct ide_device
 	unsigned			ncyls;
 	unsigned			nheads;
 
-} ide_bus[2];
+} ide_bus[2] = {
+	{
+		.name = "hda"
+	}, {
+		.name = "hdb",
+		.select = REG_HEAD_SLAVE
+	}
+};
 
 struct part_entry
 {
@@ -125,12 +133,8 @@ static void ide_reset_async(void)
 		IDE_REG_CONTROL = REG_CONTROL_DEFAULT;
 		udelay(500);
 
-		memset(ide_bus, 0, sizeof(ide_bus));
-
-		ide_bus[0].flags = FLAG_RESETTING;
-		ide_bus[1].flags = FLAG_RESETTING;
-
-		ide_bus[1].select = REG_HEAD_SLAVE;
+		ide_bus[0].flags |= FLAG_RESETTING;
+		ide_bus[1].flags |= FLAG_RESETTING;
 
 		reg_head = -1;
 	}
@@ -146,10 +150,8 @@ static int ide_reset(void)
 
 	ide_reset_async();
 
-	/* do a full reset if we come back this way */
-
-	ide_bus[0].flags = 0;
-	ide_bus[1].flags = 0;
+	ide_bus[0].flags &= ~FLAG_RESETTING;
+	ide_bus[1].flags &= ~FLAG_RESETTING;
 
 	timeout = TIMEOUT_RESET;
 
@@ -658,12 +660,14 @@ static int atapi_sense(struct ide_device *dev)
  */
 int atapi_read_sectors(struct ide_device *dev, void *data, unsigned long addr, unsigned count)
 {
+	static char emsg[32];
 	unsigned work, retry, mark;
 	unsigned long end;
 	union {
 		uint16_t	h[6];
 		uint8_t	b[1];
 	} cmnd;
+	char *cause;
 	int sense;
 
 	ide_select(dev);
@@ -697,19 +701,35 @@ int atapi_read_sectors(struct ide_device *dev, void *data, unsigned long addr, u
 			if(retry == 20)
 				return -1;
 
-			/*
-			 * 062800 medium change
-			 * 062900 reset complete
-			 * 023a00 medium not present
-			 * 020401 spinning up
-			 */
-
 			sense = atapi_sense(dev);
 
 			if(sense < 0)
+
 				ide_reset();
-			else
-				DPRINTF("ide: ATAPI retry (sense 0x%06x)\n", sense);
+
+			else {
+
+				cause = emsg;
+
+				switch(sense) {
+					case 0x020401:
+						cause = "spinning up";
+						break;
+					case 0x023a00:
+						DPUTS("ide: error { medium not present }");
+						return -1;
+					case 0x062800:
+						cause = "medium change";
+						break;
+					case 0x062900:
+						cause = "reset complete";
+						break;
+					default:
+						sprintf(cause, "#%06x", sense);
+				}
+
+				DPRINTF("ide: error { %s }, retry\n", cause);
+			}
 
 			for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE / 2;)
 				;
