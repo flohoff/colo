@@ -58,7 +58,7 @@
 #define FLAG_LBA_48					(1 << 3)
 #define FLAG_ATAPI					(1 << 4)
 
-#define PART_TYPE_EXT2				0x82
+#define PART_TYPE_EXT2				0x83
 #define PART_TYPE_RAID				0xfd
 
 static struct ide_device
