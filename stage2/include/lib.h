@@ -349,7 +349,7 @@ struct nv_store
 
 extern struct nv_store nv_store;
 
-extern void nv_get(void);
+extern void nv_get(int);
 extern void nv_put(void);
 
 #endif

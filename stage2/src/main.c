@@ -40,10 +40,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	pci_init(bank0, bank1);
 
-	if(switches & BUTTON_CLEAR)
-		nv_get();
-	else
-		nv_put();
+	nv_get(!(switches & BUTTON_CLEAR));
 
 	if(!(nv_store.flags & NVFLAG_CONSOLE_DISABLE))
 		serial_enable(1);

@@ -10,6 +10,8 @@
 #include "cpu.h"
 #include "galileo.h"
 
+#define MENU_TIMEOUT				(10 * 1000 * 1000)
+
 #define RTC_ADDR_STORE			0x20
 
 struct nv_store nv_store;
@@ -70,7 +72,7 @@ static unsigned nv_crc(struct nv_store *store)
 /*
  * load 'nv_store' from RTC RAM
  */
-void nv_get(void)
+void nv_get(int clear)
 {
 	static const char *option[][3] = {
 		{
@@ -89,20 +91,23 @@ void nv_get(void)
 
 	memset(&nv_store, 0, sizeof(nv_store));
 	
-	for(indx = 0; indx < sizeof(nv_store); ++indx)
-		((uint8_t *) &nv_store)[indx] = rtc_read(RTC_ADDR_STORE + indx);
+	if(!clear) {
 
-	if(nv_store.size < 3 || nv_store.size > sizeof(nv_store) || nv_store.crc != nv_crc(&nv_store))
-		memset(&nv_store, 0, sizeof(nv_store));
+		for(indx = 0; indx < sizeof(nv_store); ++indx)
+			((uint8_t *) &nv_store)[indx] = rtc_read(RTC_ADDR_STORE + indx);
 
-	if(nv_store.vers == NV_STORE_VERSION)
-		return;
+		if(nv_store.size < 3 || nv_store.size > sizeof(nv_store) || nv_store.crc != nv_crc(&nv_store))
+			memset(&nv_store, 0, sizeof(nv_store));
+
+		if(nv_store.vers == NV_STORE_VERSION)
+			return;
+	}
 
 	if(nv_store.vers < 2) {
 
 		disable = (pci_unit_id() == UNIT_ID_QUBE1);
 
-		if(lcd_menu(option[disable], 3, 0) == 1)
+		if(lcd_menu(option[disable], 3, MENU_TIMEOUT) == 1)
 			disable = !disable;
 
 		nv_store.flags &= ~NVFLAG_CONSOLE_DISABLE;
