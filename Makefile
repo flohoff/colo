@@ -8,7 +8,7 @@ TARGET1= colo-rom-image.bin
 TARGET2= colo-chain.elf
 STAGE1= stage1/$(TARGET1)
 CHAIN= chain/$(TARGET2)
-SUBDIRS= stage2 stage1 chain
+SUBDIRS= tools/elf2rfx stage2 stage1 chain
 BINDIR= binaries
 
 all: subdirs $(TARGET1) $(TARGET2)
