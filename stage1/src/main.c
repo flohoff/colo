@@ -62,6 +62,8 @@ static const char *dram_config(size_t *bank, size_t size)
 	static char buf[16];
 	char *ptr;
 
+#if 0
+
 	ptr = to_decimal(buf, bank[0] >> 20);
 	*ptr++ = '/';
 	ptr = to_decimal(ptr, bank[1] >> 20);
@@ -72,6 +74,20 @@ static const char *dram_config(size_t *bank, size_t size)
 	*ptr++ = '-';
 	*ptr++ = '>';
 	*to_decimal(ptr, size >> 20) = '\0';
+
+#else
+
+	unsigned idx;
+	char chr;
+
+	ptr = to_decimal(buf, size >> 20);
+	idx = 0;
+	do {
+		chr = "MB RAM"[idx];
+		ptr[idx++] = chr;
+	} while(chr);
+
+#endif
 
 	return buf;
 }

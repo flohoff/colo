@@ -1,5 +1,16 @@
 # $Id$
 
+CoLo 1.17 (xxxx-xx-xx)
+----------------------
+
+*	DHCP client now broadcasts DHCPREQUEST packets. It also includes the
+	"server identifier" option from the server in the request. Fixed minor bug
+	where we weren't appending an "end options" tag to the options. [RFC2131]
+
+*	Dropped "no matching socket" diagnostic.
+
+*	Simplified display of memory size on boot.
+
 CoLo 1.16 (2004-12-16)
 ----------------------
 

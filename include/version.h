@@ -10,7 +10,7 @@
 #define _VERSION_H_
 
 #define VER_MAJOR					1
-#define VER_MINOR					16
+#define VER_MINOR					17
 
 #endif
 

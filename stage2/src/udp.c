@@ -40,11 +40,8 @@ void udp_in(struct frame *frame)
 
 	for(indx = 0;; ++indx) {
 
-		if(indx == elements(socks)) {
-			DPRINTF("udp: no matching socket %s:%u --> ", inet_ntoa(frame->ip_src), frame->udp_src);
-			DPRINTF("%s:%u\n", inet_ntoa(frame->ip_dst), port);
+		if(indx == elements(socks))
 			return;
-		}
 
 		if(socks[indx].inuse && socks[indx].port == port && (!socks[indx].peer_port ||
 			(socks[indx].peer_port == frame->udp_src && socks[indx].peer_ip == frame->ip_src))) {
