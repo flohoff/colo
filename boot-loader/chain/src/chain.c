@@ -1,13 +1,15 @@
 /*
  * (C) P.Horton 2004
  *
- * $Id: loader.c 4 2004-03-28 16:06:07Z pdh $
+ * $Id$
  *
  * This code is covered by the GNU General Public License. For details see the file "COPYING".
  */
 
 #include "lib.h"
 #include "cpu.h"
+#include "galileo.h"
+#include "cobalt.h"
 
 typedef unsigned short		__u16;
 typedef unsigned				__u32;
@@ -25,24 +27,28 @@ extern void puts(const char *);
 extern void drain(void);
 extern void putchar(int);
 
-#if 0
-
-static void outhex(unsigned long val, unsigned count)
-{
-	if(count > 1)
-		outhex(val >> 4, count - 1);
-
-	val = (val & 0xf) + '0';
-
-	putchar(val > '9' ? val + 7 : val);
-}
-
-#endif
-
+/*
+ * fatal error, hang
+ */
 static void __attribute__((noreturn)) fatal(void)
 {
-	for(;;)
-		;
+	unsigned leds;
+
+	/*
+	 * writing 0x0f to the LED register resets the unit
+	 * so we can't turn on all 4 LEDs together
+	 *
+	 * on the Qube we Flash the light bar and on the RaQ
+	 * we flash the "power off" and "web" LEDs alternately
+	 */
+
+	for(leds = LED_RAQ_WEB | LED_QUBE_LEFT | LED_QUBE_RIGHT;;) {
+
+		*(volatile uint8_t *) BRDG_NCS0_BASE = leds;
+		udelay(400000);
+
+		leds ^= LED_RAQ_WEB | LED_RAQ_POWER_OFF | LED_QUBE_LEFT | LED_QUBE_RIGHT;
+	}
 }
 
 /*
@@ -74,7 +80,7 @@ void *memcpy(void *dst, const void *src, size_t size)
 /*
  * C library function 'memset'
  */
-void *memset(void *dst, int val, size_t size)
+static void *memset(void *dst, int val, size_t size)
 {
 	void *ptr, *end;
 
@@ -101,6 +107,17 @@ void *memset(void *dst, int val, size_t size)
 }
 
 /*
+ * output value as decimal
+ */
+static void out_decimal(unsigned long val)
+{
+	if(val >= 10)
+		out_decimal(val / 10);
+
+	putchar(val % 10 + '0');
+}
+
+/*
  * flush entire D-cache
  */
 static void dcache_flush_all(void)
@@ -114,9 +131,31 @@ static void dcache_flush_all(void)
 }
 
 /*
+ * read memory bank sizes from Galileo
+ */
+void memory_info(size_t *bank)
+{
+	unsigned lo, hi;
+
+	lo = BRDG_REG_WORD(BRDG_REG_RAS01_LOW_DECODE) << 21;
+	hi = (BRDG_REG_WORD(BRDG_REG_RAS01_HIGH_DECODE) + 1) << 21;
+
+	bank[0] = hi - lo;
+	if(bank[0] > 256 << 20)
+		bank[0] = 0;
+
+	lo = BRDG_REG_WORD(BRDG_REG_RAS23_LOW_DECODE) << 21;
+	hi = (BRDG_REG_WORD(BRDG_REG_RAS23_HIGH_DECODE) + 1) << 21;
+
+	bank[1] = hi - lo;
+	if(bank[1] > 256 << 20)
+		bank[1] = 0;
+}
+
+/*
  * load boot loader from ELF image that follows
  */
-void chain(void)
+void chain(unsigned arg)
 {
 	extern char __data, __edata;
 	extern char __bss, __ebss;
@@ -126,19 +165,35 @@ void chain(void)
 	Elf32_Ehdr *eh;
 	Elf32_Phdr *ph;
 	unsigned indx;
+	size_t ram[2];
 
 	/* initialise .bss / .data */
 
 	memcpy(&__data, &__etext, &__edata - &__data);
 	memset(&__bss, 0, &__ebss - &__bss);
 
-	/* */
+	/* say hello */
 
 	serial_init();
-	puts("[ CHAIN LOADER ]");
+	puts("chain: running");
 	drain();
 
-	/* */
+	/* get memory bank sizes */
+
+	memory_info(ram);
+
+	putstring("chain: bank 0 ");
+	out_decimal(ram[0]);
+	putstring("MB\nchain: bank 1 ");
+	out_decimal(ram[1]);
+	putchar('\n');
+
+	if(KSEG0(ram[0] + ram[1]) != (void *) arg) {
+		puts("chain: MEMORY SIZE MISMATCH");
+		fatal();
+	}
+
+	/* load stage2 */
 
 	eh = (Elf32_Ehdr *) &__stage2;
 
@@ -154,7 +209,7 @@ void chain(void)
 		!eh->e_phnum ||
 		eh->e_phentsize != sizeof(Elf32_Phdr))
 	{
-		puts("[ BAD ELF HEADER ]");
+		puts("chain: BAD ELF HEADER");
 		fatal();
 	}
 
@@ -169,7 +224,7 @@ void chain(void)
 				(ph[indx].p_filesz & 3) ||
 				(ph[indx].p_memsz & 3))
 			{
-				puts("[ BAD ELF SECTION ]");
+				puts("chain: BAD ELF SECTION");
 				fatal();
 			}
 
@@ -183,10 +238,10 @@ void chain(void)
 
 	/* jump to it */
 
-	puts("[ LAUNCHING ]");
+	puts("chain: starting stage2");
 	drain();
 
-	((void (*)(size_t, size_t, unsigned)) eh->e_entry)(128 << 20, 0, 0); // FIXME
+	((void (*)(size_t, size_t, unsigned)) eh->e_entry)(ram[0], ram[1], 0);
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

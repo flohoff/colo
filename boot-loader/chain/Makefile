@@ -22,7 +22,7 @@ all:
 
 binary: $(TARG).strip
 
-$(TARG).stage2:
+$(TARG).stage2: ../stage2/stage2.strip
 	echo -e '\t.section .stage2\n\t.incbin "../stage2/stage2.strip"' | $(AS) -o $@
 
 $(TARG).strip: $(TARG)
