@@ -8,6 +8,8 @@
 
 SUBDIRS= liblcd putlcd paneld e2fsck-lcd
 
+SUBDIRS+= $(if $(wildcard /usr/lib/liblua50.*), fpanel)
+
 all:
 	set -e; for x in $(SUBDIRS); do $(MAKE) -C $$x; done
 
