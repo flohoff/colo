@@ -55,8 +55,6 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	printf("pci: unit type <%s>\n", pci_unit_name());
 
-	lcd_init();
-
 	tulip_init();
 
 	ide_init();

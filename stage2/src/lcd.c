@@ -30,7 +30,9 @@
 #define LCD_CGRAM_ADDR				0x40
 #define LCD_DDRAM_ADDR				0x80
 
-int (*lcd_menu)(const char **, unsigned, unsigned);
+static int lcd_menu_init(const char **, unsigned, unsigned);
+
+int (*lcd_menu)(const char **, unsigned, unsigned) = lcd_menu_init;
 
 /*
  * wait for LCD ready
@@ -317,11 +319,13 @@ static int lcd_menu_vert(const char **options, unsigned count, unsigned timeout)
 }
 
 /*
- * select menu type from NV
+ * select menu type from NV and run menu
  */
-void lcd_init(void)
+static int lcd_menu_init(const char **options, unsigned count, unsigned timeout)
 {
 	lcd_menu = (nv_store.flags & NVFLAG_HORZ_MENU) ? lcd_menu_horz : lcd_menu_vert;
+
+	return lcd_menu(options, count, timeout);
 }
 
 /*

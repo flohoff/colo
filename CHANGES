@@ -3,6 +3,8 @@
 CoLo 1.19 (xxxx-xx-xx)
 ----------------------
 
+*	Fixed stupid bug in ordering of LCD initialisation.
+
 *	Added "README.tools" to tools directory.
 
 *	Renamed 'md5rom' to 'copy-rom' and added the ability to save a copy of the
