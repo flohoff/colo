@@ -144,8 +144,8 @@ Starts executing the ELF image that is in memory. If the image is compressed
 with 'gzip' it will be uncompressed automatically.
 
 To enable the kernel to load an initrd image you should pass a command line of
-the form 'initrd={initrd-size}@{initrd-start}' or 'rd_start={initrd-start}
-rd_size={initrd-size}' (depending on kernel version).
+the form 'initrd={initrd-size}@{initrd-start}' or 'rd_start=0x{initrd-start}
+rd_size=0x{initrd-size}' (depending on kernel version).
 
 Any arguments given will be passed to the executed program (the kernel needs
 to be patched for this to work). The passed 'argc' value is the argument count
