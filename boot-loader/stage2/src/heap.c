@@ -107,7 +107,7 @@ int cmnd_heap(int opsz)
 	else
 		puts("no image loaded");
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

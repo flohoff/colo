@@ -127,7 +127,7 @@ int cmnd_history(int opsz)
 		printf("{%s}\n", text);
 	}
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

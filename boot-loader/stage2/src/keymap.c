@@ -143,7 +143,7 @@ int cmnd_keyshow(int opsz)
 
 		if(indx == sizeof(buf)) {
 			puts("key sequence too long");
-			break;
+			return E_UNSPEC;
 		}
 
 		buf[indx++] = getch();
@@ -157,7 +157,7 @@ int cmnd_keyshow(int opsz)
 	putstring_safe(buf, indx);
 	puts("\"");
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 int cmnd_keymap(int opsz)
@@ -176,7 +176,7 @@ int cmnd_keymap(int opsz)
 			puts(keymaps[indx].name);
 		}
 
-		return E_SUCCESS;
+		return E_NONE;
 	}
 
 	for(indx = elements(keymaps); indx--;)
@@ -184,12 +184,12 @@ int cmnd_keymap(int opsz)
 		if(!strncasecmp(argv[1], keymaps[indx].name, argsz[1])) {
 
 			keymap = &keymaps[indx];
-			return E_SUCCESS;
+			return E_NONE;
 		}
 
 	puts("unrecognised keymap");
 
-	return E_SUCCESS;
+	return E_UNSPEC;
 }
 
 /* vi:set ts=3 sw=3 cin: */

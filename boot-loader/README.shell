@@ -8,9 +8,10 @@ pressing SPACE on a serial terminal connected to the serial port on the unit,
 just before the unit starts the boot process.
 
 If no SPACE character is detected the boot loader starts the boot process
-using the default command sequence
+using the default script :-
 
 	mount
+	-script /boot/default.boot
 	load /boot/vmlinux.gz
 	execute
 
@@ -28,6 +29,12 @@ history.
 The PAGE-UP/PAGE-DOWN keys are mapped to forward/backward word for terminals
 that support these keys.
 
+If a line begins with a '#' the whole line is ignored. This can be used to
+include comments in script files.
+
+If a command begins with a '-' an executing script will not be aborted even if
+the command fails.
+
 SHELL COMMANDS
 --------------
 
@@ -35,9 +42,9 @@ mount [partition]
 -----------------
 
 Mounts the selected partition as an EXT2/3 filing system. The partition
-argument is a number between 1 and 4. If omitted the first partition marked as
-a bootable Linux partition will be mounted. If no partition is marked bootable
-the first Linux partition will be mounted.
+argument is a Linux style device name (eg "hda2"). If omitted the first
+partition marked as a bootable Linux partition will be mounted. If no
+partition is marked bootable the first Linux partition will be mounted.
 
 ls [path ...]
 -------------
@@ -55,6 +62,12 @@ load path
 ---------
 
 Load the specified file into memory.
+
+script path
+-----------
+
+Runs the commands within the specified file. Execution of a script will be
+aborted if a command fails, unless the failing command is preceded by a '-'.
 
 execute [arguments ...]
 -----------------------
@@ -149,14 +162,19 @@ List available commands and their usage.
 dflags [number ...]
 -------------------
 
-Toggles the debug flags listed, and then lists the enabled flags. Flags
-currently defined are
+Toggles the specified debug flags and then lists state of all the debug flags.
+Active flags are marked with a '*', inactive ones with a '.'.
+
+The flags currently defined are
 
 	0 - disable IDE drivers use of LBA (ie force CHS).
 	1 - disable IDE drivers use of LBA48 (ie force 24-bit LBA).
 	2 - disable IDE timing change (by default the IDE driver will set the IDE
-	    interface timing to PIO mode 4 timings if the drive supports PIO mode 4,
-		 this flag will leave the timings set at their default, slow, values).
+	    interface timing to PIO mode 4 timings if the drive(s) supports PIO mode
+		 4, this flag will leave the timings set at their default, slow, values).
+	3 - enable IDE slave detection. Normally the boot loader does not bother
+	    checking for the prescence of an IDE slave device. This flag must be
+		 set before the first 'mount' command for slave detection to work.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

@@ -35,7 +35,9 @@ static int cmnd_help(int);
 static int cmnd_eval(int);
 static int cmnd_reboot(int);
 static int cmnd_dflags(int);
+static int cmnd_script(int);
 
+static const char *script;
 size_t argsz[32];
 char *argv[32];
 unsigned argc;
@@ -70,6 +72,7 @@ static struct
 	{ "ls",				cmnd_ls,				0,					"[path ...]",					},
 	{ "cd",				cmnd_cd,				0,					"[path]",						},
 	{ "load",			cmnd_load,			0,					"path",							},
+	{ "script",			cmnd_script,		0,					"path",							},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",			},
@@ -92,7 +95,7 @@ static int cmnd_arguments(int opsz)
 		puts("}");
 	}
 	
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 #endif
@@ -106,6 +109,7 @@ static int cmnd_dflags(int opsz)
 		"IDE LBA disabled",
 		"IDE LBA48 disabled",
 		"IDE timing disabled",
+		"IDE slave enabled",
 	};
 	unsigned indx, mask;
 	unsigned long bit;
@@ -127,10 +131,9 @@ static int cmnd_dflags(int opsz)
 	debug_flags ^= mask;
 
 	for(indx = 0; indx < elements(msg); ++indx)
-		if(debug_flags & (1 << indx))
-			printf("%u: %s\n", indx, msg[indx]);
+		printf("%2u: %c %s\n", indx, (debug_flags & (1 << indx)) ? '*' : '.', msg[indx]);
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /*
@@ -189,7 +192,7 @@ static int cmnd_help(int opsz)
 				cmndtab[indx].parms ? cmndtab[indx].parms : "");
 	}
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /*
@@ -234,7 +237,7 @@ static int cmnd_eval(int opsz)
 
 	printf((long) value < 0 ? "%08lx %lut (-%08lx -%lut)\n" : "%08lx %lut\n", value, value, -value, -value);
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /*
@@ -341,7 +344,7 @@ static int split_line(char *line)
 
 	argv[argc] = NULL;
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /*
@@ -349,11 +352,14 @@ static int split_line(char *line)
  */
 static int execute(void)
 {
+	int opsz, ignore, error;
 	unsigned indx;
-	int opsz;
 
 	if(!argc)
 		return E_ARGS_UNDER;
+
+	if(argsz[0] && argv[0][0] == '#')
+		return E_NONE;
 
 	/* strip size suffix from command */
 
@@ -375,9 +381,15 @@ static int execute(void)
 
 	/* find and call command */
 
+	ignore = (argsz[0] && argv[0][0] == '-');
+
 	for(indx = 0; indx < elements(cmndtab); ++indx)
-		if(!strncasecmp(argv[0], cmndtab[indx].name, argsz[0]) && (!opsz || (cmndtab[indx].flags & FLAG_SIZED)))
-			return cmndtab[indx].func(opsz);
+		if(!strncasecmp(argv[0] + ignore, cmndtab[indx].name, argsz[0] - ignore) &&
+			(!opsz || (cmndtab[indx].flags & FLAG_SIZED))) {
+
+			error = cmndtab[indx].func(opsz);
+			return ignore ? E_NONE : error;
+		}
 
 	return E_INVALID_CMND;
 }
@@ -385,7 +397,7 @@ static int execute(void)
 /*
  * loop reading command lines and dispatching
  */
-void shell(const char *script)
+void shell(const char *run)
 {
 	static const char *msgs[] = {
 		[E_INVALID_CMND]	= "unrecognised command",
@@ -401,26 +413,28 @@ void shell(const char *script)
 
 	assert(elements(argv) == elements(argsz));
 
-	for(;;)
-	{
+	for(script = run;;) {
+
 		putstring("> ");
 
 		if(script) {
 
-			for(indx = 0;; ++indx) {
+			/* fetch line from script */
 
-				if(!script[indx]) {
+			for(indx = 0; indx < sizeof(line) - 1;) {
+
+				line[indx] = *script++;
+
+				if(!line[indx]) {
 					script = NULL;
 					break;
 				}
 
-				if(script[indx] == '\n') {
-					script += indx + 1;
+				if(indx && (line[indx] == '\n' || line[indx] == '\r'))
 					break;
-				}
 
-				line[indx] = script[indx];
-				putchar(line[indx]);
+				if(line[indx] >= ' ' && line[indx] < '~')
+					putchar(line[indx++]);
 			}
 
 			line[indx] = '\0';
@@ -441,16 +455,58 @@ void shell(const char *script)
 
 		error = split_line(line);
 
-		if(error == E_SUCCESS && argc)
+		if(error == E_NONE && argc)
 			error = execute();
 
-		if(error != E_SUCCESS) {
-			if(error >= elements(msgs) || !msgs[error])
-				printf("unkown error #%d\n", error);
-			else
-				puts(msgs[error]);
+		if(error != E_NONE) {
+
+			if(error != E_UNSPEC) {
+				if(error >= elements(msgs) || !msgs[error])
+					printf("unkown error #%d\n", error);
+				else
+					puts(msgs[error]);
+			}
+
+			if(script) {
+				script = NULL;
+				puts("script aborted");
+			}
 		}
 	}
+}
+
+/*
+ * shell command - script
+ */
+static int cmnd_script(int opsz)
+{
+	static char buf[1024];
+	unsigned long size;
+	void *hdl;
+
+	if(argc < 2)
+		return E_ARGS_UNDER;
+
+	if(argc > 2)
+		return E_ARGS_OVER;
+
+	hdl = file_open(argv[1], &size);
+	if(!hdl)
+		return E_UNSPEC;
+
+	if(size > sizeof(buf) - 1) {
+		puts("script file too large");
+		return E_UNSPEC;
+	}
+
+	if(!file_load(hdl, buf, size))
+		return E_UNSPEC;
+
+	buf[size] = '\0';
+
+	script = buf;
+
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

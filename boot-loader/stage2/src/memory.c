@@ -129,7 +129,7 @@ int cmnd_read(int opsz)
 
 	last.addr += last.size;
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /*
@@ -179,7 +179,7 @@ int cmnd_write(int opsz)
 
 	last.addr += last.size;
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /*
@@ -265,7 +265,7 @@ int cmnd_dump(int opsz)
 		base += indx;
 	}
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 int cmnd_md5sum(int opsz)
@@ -298,7 +298,7 @@ int cmnd_md5sum(int opsz)
 
 		if(!size) {
 			puts("no data loaded");
-			return E_SUCCESS;
+			return E_UNSPEC;
 		}
 	}
 
@@ -310,7 +310,7 @@ int cmnd_md5sum(int opsz)
 		printf("%02x", digest[indx]);
 	putchar('\n');
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

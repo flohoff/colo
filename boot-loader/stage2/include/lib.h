@@ -15,7 +15,7 @@
 
 #define NULL					((void *) 0)
 
-#define elements(x)			(sizeof(x)/sizeof((x)[0]))
+#define elements(x)			((int)(sizeof(x)/sizeof((x)[0])))
 
 #define __STR(x)				#x
 #define _STR(x)				__STR(x)
@@ -109,7 +109,8 @@ extern void line_edit(char *, size_t);
 /* shell.c */
 
 enum {
-	E_SUCCESS,
+	E_NONE,
+	E_UNSPEC,
 	E_INVALID_CMND,
 	E_ARGS_OVER,
 	E_ARGS_UNDER,
@@ -133,6 +134,7 @@ extern unsigned pci_init(size_t, size_t);
 extern void ide_init(void);
 extern int ide_read_sectors(void *, void *, unsigned long, unsigned);
 extern void *ide_open(const char *);
+extern int ide_block_size(void *);
 
 /* expr.c */
 
@@ -146,8 +148,8 @@ extern void icache_flush_all(void);
 
 /* block.c */
 
-extern int block_read_raw(void *, void *, unsigned long, size_t);
-extern void *block_read(void *, unsigned long, size_t);
+extern int block_read_raw(void *, void *, unsigned long, size_t, size_t);
+extern void *block_read(void *, unsigned long, size_t, size_t);
 extern void block_flush(void *);
 extern int block_init(void);
 
@@ -177,6 +179,7 @@ extern void tulip_init(void);
 #define DFLAG_IDE_DISABLE_LBA				(1 << 0)
 #define DFLAG_IDE_DISABLE_LBA48			(1 << 1)
 #define DFLAG_IDE_DISABLE_TIMING			(1 << 2)
+#define DFLAG_IDE_ENABLE_SLAVE			(1 << 3)
 
 extern unsigned debug_flags;
 extern size_t ram_size;
@@ -190,6 +193,11 @@ extern void *heap_reserve_hi(size_t);
 extern void heap_alloc(void);
 extern void heap_info(void);
 extern void *heap_image(size_t *);
+
+/* ext2.c */
+
+extern void *file_open(const char *, unsigned long *);
+extern int file_load(void *, void *, unsigned long);
 
 #endif
 

@@ -12,7 +12,7 @@
 #include "galileo.h"
 
 #define VER_MAJOR					1
-#define VER_MINOR					2
+#define VER_MINOR					3
 
 unsigned debug_flags;
 size_t ram_size;
@@ -39,7 +39,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 		if(kbhit() && getch() == ' ')
 			shell(NULL);
 
-	shell("mount\nload /boot/vmlinux.gz\nexecute\n");
+	shell("mount\n-script /boot/default.boot\nload /boot/vmlinux.gz\nexecute");
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

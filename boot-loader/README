@@ -10,11 +10,13 @@ FEATURES
 
 * Will boot from any primary Linux partition containing an EXT2/3 filing
   system. The boot filing system is no longer required to be a formatted as an
-  EXT2 revision 0 filing system.
+  EXT2 revision 0 filing system. Will also boot from a whole device.
 
 * The maximum size of kernel that can be booted is only constrained by
   available memory. A 16MB unit will be able to boot a 7MB uncompressed
   kernel (the limit is less for a compressed kernel, probably around 5MB).
+
+* Support for booting from EXT2 formatted CDROMs.
 
 LIMITATIONS
 -----------

@@ -227,13 +227,13 @@ int cmnd_unzip(int opsz)
 
 	if(!size) {
 		puts("no image loaded");
-		return E_SUCCESS;
+		return E_UNSPEC;
 	}
 
 	if(unzip(base, size))
 		heap_info();
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 static void flush_window(void)
@@ -350,7 +350,7 @@ static void flush_window(void)
  */
 
 #ifdef RCSID
-static char rcsid[] = "$Id: inflate.c,v 1.2 2004/02/08 00:20:11 pdh Exp $";
+static char rcsid[] = "$Id$";
 #endif
 
 #define slide window
