@@ -68,15 +68,21 @@ void *memcpy(void *dst, const void *src, size_t size)
 	ptr = dst;
 	end = ptr + size;
 
-	while(ptr < end && ((unsigned long) ptr & 3))
-		*((uint8_t *) ptr)++ = *((uint8_t *) src)++;
+	while(ptr < end && ((unsigned long) ptr & 3)) {
+		*(uint8_t *) ptr = *(uint8_t *) src;
+		++ptr, ++src;
+	}
 
 	if(!((unsigned long) src & 3))
-		while(ptr < end - 3)
-			*((uint32_t *) ptr)++ = *((uint32_t *) src)++;
+		while(ptr < end - 3) {
+			*(uint32_t *) ptr = *(uint32_t *) src;
+			ptr += 4, src += 4;
+		}
 
-	while(ptr < end)
-		*((uint8_t *) ptr)++ = *((uint8_t *) src)++;
+	while(ptr < end) {
+		*(uint8_t *) ptr = *(uint8_t *) src;
+		++ptr, ++src;
+	}
 
 	return dst;
 }
@@ -104,14 +110,20 @@ void *memset(void *dst, int val, size_t size)
 	ptr = dst;
 	end = ptr + size;
 
-	while(ptr < end && ((unsigned long) ptr & 3))
-		*((uint8_t *) ptr)++ = val;
+	while(ptr < end && ((unsigned long) ptr & 3)) {
+		*(uint8_t *) ptr = val;
+		++ptr;
+	}
 
-	while(ptr < end - 3)
-		*((uint32_t *) ptr)++ = val;
+	while(ptr < end - 3) {
+		*(uint32_t *) ptr = val;
+		ptr += 4;
+	}
 
-	while(ptr < end)
-		*((uint8_t *) ptr)++ = val;
+	while(ptr < end) {
+		*(uint8_t *) ptr = val;
+		++ptr;
+	}
 
 	return dst;
 }
@@ -125,8 +137,9 @@ int memcmp(const void *mem1, const void *mem2, size_t size)
 
 	do {
 
-		dat1 = *((unsigned char *) mem1)++;
-		dat2 = *((unsigned char *) mem2)++;
+		dat1 = *(unsigned char *) mem1;
+		dat2 = *(unsigned char *) mem2;
+		++mem1, ++mem2;
 
 	} while(--size && dat1 == dat2);
 
@@ -142,8 +155,9 @@ int strncmp(const char *str1, const char *str2, size_t size)
 
 	do {
 
-		chr1 = *((unsigned char *) str1)++;
-		chr2 = *((unsigned char *) str2)++;
+		chr1 = *(unsigned char *) str1;
+		chr2 = *(unsigned char *) str2;
+		++str1, ++str2;
 
 	} while(--size && chr1 == chr2 && chr1);
 
@@ -167,8 +181,9 @@ int strncasecmp(const char *str1, const char *str2, size_t size)
 
 	do {
 
-		chr1 = toupper(*((unsigned char *) str1)++);
-		chr2 = toupper(*((unsigned char *) str2)++);
+		chr1 = toupper(*(unsigned char *) str1);
+		chr2 = toupper(*(unsigned char *) str2);
+		++str1, ++str2;
 
 	} while(--size && chr1 == chr2 && chr1);
 
@@ -236,7 +251,8 @@ void putstring_safe(const void *str, int size)
 
 	while(size--) {
 
-		chr = *((unsigned char *) str)++;
+		chr = *(unsigned char *) str;
+		++str;
 
 		if(isprint(chr))
 			putchar(chr);

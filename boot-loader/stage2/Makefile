@@ -32,7 +32,11 @@ OBJS=	main.o\
 		launch.o\
 		start.o\
 
-MIPSFLAGS= -mno-abicalls -fno-pic -EL -mips2 -mcpu=r5000
+CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&\
+	echo "-mcpu=r5000 -EL" ||\
+	echo "-mtune=r5000 -G0")
+
+MIPSFLAGS= -mno-abicalls -fno-pic -mips2 $(CC_DEP)
 
 CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-builtin -nostdlib $(MIPSFLAGS)
 ASFLAGS= $(MIPSFLAGS)
