@@ -90,7 +90,7 @@ void serial_enable(int enable)
 
 		if(state == ST_ENABLED) {
 			state = ST_DISABLED;
-			env_remove_tag(VAR_SERIAL);
+			env_puts("console-speed", NULL, 0);
 		}
 
 		return;
@@ -114,7 +114,7 @@ void serial_enable(int enable)
 	flush_ring();
 
 	sprintf(buf, "%u", baud);
-	env_put("console-speed", buf, VAR_SERIAL);
+	env_put("console-speed", buf, VAR_OTHER);
 }
 
 void drain(void)

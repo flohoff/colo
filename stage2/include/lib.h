@@ -288,7 +288,6 @@ extern int lcd_menu(const char **, unsigned, unsigned);
 #define VAR_NET								1
 #define VAR_DHCP								2
 #define VAR_INITRD							3
-#define VAR_SERIAL							4
 
 extern int env_put(const char *, const char *, unsigned);
 extern const char *env_get(const char *);
