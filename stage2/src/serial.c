@@ -57,8 +57,8 @@ static const unsigned rates[] =
 
 static unsigned queue_in, queue_out;
 static char out_queue[1024];
-static int initialised;
 static unsigned baud;
+static enum { ST_UNINIT = 0, ST_DISABLED, ST_ENABLED } state;
 
 static unsigned stored_baud(void)
 {
@@ -70,7 +70,7 @@ static unsigned stored_baud(void)
 
 static void flush_ring(void)
 {
-	if(initialised)
+	if(state == ST_ENABLED)
 
 		while(queue_in != queue_out) {
 
@@ -81,23 +81,32 @@ static void flush_ring(void)
 		}
 }
 
-void serial_init(void)
+void serial_enable(int enable)
 {
 	unsigned div;
 
-	assert(!initialised);
+	if(!enable) {
 
-	baud = stored_baud();
-	div = (18432000 + baud * 8) / (baud * 16);
+		if(state == ST_ENABLED)
+			state = ST_DISABLED;
 
-	UART_MCR = UART_MCR_OP1 | UART_MCR_RTS | UART_MCR_DTR;
-	UART_LCR = UART_LCR_DL_EN | UART_LCR_STOP2 | UART_LCR_DATA8;
-	UART_BRL = div;
-	UART_BRH = div >> 8;
-	UART_LCR = UART_LCR_STOP2 | UART_LCR_DATA8;
-	UART_FCR = UART_FCR_FIFO_EN;
+		return;
+	}
+	
+	if(state == ST_UNINIT) {
 
-	initialised = 1;
+		baud = stored_baud();
+		div = (18432000 + baud * 8) / (baud * 16);
+
+		UART_MCR = UART_MCR_OP1 | UART_MCR_RTS | UART_MCR_DTR;
+		UART_LCR = UART_LCR_DL_EN | UART_LCR_STOP2 | UART_LCR_DATA8;
+		UART_BRL = div;
+		UART_BRH = div >> 8;
+		UART_LCR = UART_LCR_STOP2 | UART_LCR_DATA8;
+		UART_FCR = UART_FCR_FIFO_EN;
+	}
+
+	state = ST_ENABLED;
 
 	flush_ring();
 }
@@ -113,14 +122,14 @@ const char *serial_baud(void)
 
 void drain(void)
 {
-	if(initialised)
+	if(state == ST_ENABLED)
 		while(~UART_LSR & (UART_LSR_THRE | UART_LSR_TEMPTY))
 			yield();
 }
 
 int kbhit(void)
 {
-	if(initialised && (UART_LSR & UART_LSR_RDR))
+	if(state == ST_ENABLED && (UART_LSR & UART_LSR_RDR))
 		return 1;
 
 	yield();
@@ -163,7 +172,7 @@ void puts(const char *str)
 
 int cmnd_serial(int opsz)
 {
-	unsigned indx, error, best;
+	unsigned size, indx, error, best;
 	unsigned long val;
 	char *end;
 
@@ -175,12 +184,26 @@ int cmnd_serial(int opsz)
 	if(argc > 2)
 		return E_ARGS_OVER;
 
-	if(!strncasecmp(argv[1], "default", strlen(argv[1]))) {
+	size = strlen(argv[1]);
+
+	if(!strncasecmp(argv[1], "default", size)) {
 
 		puts(_STR(BAUD_RATE));
 
 		nv_store.baud = 0;
 		nv_put();
+
+		return E_NONE;
+
+	} else if(!strncasecmp(argv[1], "on", size)) {
+
+		serial_enable(1);
+
+		return E_NONE;
+
+	} else if(!strncasecmp(argv[1], "off", size)) {
+
+		serial_enable(0);
 
 		return E_NONE;
 	}

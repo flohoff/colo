@@ -33,7 +33,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 		nv_put();
 
 	if(!(nv_store.flags & NVFLAG_CONSOLE_DISABLE))
-		serial_init();
+		serial_enable(1);
 
 	puts("\n[ \"CoLo\" v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]");
 
@@ -70,8 +70,8 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 			}
 	}
 
-	if((nv_store.flags & NVFLAG_CONSOLE_DISABLE) && !noshell)
-		serial_init();
+	if(!noshell)
+		serial_enable(1);
 
 	shell();
 }

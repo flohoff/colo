@@ -316,11 +316,15 @@ the contents of the directory will be listed.
 If no paths are given then the contents of the volume's root directory are
 listed.
 
-serial [rate | default]
------------------------
+serial [rate | default | on | off ]
+-----------------------------------
 
-Sets the baud rate for the boot shell to the nearest supported rate. The
-change will not take effect until the unit is rebooted.
+If called with an argument of 'on' or 'off' the serial port is enabled or
+disabled respectively, otherwise the command configures the boot shell serial
+baud rate.
+
+The baud rate will be set to the nearest supported rate. The change will not
+take effect until the unit is rebooted.
 
 If called with an argument of 'default' the baud rate is set back to the
 default value set at compile time.

@@ -92,7 +92,7 @@ static struct
 	{ "variable",		cmnd_environ,		0,					"[name [value]]",											},
 	{ "boot",			cmnd_boot,			0,					"[list | default] [option]",							},
 	{ "nfs",				cmnd_nfs,			0,					"host root [path [path]]",								},
-	{ "serial",			cmnd_serial,		0,					"[rate | default]",										},
+	{ "serial",			cmnd_serial,		0,					"[rate | default | on | off ]",						},
 	{ "restrict",		cmnd_restrict,		0,					"[megabytes]",												},
 	{ "menu",			cmnd_menu,			0,					"title timeout {text value} ...",					},
 

@@ -119,7 +119,7 @@ extern int vsprintf(char *, const char *, va_list);
 
 /* serial.c */
 
-extern void serial_init(void);
+extern void serial_enable(int);
 extern int kbhit(void);
 extern int getch(void);
 extern void putchar(int);

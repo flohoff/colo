@@ -1,7 +1,11 @@
 # $Id$
 
-CoLo 1.13 (xxxx-xx-xx)
+CoLo 1.13 (2004-08-30)
 ----------------------
+
+*	Speeded up raw LCD access in LCD tools library.
+
+*	Added 'on' and 'off' options to the 'serial' command.
 
 *	Added 'colo-perm' and 'md5rom' to build.
 
