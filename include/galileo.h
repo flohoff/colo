@@ -57,6 +57,8 @@
 #define BRDG_REG_TIMEOUT_RETRY			0xc04
 #define BRDG_REG_RAS01_BANK_SIZE			0xc08
 #define BRDG_REG_RAS23_BANK_SIZE			0xc0c
+#define BRDG_REG_INTR_CAUSE				0xc18
+# define BRDG_INTR_CAUSE_RETRY_CTR		(1 << 20)
 
 #endif
 

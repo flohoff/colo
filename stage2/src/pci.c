@@ -11,6 +11,10 @@
 #include "galileo.h"
 #include "pci.h"
 
+/* Galileo generates special cycles on access to device 31 */
+
+#define PCI_DEVICES_MAX				31
+
 unsigned cp0_count_freq = CP0_COUNT_RATE_DEFAULT;
 
 static unsigned unit;
@@ -27,7 +31,7 @@ static void fixup_count_rate(void)
 
 	count = MFC0(CP0_COUNT);
 
-	while(BRDG_REG_WORD(BRDG_REG_COUNTER_0));
+	while(BRDG_REG_WORD(BRDG_REG_COUNTER_0))
 		;
 
 	count = MFC0(CP0_COUNT) - count;
@@ -40,11 +44,6 @@ static void fixup_count_rate(void)
 unsigned cpu_clock_khz(void)
 {
 	return (cp0_count_freq * 2 + 500) / 1000;
-}
-
-static inline int bad_device(unsigned dev)
-{
-	return dev == 6 || dev == 31;
 }
 
 void pcicfg_write_word(unsigned dev, unsigned func, unsigned addr, unsigned data)
@@ -138,6 +137,19 @@ void pci_init(size_t bank0, size_t bank1)
 
 	pcicfg_write_byte(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x0d, 64);
 
+	/* set PCI bus timeouts / retries             *
+	 *                                            *
+	 * apparently early Galileos require the read *
+	 * before the write else they lock up. info   *
+	 * picked up from kernel source               */
+
+	BRDG_REG_WORD(BRDG_REG_TIMEOUT_RETRY);
+
+	BRDG_REG_WORD(BRDG_REG_TIMEOUT_RETRY) =
+		(255 << 16) |		/* retry counter */
+		(255 << 8) |		/* timeout #1    */
+		255;					/* timeout #0    */
+
 	/* read unit type */
 
 	unit = pcicfg_read_byte(PCI_DEV_VIA, PCI_FNC_VIA_ISA, 0x94) >> 4;
@@ -152,18 +164,30 @@ static void pci_scan(void)
 {
 	unsigned dev, fnc, id, ss;
 
-	for(dev = 0; dev < 0x20; ++dev)
-		if(!bad_device(dev))
-			for(fnc = 0; fnc < 8; ++fnc) {
-				id = pcicfg_read_word(dev, fnc, 0);
-				if(id != 0xffffffff) {
-					ss = pcicfg_read_word(dev, fnc, 0x2c);
-					printf("%02x.%u %04x_%04x (%04x_%04x)\n", dev, fnc, id & 0xffff, id >> 16, ss & 0xffff, ss >> 16);
-					if(!fnc && !(pcicfg_read_byte(dev, fnc, 0x0e) & 0x80))
-						break;
-				} else
+	for(dev = 0; dev < PCI_DEVICES_MAX; ++dev)
+
+		for(fnc = 0; fnc < 8; ++fnc) {
+
+			BRDG_REG_WORD(BRDG_REG_INTR_CAUSE) = ~BRDG_INTR_CAUSE_RETRY_CTR;
+
+			id = pcicfg_read_word(dev, fnc, 0);
+
+			if(BRDG_REG_WORD(BRDG_REG_INTR_CAUSE) & BRDG_INTR_CAUSE_RETRY_CTR) {
+
+				printf("%02x.%u ***  bad device  ***\n", dev, fnc);
+				break;
+
+			} else if(id != 0xffffffff) {
+
+				ss = pcicfg_read_word(dev, fnc, 0x2c);
+				printf("%02x.%u %04x_%04x (%04x_%04x)\n", dev, fnc, id & 0xffff, id >> 16, ss & 0xffff, ss >> 16);
+				if(!fnc && !(pcicfg_read_byte(dev, fnc, 0x0e) & 0x80))
 					break;
-			}
+
+			} else
+
+				break;
+		}
 }
 
 int cmnd_pci(int opsz)
@@ -185,16 +209,11 @@ int cmnd_pci(int opsz)
 	dev = evaluate(argv[1], &ptr);
 	if(*ptr == '.')
 		fnc = evaluate(ptr + 1, &ptr);
-	if(*ptr || dev > 0x1f || fnc > 7) {
+	if(*ptr || dev >= PCI_DEVICES_MAX || fnc > 7) {
 		puts("invalid device/function");
 		return E_UNSPEC;
 	}
 
-	if(bad_device(dev)) {
-		puts("bad device to play with");
-		return E_UNSPEC;
-	}
-	
 	if(!opsz)
 		opsz = 4;
 

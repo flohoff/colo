@@ -10,7 +10,11 @@ CoLo 1.19 (xxxx-xx-xx)
 *	Renamed 'md5rom' to 'copy-rom' and added the ability to save a copy of the
 	ROM to a file.
 
-*	Fixed buglet in 'pci' command bus scan.
+*	Moved PCI timeout / retry counter initialisation to PCI initialisation
+	code. We now use a retry count of 255 rather than retrying forever. The
+	kernel needs a similiar fix.
+
+*	Improved PCI bus scan.
 
 CoLo 1.18 (2005-03-22)
 ----------------------

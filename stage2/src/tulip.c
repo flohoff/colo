@@ -546,16 +546,6 @@ void tulip_init(void)
 	nic_avail = tulip_setup(PCI_DEV_ETH0, PCI_FNC_ETH0, IO_BASE_ETH0);
 	tulip_setup(PCI_DEV_ETH1, PCI_FNC_ETH1, IO_BASE_ETH1);
 
-	/* without this Tulip bus mastering doesn't work correctly */
-
-		/* apparently early Galileos require the read *
-		 * before the write else they lock up. info   *
-		 * picked up from kernel source               */
-
-	BRDG_REG_WORD(BRDG_REG_TIMEOUT_RETRY);
-
-	BRDG_REG_WORD(BRDG_REG_TIMEOUT_RETRY) = 0xffff;
-
 	if(!nic_avail)
 		return;
 
