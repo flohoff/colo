@@ -20,10 +20,11 @@ int cmnd_execute(int opsz)
 	extern unsigned launch(uint64_t, uint64_t, uint64_t, uint64_t);
 	extern char __text;
 
+	void *image, *load, *initrd;
 	size_t imagesz, initrdsz;
-	void *image, *initrd;
 	struct elf_info info;
 	unsigned code;
+	int elf32;
 
 	image = heap_image(&imagesz);
 
@@ -39,29 +40,36 @@ int cmnd_execute(int opsz)
 
 	image = heap_image(&imagesz);
 
-	if(!elf32_validate(image, imagesz, &info)) {
+	elf32 = elf32_validate(image, imagesz, &info);
+
+	if(!elf32 && !elf64_validate(image, imagesz, &info)) {
 		puts("ELF image invalid");
 		return E_UNSPEC;
 	}
 
-	if(info.load_addr < (unsigned long) KSEG0(0) || info.load_addr + info.load_size > (unsigned long) &__text) {
+	load = (void *) info.load_addr + info.load_offset;
+
+	if(load < KSEG0(0) || load + info.load_size > (void *) &__text) {
 		puts("ELF loads outside available memory");
 		return E_UNSPEC;
 	}
 
-	if(info.load_addr < (unsigned long) image + imagesz && info.load_addr + info.load_size > (unsigned long) image) {
+	if(load < image + imagesz && load + info.load_size > image) {
 		puts("ELF loads over ELF image");
 		return E_UNSPEC;
 	}
 
-	if(initrdsz && info.load_addr < (unsigned long) initrd + initrdsz && info.load_addr + info.load_size > (unsigned long) initrd) {
+	if(initrdsz && load < initrd + initrdsz && load + info.load_size > initrd) {
 		puts("ELF loads over initrd image");
 		return E_UNSPEC;
 	}
 
-	elf32_load(image);
+	if(elf32)
+		elf32_load(image, info.load_offset);
+	else
+		elf64_load(image, info.load_offset);
 
-	if(info.load_size >= 12 && unaligned_load((void *) info.load_addr + 8) == unaligned_load("CoLo")) {
+	if(info.load_size >= 12 && unaligned_load(load + 8) == unaligned_load("CoLo")) {
 		puts("Refusing to load \"CoLo\" chain loader");
 		return E_UNSPEC;
 	}
@@ -76,6 +84,11 @@ int cmnd_execute(int opsz)
 
 	icache_flush_all();
 	dcache_flush_all();
+
+	/* enable 64-bit addressing */
+
+	if(!elf32)
+		MTC0(CP0_STATUS, MFC0(CP0_STATUS) | CP0_STATUS_KX);
 
 	/* relocate stack to top of RAM and call target */
 

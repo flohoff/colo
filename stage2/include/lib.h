@@ -200,6 +200,7 @@ struct elf_info
 {
 	unsigned long				load_addr;
 	unsigned						load_size;
+	long							load_offset;
 	unsigned long				entry_point;
 	union {
 		unsigned long long	region;
@@ -211,12 +212,12 @@ struct elf_info
 };
 
 extern int elf32_validate(const void *, size_t, struct elf_info *);
-extern void elf32_load(const void *);
+extern void elf32_load(const void *, long);
 
 /* elf64.c */
 
 extern int elf64_validate(const void *, size_t, struct elf_info *);
-extern void *elf64_load(const void *);
+extern void elf64_load(const void *, long);
 
 /* inflate.c */
 

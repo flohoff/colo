@@ -22,6 +22,7 @@
 #define CP0_STATUS						12
 # define CP0_STATUS_IE					(1 << 0)
 # define CP0_STATUS_ERL					(1 << 2)
+# define CP0_STATUS_KX					(1 << 7)
 # define CP0_STATUS_IM(n)				(1 << (8 + (n)))
 # define CP0_STATUS_BEV					(1 << 22)
 # define CP0_STATUS_DL					(1 << 24)
