@@ -114,13 +114,14 @@ void pci_init(size_t bank0, size_t bank1)
  */
 static void pci_scan(void)
 {
-	unsigned dev, fnc, id;
+	unsigned dev, fnc, id, ss;
 
 	for(dev = 0; dev < 0x1f; ++dev)
 		for(fnc = 0; fnc < 8; ++fnc) {
 			id = pcicfg_read_word(dev, fnc, 0);
 			if(id != 0xffffffff) {
-				printf("%02x.%u %04x_%04x\n", dev, fnc, id & 0xffff, id >> 16);
+				ss = pcicfg_read_word(dev, fnc, 0x2c);
+				printf("%02x.%u %04x_%04x (%04x_%04x)\n", dev, fnc, id & 0xffff, id >> 16, ss & 0xffff, ss >> 16);
 				if(!fnc && !(pcicfg_read_byte(dev, fnc, 0x0e) & 0x80))
 					break;
 			}

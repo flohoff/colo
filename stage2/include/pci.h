@@ -11,6 +11,9 @@
 
 #define PCI_CLOCK								(33 * 1000000)
 
+#define PCI_DEV_SLOT							10
+#define PCI_FNC_SLOT							0
+
 #define PCI_DEV_GALILEO						0
 #define PCI_FNC_GALILEO						0
 
