@@ -16,16 +16,16 @@
 
 			la	sp, __stack - 16
 			lui	gp, %hi(_gp)
-			bal	cpu_init
+			jal	cpu_init
 			 addiu	gp, %lo(_gp)
 
-			bal	stage1
+			jal	stage1
 			 nop
 
-			bal	loader
+			jal	loader
 			 subu	sp, v0, 16
 
-			b	fatal
+			j	fatal
 			 nop
 
 			.org	0x200
@@ -36,7 +36,7 @@
 
 1:			la	sp, __stack - 16
 			lui	gp, %hi(_gp)
-			b	exception
+			j	exception
 			 addiu	gp, %lo(_gp)
 
 			.org	0x280

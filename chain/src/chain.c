@@ -64,15 +64,21 @@ void *memcpy(void *dst, const void *src, size_t size)
 	ptr = dst;
 	end = ptr + size;
 
-	while(ptr < end && ((unsigned long) ptr & 3))
-		*((uint8_t *) ptr)++ = *((uint8_t *) src)++;
+	while(ptr < end && ((unsigned long) ptr & 3)) {
+		*(uint8_t *) ptr = *(uint8_t *) src;
+		++ptr, ++src;
+	}
 
 	if(!((unsigned long) src & 3))
-		while(ptr < end - 3)
-			*((uint32_t *) ptr)++ = *((uint32_t *) src)++;
+		while(ptr < end - 3) {
+			*(uint32_t *) ptr = *(uint32_t *) src;
+			ptr += 4, src += 4;
+		}
 
-	while(ptr < end)
-		*((uint8_t *) ptr)++ = *((uint8_t *) src)++;
+	while(ptr < end) {
+		*(uint8_t *) ptr = *(uint8_t *) src;
+		++ptr, ++src;
+	}
 
 	return dst;
 }
@@ -94,14 +100,20 @@ static void *memset(void *dst, int val, size_t size)
 	ptr = dst;
 	end = ptr + size;
 
-	while(ptr < end && ((unsigned long) ptr & 3))
-		*((uint8_t *) ptr)++ = val;
+	while(ptr < end && ((unsigned long) ptr & 3)) {
+		*(uint8_t *) ptr = val;
+		++ptr;
+	}
 
-	while(ptr < end - 3)
-		*((uint32_t *) ptr)++ = val;
+	while(ptr < end - 3) {
+		*(uint32_t *) ptr = val;
+		ptr += 4;
+	}
 
-	while(ptr < end)
-		*((uint8_t *) ptr)++ = val;
+	while(ptr < end) {
+		*(uint8_t *) ptr = val;
+		++ptr;
+	}
 
 	return dst;
 }
