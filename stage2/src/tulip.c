@@ -113,6 +113,10 @@
 
 #define bit_bang_delay()				do{CSR(5);udelay(2);}while(0)
 
+#define PHY_UNINIT						0
+#define PHY_LINK_DOWN					1
+#define PHY_LINK_UP						2
+
 struct descriptor
 {
 	unsigned	status;
@@ -135,7 +139,7 @@ static unsigned rx_fill;
 
 static unsigned reg_csr6;
 static int nic_avail;
-static int phy_avail;
+static int phy_state;
 static int chip_id;
 
 /*
@@ -527,37 +531,46 @@ void tulip_init(void)
 /*
  * initialise SIA PHY
  */
-static int setup_phy_sia(void)
+static void setup_phy_sia(void)
 {
 	unsigned mark, info;
 
-	assert(!phy_avail && chip_id == CHIP_ID_21041);
+	assert(chip_id == CHIP_ID_21041);
 
-	CSR(13) = 0;
-	CSR(14) = CSR14_SPP | CSR14_APE | CSR14_LTE | CSR14_SQE | CSR14_CLD |
-		CSR14_CSQ | CSR14_RSQ | CSR14_ANE | CSR14_MBO | CSR14_CPEN_NORMAL |
-		CSR14_LSE | CSR14_DREN | CSR14_LBK | CSR14_ECEN;
-	CSR(15) = CSR15_ABM;
-	CSR(13) = CSR13_SDM | CSR13_SRL;
+	if(phy_state == PHY_UNINIT) {
 
-	udelay(10 * 1000);
+		CSR(13) = 0;
+		CSR(14) = CSR14_SPP | CSR14_APE | CSR14_LTE | CSR14_SQE | CSR14_CLD |
+			CSR14_CSQ | CSR14_RSQ | CSR14_ANE | CSR14_MBO | CSR14_CPEN_NORMAL |
+			CSR14_LSE | CSR14_DREN | CSR14_LBK | CSR14_ECEN;
+		CSR(15) = CSR15_ABM;
+		CSR(13) = CSR13_SDM | CSR13_SRL;
+
+		udelay(10 * 1000);
+	}
 
 	/* wait for link */
+
+	phy_state = PHY_LINK_DOWN;
 
 	for(mark = MFC0(CP0_COUNT);;) {
 
 		info = CSR(12);
-		if((info & (CSR12_ANS_MASK | CSR12_21041_LKF)) == CSR12_ANS_COMPLETE)
+		if((info & (CSR12_ANS_MASK | CSR12_21041_LKF)) == CSR12_ANS_COMPLETE) {
+			phy_state = PHY_LINK_UP;
 			break;
+		}
 
 		if(MFC0(CP0_COUNT) - mark >= LINK_WAIT * CP0_COUNT_RATE)
-			return 0;
+			break;
 
 		udelay(10 * 1000);
 	}
 
 #ifdef _DEBUG
-	{
+
+	if(phy_state == PHY_LINK_UP) {
+
 		static char word[16];
 
 		word[0] = '\0';
@@ -566,51 +579,58 @@ static int setup_phy_sia(void)
 
 		DPRINTF("tulip: link up%s\n", word);
 	}
-#endif
 
-	return 1;
+#endif
 }
 
 /*
  * initialise MII PHY
  */
-static int setup_phy_mii(void)
+static void setup_phy_mii(void)
 {
 	unsigned mark, info;
 
-	assert(!phy_avail && chip_id == CHIP_ID_21143);
+	assert(chip_id == CHIP_ID_21143);
 
-	CSR(13) = 0;
-	CSR(14) = 0;
-	CSR(15) = CSR15_ABM;
+	if(phy_state == PHY_UNINIT) {
 
-	udelay(10 * 1000);
+		CSR(13) = 0;
+		CSR(14) = 0;
+		CSR(15) = CSR15_ABM;
+
+		udelay(10 * 1000);
+	}
 
 	/* wait for link */
+
+	phy_state = PHY_LINK_DOWN;
 
 	for(mark = MFC0(CP0_COUNT);;) {
 
 		info = phy_read_mii(PHY_ID, PHY_REG_CSTAT);
-		if(info & PHY_REG_CSTAT_LINK)
+		if(info & PHY_REG_CSTAT_LINK) {
+			phy_state = PHY_LINK_UP;
 			break;
+		}
 
 		if(MFC0(CP0_COUNT) - mark >= LINK_WAIT * CP0_COUNT_RATE)
-			return 0;
+			break;
 
 		udelay(10 * 1000);
 	}
 
 #ifdef _DEBUG
-	{
+
+	if(phy_state == PHY_LINK_UP) {
+
 		static const char *link[] = {
 			"10Mbps", "100Mbps", "10Mbps full-duplex", "100Mbps full-duplex",
 		};
 
 		DPRINTF("tulip: link up (%s)\n", link[(info >> 11) & 3]);
 	}
-#endif
 
-	return 1;
+#endif
 }
 
 /*
@@ -623,17 +643,14 @@ int tulip_up(void)
 	if(!nic_avail)
 		return 0;
 
-	if(!phy_avail) {
+	if(chip_id == CHIP_ID_21041)
+		setup_phy_sia();
+	else
+		setup_phy_mii();
 
-		if(chip_id == CHIP_ID_21041)
-			phy_avail = setup_phy_sia();
-		else
-			phy_avail = setup_phy_mii();
-
-		if(!phy_avail) {
-			DPUTS("tulip: link down");
-			return 0;
-		}
+	if(phy_state != PHY_LINK_UP) {
+		DPUTS("tulip: link down");
+		return 0;
 	}
 
 	/* enable/disable full duplex */
