@@ -2,9 +2,11 @@
 
 In no particular order ...
 
-* Remove excess debugging messages.
+* Make boot menu interruptible from console port.
 
-* Add support for different console baud rates.
+* Don't load chain loader in a loop.
+
+* Remove excess debugging messages.
 
 * Add support for booting from LVM setups.
 
@@ -13,8 +15,6 @@ In no particular order ...
 * Sort out exactly where $sp should point during the various stages.
 
 * Set $sp when chain loading kernel.
-
-* Make chain loader use LCD for error messages rather than serial.
 
 * Add boot menu using LCD. [partially done]
 

@@ -1,0 +1,28 @@
+# $Id$
+
+e2fsck-lcd
+==========
+
+This program outputs file system check progress information on the Cobalt LCD.
+
+INSTALLING (Debian)
+-------------------
+
+divert /sbin/fsck.ext2 to /sbin/fsck.ext2.distrib.
+
+divert /sbin/fsck.ext3 to /sbin/fsck.ext3.distrib.
+
+copy e2fsck-lcd to /sbin/fsck.ext2.
+
+link /sbin/fsck.ext3 to /sbin/fsck.ext2.
+
+TESTING
+-------
+
+Run
+
+	fsck -f -C /dev/hda<n>
+
+on an unmounted partition.
+
+# vi:set ts=3 sw=3 tw=78 ai:

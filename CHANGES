@@ -1,5 +1,13 @@
 # $Id$
 
+CoLo 1.11 (xxxx-xx-xx)
+----------------------
+
+*	Added man pages for 'colo-perm' and 'md5rom'.
+	[Martin Michlmayr]
+
+*	Added 'e2fsck-lcd', file check progress bar on LCD.
+
 CoLo 1.10 (2004-05-23)
 ----------------------
 
