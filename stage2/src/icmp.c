@@ -55,8 +55,8 @@ void icmp_in(struct frame *frame)
 				indx = reply_in++ % elements(reply_queue);
 
 				reply_queue[indx].src = targ;
-				reply_queue[indx].seqnr = *(uint32_t *)(data + 4);
-				reply_queue[indx].ticks = *(uint32_t *)(data + 8);
+				reply_queue[indx].seqnr = NET_READ_LONG(data + 4);
+				reply_queue[indx].ticks = NET_READ_LONG(data + 8);
 			}
 			
 			break;
@@ -135,14 +135,16 @@ int cmnd_ping(int opsz)
 				NET_WRITE_BYTE(data + 1, ICMP_CODE_ECHO_REQUEST_REPLY);
 				NET_WRITE_SHORT(data + 2, 0);
 
-				*(uint32_t *)(data + 4) = seqnr++;
-				*(uint32_t *)(data + 8) = ticks;
+				NET_WRITE_LONG(data + 4, seqnr);
+				NET_WRITE_LONG(data + 8, ticks);
 
 				cksum = ip_checksum(0, data, 4 + 4 + 4);
 
 				NET_WRITE_SHORT(data + 2, ~cksum);
 
 				ip_out(frame, host, IPPROTO_ICMP);
+
+				++seqnr;
 
 			} else
 

@@ -218,6 +218,16 @@ ping host
 Sends ICMP echo request packets to the specified host and displays information
 from received replies. Pressing the SPACE key terminates the command.
 
+pci[{.b|.h|.w}] [device[.function] register [value]]
+----------------------------------------------------
+
+Read or write PCI config space register. A .b/.h/.w suffix can be used to
+specify the size of the register as byte/half word/word respectively. The
+register address must be correctly aligned for the size of the operation.
+
+If no arguments are passed the PCI bus is scanned and the PCI ID of each
+device found is displayed.
+
 -- Peter Horton, pdh@colonel-panic.org --
 
 # vi:set ts=3 sw=3 tw=78:

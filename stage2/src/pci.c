@@ -99,4 +99,92 @@ unsigned pci_init(size_t bank0, size_t bank1)
 	return unit;
 }
 
+/*
+ * list PCI devices
+ */
+static void pci_scan(void)
+{
+	unsigned dev, fnc, id;
+
+	for(dev = 0; dev < 0x1f; ++dev)
+		for(fnc = 0; fnc < 8; ++fnc) {
+			id = pcicfg_read_word(dev, fnc, 0);
+			if(id != 0xffffffff) {
+				printf("%02x.%u %04x_%04x\n", dev, fnc, id & 0xffff, id >> 16);
+				if(!fnc && !(pcicfg_read_byte(dev, fnc, 0x0e) & 0x80))
+					break;
+			}
+		}
+}
+
+int cmnd_pci(int opsz)
+{
+	unsigned dev, fnc, ofs, val;
+	char *ptr;
+
+	if(argc == 1) {
+		pci_scan();
+		return E_NONE;
+	}
+
+	if(argc < 3)
+		return E_ARGS_UNDER;
+	if(argc > 4)
+		return E_ARGS_OVER;
+
+	fnc = 0;
+	dev = evaluate(argv[1], &ptr);
+	if(*ptr == '.')
+		fnc = evaluate(ptr + 1, &ptr);
+	if(*ptr || dev > 0x1e || fnc > 7) {
+		puts("invalid device/function");
+		return E_UNSPEC;
+	}
+
+	
+	if(!opsz)
+		opsz = 4;
+
+	ofs = evaluate(argv[2], &ptr);
+	if(*ptr || ofs > 0xff || (ofs & (opsz - 1))) {
+		puts("invalid register (must be aligned)");
+		return E_UNSPEC;
+	}
+
+	if(argc < 4)
+
+		switch(opsz) {
+			case 1:
+				val = pcicfg_read_byte(dev, fnc, ofs);
+				break;
+			case 2:
+				val = pcicfg_read_half(dev, fnc, ofs);
+				break;
+			default:
+				val = pcicfg_read_word(dev, fnc, ofs);
+		}
+
+	else {
+
+		val = evaluate(argv[3], &ptr);
+		if(*ptr || (opsz < 4 && (val & (~0 << (opsz * 8)))))
+			return E_BAD_VALUE;
+
+		switch(opsz) {
+			case 1:
+				pcicfg_write_byte(dev, fnc, ofs, val);
+				break;
+			case 2:
+				pcicfg_write_half(dev, fnc, ofs, val);
+				break;
+			default:
+				pcicfg_write_word(dev, fnc, ofs, val);
+		}
+	}
+
+	printf("%02x.%u %02x = %0*x\n", dev, fnc, ofs, opsz * 2, val);
+
+	return E_NONE;
+}
+
 /* vi:set ts=3 sw=3 cin path=include,../include: */

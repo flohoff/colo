@@ -1,7 +1,9 @@
 # $Id$
 
-CoLo 1.7 (2004-04-24)
+CoLo 1.8 (xxxx-xx-xx)
 ---------------------
+
+*	Added 'pci' command.
 
 *	Added 'ping' command.
 

@@ -46,7 +46,7 @@ static void tftp_error(const void *data, unsigned size)
  */
 static size_t tftp_transfer(int sock, void *mem, size_t max, struct frame *frame)
 {
-	unsigned size, block, mark, diff;
+	unsigned size, block, mark, diff, update;
 	size_t loaded;
 	void *data;
 
@@ -55,6 +55,8 @@ static size_t tftp_transfer(int sock, void *mem, size_t max, struct frame *frame
 
 	loaded = 0;
 	block = 1;
+
+	update = MFC0(CP0_COUNT) - CP0_COUNT_RATE;
 
 	for(;;) {
 
@@ -87,15 +89,18 @@ static size_t tftp_transfer(int sock, void *mem, size_t max, struct frame *frame
 
 		udp_send(sock, frame);
 
-		if((block & 0x3ff) == 1)
-			printf(" %uKB\r", loaded / 1024);
-
 		if(size) {
 			printf("%uKB loaded\n", (loaded + 512) / 1024);
 			return loaded;
 		}
 
 		mark = MFC0(CP0_COUNT);
+
+		if(mark - update >= CP0_COUNT_RATE / 4) {
+			update = mark;
+			printf(" %uKB\r", loaded / 1024);
+		}
+
 		do {
 
 			if(kbhit() && getch() == ' ') {
