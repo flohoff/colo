@@ -14,7 +14,6 @@ SUBDIRS= tools/elf2rfx stage2 stage1 chain
 TOOLDIRS= tools/flash-tool tools/lcdtools tools/colo-perm tools/md5rom
 BINDIR= binaries
 
-CROSS_COMPILE=
 export CROSS_COMPILE
 
 include Rules.mak

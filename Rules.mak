@@ -6,8 +6,6 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-CROSS_COMPILE=
-
 CC= $(CROSS_COMPILE)gcc
 LD= $(CROSS_COMPILE)ld
 AR= $(CROSS_COMPILE)ar

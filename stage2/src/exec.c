@@ -15,15 +15,33 @@
 
 extern void *initrd_image(size_t *);
 
+static int launch_kernel(uint64_t *parm)
+{
+	extern int launch(void *);
+	int (*func)(void *);
+	int code;
+
+	parm = KSEG1(parm);
+	func = KSEG1(launch);
+
+	icache_flush_all();
+	dcache_flush_all();
+
+	code = func(parm);
+
+	printf("\nExited (%d)\n", code);
+
+	return code;
+}
+
 int cmnd_execute(int opsz)
 {
-	extern unsigned launch(uint64_t, uint64_t, uint64_t, uint64_t);
 	extern char __text;
 
-	void *image, *load, *initrd;
+	void *image, *load, *initrd, *top;
 	size_t imagesz, initrdsz;
 	struct elf_info info;
-	unsigned code;
+	uint64_t parm[6];
 	int elf32;
 
 	image = heap_image(&imagesz);
@@ -42,12 +60,12 @@ int cmnd_execute(int opsz)
 
 	elf32 = elf32_validate(image, imagesz, &info);
 
-	if(!elf32 && !elf64_validate(image, imagesz, &info)) {
+	if(!elf32 /*&& !elf64_validate(image, imagesz, &info)*/) {
 		puts("ELF image invalid");
 		return E_UNSPEC;
 	}
 
-	load = (void *) info.load_addr + info.load_offset;
+	load = KSEG0(info.load_phys);
 
 	if(load < KSEG0(0) || load + info.load_size > (void *) &__text) {
 		puts("ELF loads outside available memory");
@@ -65,25 +83,46 @@ int cmnd_execute(int opsz)
 	}
 
 	if(elf32)
-		elf32_load(image, info.load_offset);
+		elf32_load(image);
+	/*
 	else
-		elf64_load(image, info.load_offset);
+		elf64_load(image);
+	*/
 
 	if(info.load_size >= 12 && unaligned_load(load + 8) == unaligned_load("CoLo")) {
 		puts("Refusing to load \"CoLo\" chain loader");
 		return E_UNSPEC;
 	}
 
+	/* no more network */
+
 	net_down(0);
+
+	/* set up parameter block */
+
+	top = KSEG0(ram_restrict);
+	if(argc > 1)
+		top += argc;
+
+	parm[0] = KSEG_TO_CKSEG(&__text);
+	parm[1] = info.entry_point;
+	parm[2] = KSEG_TO_CKSEG(top);
+	parm[3] = KSEG_TO_CKSEG(argv);
+	parm[4] = 0;
+	parm[5] = 0;
+
+#ifdef _DEBUG
+	{
+		int indx;
+
+		for(indx = 0; indx < 6; ++indx)
+			printf("%d: %08x.%08x\n", indx, double_word_hi(parm[indx]), double_word_lo(parm[indx]));
+	}
+#endif
 
 	/* turn on the light bar on the Qube FIXME */
 
 	*(volatile uint8_t *) BRDG_NCS0_BASE = LED_QUBE_LEFT | LED_QUBE_RIGHT;
-
-	/* ensure caches are consistent */
-
-	icache_flush_all();
-	dcache_flush_all();
 
 	/* enable 64-bit addressing */
 
@@ -92,13 +131,7 @@ int cmnd_execute(int opsz)
 
 	/* relocate stack to top of RAM and call target */
 
-	code = launch(
-			KSEG_TO_CKSEG(&__text),
-			info.r.region | info.entry_point,
-			KSEG_TO_CKSEG((unsigned long) KSEG0(ram_restrict) | (argc > 1 ? argc : 0)),
-			KSEG_TO_CKSEG(argv));
-
-	printf("exited #%08x\n", code);
+	launch_kernel(parm);
 
 	return E_NONE;
 }

@@ -69,6 +69,19 @@ typedef long long				__s64;
 
 typedef unsigned				UWORD32;
 
+union double_word
+{
+	unsigned long long		d;
+	struct {
+		unsigned					l;
+		unsigned					h;
+	} w;
+};
+
+#define double_word_ptr(v)	((union double_word*)&(v))
+#define double_word_lo(v)	(double_word_ptr(v)->w.l)
+#define double_word_hi(v)	(double_word_ptr(v)->w.h)
+
 /* ext2.c & nfs.c */
 
 #define S_IFMT					0170000
@@ -204,21 +217,13 @@ extern int block_init(void);
 
 struct elf_info
 {
-	unsigned long				load_addr;
-	unsigned						load_size;
-	long							load_offset;
-	unsigned long				entry_point;
-	union {
-		unsigned long long	region;
-		struct {
-			unsigned				region_lo;
-			unsigned				region_hi;
-		} w;
-	} r;
+	unsigned long			load_phys;
+	unsigned					load_size;
+	unsigned long long	entry_point;
 };
 
 extern int elf32_validate(const void *, size_t, struct elf_info *);
-extern void elf32_load(const void *, long);
+extern void elf32_load(const void *);
 
 /* elf64.c */
 

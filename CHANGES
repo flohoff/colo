@@ -4,7 +4,8 @@ CoLo 1.14 (xxxx-xx-xx)
 ----------------------
 
 *	Cleaned up build system and add ability to cross compile
-	[XXX acknowledgements XXX]
+	[cross compile suggestion / gcc-3.4 link fix - Sebastien Vajda]
+	[compiler flag suggestions - Thiemo Seufer]
 
 *	Added new example boot script 'menu.colo' showing new features.
 
