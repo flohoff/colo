@@ -165,7 +165,8 @@ extern char *argv[];
 
 /* pci.c */
 
-extern unsigned pci_init(size_t, size_t);
+extern void pci_init(size_t, size_t);
+extern const char *pci_unit_name(void);
 
 /* ide.c */
 

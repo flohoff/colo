@@ -16,6 +16,8 @@
 #define UNIT_ID_QUBE2			5
 #define UNIT_ID_RAQ2				6
 
+static unsigned unit;
+
 void pcicfg_write_word(unsigned dev, unsigned func, unsigned addr, unsigned data)
 {
 	assert(!(addr & 3));
@@ -60,7 +62,7 @@ unsigned pcicfg_read_byte(unsigned dev, unsigned func, unsigned addr)
 	return BRDG_REG_BYTE(0xcfc | (addr & 3));
 }
 
-unsigned pci_init(size_t bank0, size_t bank1)
+const char *pci_unit_name(void)
 {
 	static const char *name[] = {
 		[UNIT_ID_QUBE1]	= "Qube",
@@ -68,8 +70,18 @@ unsigned pci_init(size_t bank0, size_t bank1)
 		[UNIT_ID_QUBE2]	= "Qube2",
 		[UNIT_ID_RAQ2]		= "RaQ2",
 	};
-	unsigned unit;
+	static char buf[16];
 
+	if(unit >= elements(name) || !name[unit]) {
+		sprintf(buf, "#%u", unit);
+		return buf;
+	}
+
+	return name[unit];
+}
+
+void pci_init(size_t bank0, size_t bank1)
+{
 	/* set Galileo BARs for bus master memory access */
 
 	BRDG_REG_WORD(BRDG_REG_RAS01_BANK_SIZE) = bank0 ? bank0 - 1 : 0;
@@ -95,13 +107,6 @@ unsigned pci_init(size_t bank0, size_t bank1)
 	/* read unit type */
 
 	unit = pcicfg_read_byte(PCI_DEV_VIA, PCI_FNC_VIA_ISA, 0x94) >> 4;
-
-	if(unit < elements(name) && name[unit])
-		DPRINTF("pci: unit type \"%s\"\n", name[unit]);
-	else
-		DPRINTF("pci: unit type #%u\n", unit);
-
-	return unit;
 }
 
 /*

@@ -21,6 +21,10 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	unsigned long mark;
 
+	ram_size = bank0 + bank1;
+
+	pci_init(bank0, bank1);
+
 	if(switches & BUTTON_CLEAR)
 		nv_get();
 	else
@@ -28,13 +32,11 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	serial_init();
 
-	puts("\n-=<[ \"CoLo\" Qube2/RaQ2 boot loader v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " (" __DATE__ ") ]>=-");
-
-	ram_size = bank0 + bank1;
+	puts("\n[ \"CoLo\" v" _STR(VER_MAJOR) "." _STR(VER_MINOR) "]");
 
 	printf("stage2: %08lx-%08lx\n", (unsigned long) &__text, (unsigned long) KSEG0(ram_size));
 
-	pci_init(bank0, bank1);
+	printf("pci: unit type <%s>\n", pci_unit_name());
 
 	tulip_init();
 
