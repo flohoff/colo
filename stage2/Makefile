@@ -46,22 +46,19 @@ CPPFLAGS= -nostdinc -Iinclude -I../include -I$(shell dirname `$(CC) --print-libg
 all:
 	$(MAKE) -C ..
 
-binary: $(TARG).strip
+binary: $(TARG).elf
+
+$(TARG).elf: $(TARG).strip
+	echo -e '\t.section .stage2\n\t.incbin "$^"' | $(AS) -o $@
 
 $(TARG).strip: $(TARG)
 	strip -o $@ $^
 
 clean:
-	rm -f $(TARG){,.strip,.map,.lst} $(OBJS)
-
-dist: $(TARG)
-	rm -f $(TARG){.map,.lst} $(OBJS)
-
-$(TARG).lst: $(TARG)
-	objdump -Dx $^ > $@
+	rm -f $(TARG){,.elf,.strip,.map,.lst} $(OBJS)
 
 $(TARG): $(OBJS)
-	$(LD) -q -T $(TARG).lnk -Map $(TARG).map -o $@ $^
+	$(LD) -T $(TARG).lnk -Map $(TARG).map -o $@ $^
 
 %.o: src/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^

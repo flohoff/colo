@@ -4,12 +4,11 @@
 # $Id$
 #
 
-TARGET1= boot.bin
-TARGET2= chain.bin
-STAGE1= stage1/stage1.bin
-STAGE2= stage2/stage2.strip
-CHAIN= chain/chain.strip
-SUBDIRS= stage1 stage2 chain
+TARGET1= colo-rom-image.bin
+TARGET2= colo-chain.elf
+STAGE1= stage1/$(TARGET1)
+CHAIN= chain/$(TARGET2)
+SUBDIRS= stage2 stage1 chain
 BINDIR= binaries
 
 all: subdirs $(TARGET1) $(TARGET2)
@@ -18,14 +17,13 @@ ci:
 	rm -f $(BINDIR)/$(TARGET1) $(BINDIR)/$(TARGET2)
 	EDITOR=vi svn ci
 
-$(TARGET1): $(STAGE1) $(STAGE2)
-	rm -f $@
-	cat $^ > $@
-	cp -f $@ $(BINDIR)
+$(TARGET1): $(STAGE1)
+	cp -f $^ $@
+	cp -f $^ $(BINDIR)
 
 $(TARGET2): $(CHAIN)
 	cp -f $^ $@
-	cp -f $@ $(BINDIR)
+	cp -f $^ $(BINDIR)
 
 subdirs:
 	for x in $(SUBDIRS); do $(MAKE) -C $$x binary; done

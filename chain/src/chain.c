@@ -21,8 +21,6 @@ typedef long long				__s64;
 
 #include "linux/elf.h"
 
-/* libmem.c */
-
 extern void *memcpy(void *, const void *, size_t);
 extern void *memset(void *, int, size_t);
 
@@ -111,20 +109,12 @@ void memory_info(size_t *bank)
  */
 void chain(unsigned arg, unsigned sp)
 {
-	extern char __data, __edata;
-	extern char __bss, __ebss;
 	extern char __stage2;
-	extern char __etext;
 
 	Elf32_Ehdr *eh;
 	Elf32_Phdr *ph;
 	unsigned indx;
 	size_t ram[2];
-
-	/* initialise .bss / .data */
-
-	memcpy(&__data, &__etext, &__edata - &__data);
-	memset(&__bss, 0, &__ebss - &__bss);
 
 	/* say hello */
 

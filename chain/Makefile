@@ -6,12 +6,12 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-TARG= chain
-STAGE2= ../stage2/stage2.strip
+TARG= colo-chain
 OBJS=	chain.o\
 		serial.o\
 		libmem.o\
 		start.o\
+		../stage2/stage2.elf\
 
 CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&\
 	echo "-mcpu=r5000 -EL" ||\
@@ -26,21 +26,18 @@ CPPFLAGS= -nostdinc -Iinclude -I../include -I$(shell dirname `$(CC) --print-libg
 all:
 	$(MAKE) -C ..
 
-binary: $(TARG).strip
+binary: $(TARG).elf
 
-$(TARG).stage2: $(STAGE2)
-	echo -e '\t.section .stage2\n\t.incbin "$(STAGE2)"' | $(AS) -o $@
-
-$(TARG).strip: $(TARG)
+$(TARG).elf: $(TARG).unstripped
 	strip -o $@ $^
 
 clean:
-	rm -f $(TARG){,.stage2,.strip,.map,.lst} $(OBJS)
+	rm -f $(TARG){,.elf,.map,.lst,.unstripped} $(OBJS)
 
 $(TARG).lst: $(TARG)
 	objdump -Dx $^ > $@
 
-$(TARG): $(OBJS) $(TARG).stage2
+$(TARG).unstripped: $(OBJS)
 	$(LD) -T $(TARG).lnk -Map $(TARG).map -o $@ $^
 
 %.o: src/%.c
