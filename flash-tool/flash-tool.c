@@ -1,7 +1,7 @@
 /*
  * (C) P.Horton 2004
  *
- * $Header: /export1/cvs/cobalt-boot/flash-tool/flash-tool.c,v 1.3 2004/02/15 12:52:49 pdh Exp $
+ * $Id$
  */
 
 #include <stdio.h>
