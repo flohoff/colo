@@ -1,11 +1,11 @@
 # $Id$
 
-CoLo 1.15 (xxxx-xx-xx)
+CoLo 1.15 (2004-11-28)
 ----------------------
 
 *	Added link detection to network driver.
 
-*	Added support for 21041 network controller (early units).
+*	Added support for 21041 network controller (2700WG units).
 
 *	Added clock speed detection (stage2 only) to ensure timeouts and delays are
 	consistent regardless of CPU speed.
