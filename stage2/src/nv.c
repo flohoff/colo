@@ -10,7 +10,7 @@
 #include "cpu.h"
 #include "galileo.h"
 
-#define MENU_TIMEOUT				(10 * 1000 * 1000)
+#define MENU_TIMEOUT				(10 * 1000)
 
 #define RTC_ADDR_STORE			0x20
 
