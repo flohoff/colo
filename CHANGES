@@ -1,12 +1,13 @@
 # $Id$
 
-CoLo 1.12 (xxxx-xx-xx)
+CoLo 1.12 (2004-08-20)
 ----------------------
 
 *	The LCD tools 'putlcd', 'paneld' and 'e2fsck-lcd' are now built around a
 	common library. The library has support for using direct access to the LCD
-	via /dev/mem (the default) or driver access via the Cobalt LCD driver. To
-	make the library use the Cobalt LCD driver you need to export an
+	via /dev/mem (the default) or driver access via the Cobalt LCD driver.
+
+	To make the library use the Cobalt LCD driver you need to export an
 	environment variable LCD_DEVICE with the name of the device. If LCD_DEVICE
 	is an empty string the library will use the default device name, /dev/lcd.
 
