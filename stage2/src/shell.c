@@ -197,7 +197,7 @@ static int cmnd_nvflags(int opsz)
 		bit = evaluate(argv[indx], &ptr);
 		if(*ptr)
 			return E_BAD_EXPR;
-		if(bit > 31)
+		if(bit >= sizeof(nv_store.flags) * 8)
 			return E_BAD_VALUE;
 
 		mask |= 1 << bit;
@@ -208,8 +208,15 @@ static int cmnd_nvflags(int opsz)
 		nv_put();
 	}
 
-	for(indx = 0; indx < elements(msg); ++indx)
-		printf("%x: %c %s\n", indx, (nv_store.flags & (1 << indx)) ? '*' : '.', msg[indx]);
+	for(indx = 0; indx < sizeof(nv_store.flags) * 8; ++indx) {
+
+		mask = 1 << indx;
+
+		if(indx < elements(msg))
+			printf("%x: %c %s\n", indx, (nv_store.flags & mask) ? '*' : '.', msg[indx]);
+		else if(nv_store.flags & mask)
+			printf("%x: *\n", indx);
+	}
 
 	return E_NONE;
 }

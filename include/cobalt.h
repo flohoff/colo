@@ -9,8 +9,6 @@
 #ifndef _COBALT_H_
 #define _COBALT_H_
 
-#define PCI_SERIAL					1
-
 #define BAUD_RATE						115200
 
 #define LED_QUBE_LEFT				(1 << 0)

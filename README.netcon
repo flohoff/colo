@@ -1,0 +1,37 @@
+# $Id$
+
+CoLo NETWORK CONSOLE
+====================
+
+As of version 1.18, CoLo supports a rudimentary network console.
+
+The network console is started with the command 'netcon' or through the boot
+menu item "Network Shell".
+
+When "Network Shell" is chosen from the boot menu the unit first queries a
+DHCP server for an IP address etc. and also for the address of the next server
+to be used in the boot process. A network console session is then started to
+the next server, using the source port 6665 and the destination port 6666.
+
+If the network console is started from the boot shell using the 'netcon'
+command the host, destination port and source port can be specified directly.
+
+There is not a protocol as such. The exchanged UDP packets just contain simple
+ASCII text.
+
+In the 'tools/ncon' directory of the CoLo source there is a very simple client
+application. The client application should be started on the server, passing
+the hostname or IP address of the target unit.
+
+CoLo's net console is roughly compatible with the kernel net console. See the
+'netcon' entry in README.shell for an example of how to propagate the network
+console settings to the kernel.
+
+*NOTE*
+
+The network console is totally independent of the serial console. Both can
+operate at the same time if required.
+
+-- Peter Horton, pdh@colonel-panic.org --
+
+# vi:set ts=3 sw=3 tw=78:

@@ -8,6 +8,8 @@ CoLo 1.18 (xxxx-xx-xx)
 
 *	Added "ncon" to tools directory. Very simple net console client.
 
+*	PCI serial support switch moved to NV flag 7.
+
 CoLo 1.17 (2005-02-20)
 ----------------------
 

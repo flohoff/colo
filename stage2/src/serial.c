@@ -153,10 +153,9 @@ void serial_enable(int enable)
 		uart_base = UART_REGISTER;
 		uart_clock = UART_CLOCK;
 
-#ifdef PCI_SERIAL
-
-		if(pcicfg_read_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x00) == ((TIMEDIA_DEV_ID << 16) | TIMEDIA_VND_ID)) {
-
+		if((nv_store.flags & NVFLAG_CONSOLE_PCI_SERIAL) &&
+			pcicfg_read_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x00) == ((TIMEDIA_DEV_ID << 16) | TIMEDIA_VND_ID))
+		{
 			pcicfg_write_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x10, TIMEDIA_BASE);
 
 			pcicfg_write_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04,
@@ -165,8 +164,6 @@ void serial_enable(int enable)
 			uart_base = TIMEDIA_REGISTER;
 			uart_clock = TIMEDIA_CLOCK;
 		}
-
-#endif
 
 		baud = stored_baud();
 		div = (uart_clock + baud * 8) / (baud * 16);
@@ -193,8 +190,6 @@ void drain(void)
 		while(~UART_LSR & (UART_LSR_THRE | UART_LSR_TEMPTY))
 			yield();
 }
-
-#ifdef PCI_SERIAL
 
 /*
  * don't hog the PCI bus whilst polling the serial
@@ -228,23 +223,6 @@ int kbhit(void)
 
 	return 0;
 }
-
-#else
-
-int kbhit(void)
-{
-	if(state == ST_ENABLED && (UART_LSR & UART_LSR_RDR))
-		return 1;
-
-	if(netcon_poll())
-		return 1;
-
-	yield();
-
-	return 0;
-}
-
-#endif
 
 int getch(void)
 {

@@ -335,6 +335,7 @@ extern int boot(int);
 #define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
 #define NVFLAG_CONSOLE_DISABLE			(1 << 4)
 #define NVFLAG_HORZ_MENU					(1 << 5)
+#define NVFLAG_CONSOLE_PCI_SERIAL		(1 << 7)
 
 #define NV_STORE_VERSION					2
 
