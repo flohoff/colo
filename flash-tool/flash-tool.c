@@ -17,7 +17,7 @@
 #include <sys/mman.h>
 
 #define VER_MAJOR					1
-#define VER_MINOR					2
+#define VER_MINOR					3
 
 #define APP_NAME					"flash-tool"
 
