@@ -19,13 +19,17 @@ size_t ram_size;
 
 void loader(size_t bank0, size_t bank1, unsigned switches)
 {
+	extern char __text;
+
 	unsigned long mark;
 
 	serial_init();
 
-	puts("\n-=<[ \"CoLo\" Qube2/RaQ2 boot loader v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]>=-");
+	puts("\n-=<[ \"CoLo\" Qube2/RaQ2 boot loader v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " (" __DATE__ ") ]>=-");
 
 	ram_size = bank0 + bank1;
+
+	printf("stage2: %08lx-%08lx\n", (unsigned long) &__text, (unsigned long) KSEG0(ram_size));
 
 	pci_init(bank0, bank1);
 
@@ -34,6 +38,8 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 	ide_init();
 
 	block_init();
+
+	heap_reset();
 
 	for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE * 3 / 2;)
 		if(kbhit() && getch() == ' ')

@@ -3,6 +3,15 @@
 CoLo 1.6 (xxxx-xx-xx)
 ---------------------
 
+*	The layout of the source tree has been tidied up.
+
+*	Stage 2 is now loaded at the top of RAM rather than the bottom. We can now
+	load kernels linked to run at 0x80000000. This is a big change, but it all
+	seems to work.
+
+	Unfortunately the chain loader can no longer detect if it's being loaded
+	from "CoLo".
+
 *	Build output files are now 'colo-rom-image.bin' and 'colo-chain.elf'.
 
 *	Boot loader now sources the script '/boot/default.colo' by default, rather

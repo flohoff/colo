@@ -7,14 +7,12 @@
  */
 
 __stack = __ebss + (32 << 10);
-__heap = __stack;
 
 SECTIONS
 {
-	. = 0x80000000;
-
 	.text :
 	{
+		__text = .;
 		*(.text)
 		*(.rodata)
 	}

@@ -69,4 +69,22 @@ void *memset(void *dst, int val, size_t size)
 	return dst;
 }
 
+int memcmp(const void *mem1, const void *mem2, size_t size)
+{
+	unsigned dat1, dat2;
+
+	if(!size)
+		return 0;
+
+	do {
+
+		dat1 = *(unsigned char *) mem1;
+		dat2 = *(unsigned char *) mem2;
+		++mem1, ++mem2;
+
+	} while(--size && dat1 == dat2);
+
+	return (int) dat1 - (int) dat2;
+}
+
 /* vi:set ts=3 sw=3 cin path=include,../include: */

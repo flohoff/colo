@@ -10,19 +10,17 @@
 #include "cpu.h"
 #include "galileo.h"
 #include "cobalt.h"
+#include "rfx.h"
 
-typedef unsigned short		__u16;
-typedef unsigned				__u32;
-typedef unsigned long long	__u64;
+#define VER_MAJOR				0
+#define VER_MINOR				9
 
-typedef short					__s16;
-typedef int						__s32;
-typedef long long				__s64;
-
-#include "linux/elf.h"
+#define __STR(x)				#x
+#define _STR(x)				__STR(x)
 
 extern void *memcpy(void *, const void *, size_t);
 extern void *memset(void *, int, size_t);
+extern int memcmp(const void *, const void *, size_t);
 
 /* serial.c */
 
@@ -103,29 +101,23 @@ void memory_info(size_t *bank)
 }
 
 /*
- * load boot loader from ELF image that follows
+ * load boot loader from RFX image that follows
  */
-void chain(unsigned arg, unsigned sp)
+void chain(unsigned arg)
 {
 	extern char __stage2;
 
-	Elf32_Ehdr *eh;
-	Elf32_Phdr *ph;
-	unsigned indx;
+	unsigned indx, data, type;
+	unsigned *pfix, *relocs;
+	unsigned long loadaddr;
+	struct rfx_header *rfx;
 	size_t ram[2];
 
 	/* say hello */
 
 	serial_init();
-	puts("chain: running");
+	puts("chain: v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " (" __DATE__ ")");
 	drain();
-
-	/* if loaded from "CoLo" launch.S will have stacked 64 bytes */
-
-	if((arg & 0xffff) || arg - sp == 64) {
-		puts("chain: LOADED FROM \"CoLo\" HALTING");
-		fatal();
-	}
 
 	/* get memory bank sizes */
 
@@ -144,43 +136,58 @@ void chain(unsigned arg, unsigned sp)
 
 	/* load stage2 */
 
-	eh = (Elf32_Ehdr *) &__stage2;
-
-	if(eh->e_ident[EI_MAG0] != ELFMAG0 ||
-		eh->e_ident[EI_MAG1] != ELFMAG1 ||
-		eh->e_ident[EI_MAG2] != ELFMAG2 ||
-		eh->e_ident[EI_MAG3] != ELFMAG3 ||
-		eh->e_ident[EI_CLASS] != ELFCLASS32 ||
-		eh->e_ident[EI_DATA] != ELFDATA2LSB ||
-		eh->e_ident[EI_VERSION] != EV_CURRENT ||
-		eh->e_machine != EM_MIPS ||
-		!eh->e_phoff ||
-		!eh->e_phnum ||
-		eh->e_phentsize != sizeof(Elf32_Phdr))
-	{
-		puts("chain: BAD ELF HEADER");
+	rfx = (void *) &__stage2;
+	
+	if(memcmp(rfx->magic, RFX_HDR_MAGIC, RFX_HDR_MAGIC_SZ)) {
+		puts("chain: RFX header missing");
 		fatal();
 	}
 
-	ph = (void *) eh + eh->e_phoff;
+	loadaddr = ram[0] + ram[1] - (32 << 10); // XXX
 
-	for(indx = 0; indx < eh->e_phnum; ++indx)
+	if(rfx->memsize > loadaddr) {
+		puts("chain: out of memory");
+		fatal();
+	}
 
-		if(ph[indx].p_type == PT_LOAD) {
+	loadaddr = (unsigned long) KSEG0((loadaddr - rfx->memsize) & 0xffff0000);
 
-			if((ph[indx].p_vaddr & 3) ||
-				(ph[indx].p_offset & 3) ||
-				(ph[indx].p_filesz & 3) ||
-				(ph[indx].p_memsz & 3))
-			{
-				puts("chain: BAD ELF SECTION");
+	memcpy((void *) loadaddr, rfx + 1, rfx->imgsize);
+	memset((void *) loadaddr + rfx->imgsize, 0, rfx->memsize - rfx->imgsize);
+
+	relocs = (void *)(rfx + 1) + rfx->imgsize;
+
+	for(indx = 0; indx < rfx->nrelocs; ++indx) {
+
+		type = relocs[indx] & 3;
+		pfix = (void *) loadaddr + (relocs[indx] & ~3);
+		data = *pfix;
+
+		switch(type) {
+
+			case RFX_REL_32:
+				*pfix = data + loadaddr;
+				break;
+
+			case RFX_REL_26:
+				data += (loadaddr & 0x0fffffff) >> 2;
+				if((*pfix ^ data) & 0xfc000000) {
+					puts("chain: RFX_REL_26 relocation out of range");
+					fatal();
+				}
+				*pfix = data;
+				break;
+
+			case RFX_REL_H16:
+				*pfix = (data & 0xffff0000) | ((data + (loadaddr >> 16)) & 0x0000ffff);
+				break;
+
+			default:
+				puts("chain: unexpected RFX relocation");
 				fatal();
-			}
-
-			memcpy((void *) ph[indx].p_vaddr, (void *) eh + ph[indx].p_offset, ph[indx].p_filesz);
-			memset((void *) ph[indx].p_vaddr + ph[indx].p_filesz, 0, ph[indx].p_memsz - ph[indx].p_filesz);
 		}
-
+	}
+	
 	/* ensure what we just loaded is in physical memory */
 
 	dcache_flush_all();
@@ -190,7 +197,7 @@ void chain(unsigned arg, unsigned sp)
 	puts("chain: starting stage2");
 	drain();
 
-	((void (*)(size_t, size_t, unsigned)) eh->e_entry)(ram[0], ram[1], 0);
+	((void (*)(size_t, size_t, unsigned))(rfx->entry + loadaddr))(ram[0], ram[1], 0);
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

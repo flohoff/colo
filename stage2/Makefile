@@ -7,6 +7,7 @@
 #
 
 TARG= stage2
+TOOLDIR= ../tools
 OBJS=	main.o\
 		lib.o\
 		libmem.o\
@@ -33,13 +34,15 @@ OBJS=	main.o\
 		launch.o\
 		start.o\
 
+LOADADDR=0x80000000
+
 CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&\
 	echo "-mcpu=r5000 -EL" ||\
 	echo "-mtune=r5000 -G0")
 
 MIPSFLAGS= -mno-abicalls -fno-pic -mips2 $(CC_DEP)
 
-LDFLAGS= -T $(TARG).lnk -Map $(TARG).map --emit-relocs
+LDFLAGS= -T $(TARG).lnk -Map $(TARG).map --emit-relocs --section-start .text=$(LOADADDR)
 CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-builtin -nostdlib $(MIPSFLAGS)
 ASFLAGS= $(MIPSFLAGS)
 CPPFLAGS= -nostdinc -Iinclude -I../include -I$(shell dirname `$(CC) --print-libgcc-file-name`)/include -D_DEBUG
@@ -49,14 +52,24 @@ all:
 
 binary: $(TARG).elf
 
-$(TARG).elf: $(TARG).strip
+$(TARG).bin: $(TARG)
+	objcopy -O binary $^ $@
+
+$(TARG).elf: $(TARG).rfx
 	echo -e '\t.section .stage2\n\t.incbin "$^"' | $(AS) -o $@
 
-$(TARG).strip: $(TARG)
-	strip -o $@ $^
+$(TARG).rfx: $(TARG)
+	$(TOOLDIR)/elf2rfx/elf2rfx -f $^ $@
+
+$(TARG).tmp: $(TARG)
+	$(TOOLDIR)/elf2rfx/elf2rfx -fb $(LOADADDR) $^ $@
+
+test-rfx: $(TARG).bin $(TARG).tmp
+	cmp $^
+	@echo '***  SUCCESS  ***'
 
 clean:
-	rm -f $(TARG){,.elf,.strip,.map} $(OBJS)
+	rm -f $(TARG){,.elf,.rfx,.map,.bin,.tmp} $(OBJS)
 
 $(TARG): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
@@ -67,6 +80,6 @@ $(TARG): $(OBJS)
 %.o: src/%.S
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c -o $@ $^
 
-.PHONY: all binary clean
+.PHONY: all binary clean test-rfx
 
 # vi:set ts=3 sw=3 ai:

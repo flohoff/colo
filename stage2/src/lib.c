@@ -67,24 +67,6 @@ void *memmove(void *dst, const void *src, size_t size)
 	return memcpy(dst, src, size);
 }
 
-int memcmp(const void *mem1, const void *mem2, size_t size)
-{
-	unsigned dat1, dat2;
-
-	if(!size)
-		return 0;
-
-	do {
-
-		dat1 = *(unsigned char *) mem1;
-		dat2 = *(unsigned char *) mem2;
-		++mem1, ++mem2;
-
-	} while(--size && dat1 == dat2);
-
-	return (int) dat1 - (int) dat2;
-}
-
 int strncmp(const char *str1, const char *str2, size_t size)
 {
 	unsigned chr1, chr2;

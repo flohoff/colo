@@ -272,7 +272,7 @@ void *elf_load(const void *image, size_t size)
 int cmnd_execute(int opsz)
 {
 	extern unsigned launch(void *, void *, int, char **, char **, int *);
-	extern char __heap;
+	extern char __text;
 
 	static char irdstr[32];
 	void *image, *targ, *func, *initrd;
@@ -307,8 +307,8 @@ int cmnd_execute(int opsz)
 		return E_UNSPEC;
 	}
 
-	if(targ < (void *) &__heap ||
-		targ + elfsz > KSEG0(ram_size) ||
+	if(targ < KSEG0(0) ||
+		targ + elfsz > (void *) &__text ||
 		(targ + elfsz > image && targ < image + imagesz)) {
 
 		puts("ELF image won't fit");
@@ -330,7 +330,7 @@ int cmnd_execute(int opsz)
 
 	/* relocate stack to top of RAM and call target */
 
-	code = launch(KSEG0(ram_size), func, (int) KSEG0(ram_size) | (argc > 1 ? argc : 0), argv, NULL, NULL);
+	code = launch(&__text, func, (int) KSEG0(ram_size) | (argc > 1 ? argc : 0), argv, NULL, NULL);
 
 	printf("exited #%08x\n", code);
 

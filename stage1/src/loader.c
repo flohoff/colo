@@ -8,16 +8,9 @@
 
 #include "lib.h"
 #include "cpu.h"
+#include "rfx.h"
 
-typedef unsigned short		__u16;
-typedef unsigned				__u32;
-typedef unsigned long long	__u64;
-
-typedef short					__s16;
-typedef int						__s32;
-typedef long long				__s64;
-
-#include "linux/elf.h"
+extern size_t mem_bank[2];
 
 static void *(*memcpy_w)(void *, const void *, size_t)	= _memcpy_w;
 static void *(*memset_w)(void *, int, size_t)				= _memset_w;
@@ -36,65 +29,84 @@ static void dcache_flush_all(void)
 }
 
 /*
- * load boot loader from ELF image in Flash
+ * display error message and die
+ */
+static void loader_error(const char *msg)
+{
+	lcd_line(0, "!RFX LOAD FAIL !");
+	lcd_line(1, msg);
+	fatal();
+}
+
+/*
+ * load boot loader from RFX image in Flash
  */
 void loader(void)
 {
 	extern char __stage2;
-	Elf32_Ehdr *eh;
-	Elf32_Phdr *ph;
-	unsigned indx;
+
+	unsigned indx, type, data;
+	unsigned *pfix, *relocs;
+	unsigned long loadaddr;
+	struct rfx_header *rfx;
 
 	/* ensure _memcpy_w() / _memset_w() are in physical memory */
 
 	dcache_flush_all();
 
-	eh = KSEG1(&__stage2);
+	rfx = KSEG1(&__stage2);
+	
+	for(indx = 0; indx < RFX_HDR_MAGIC_SZ; ++indx)
+		if(rfx->magic[indx] != RFX_HDR_MAGIC[indx])
+			loader_error(" INVALID HEADER");
 
-	if(eh->e_ident[EI_MAG0] != ELFMAG0 ||
-		eh->e_ident[EI_MAG1] != ELFMAG1 ||
-		eh->e_ident[EI_MAG2] != ELFMAG2 ||
-		eh->e_ident[EI_MAG3] != ELFMAG3 ||
-		eh->e_ident[EI_CLASS] != ELFCLASS32 ||
-		eh->e_ident[EI_DATA] != ELFDATA2LSB ||
-		eh->e_ident[EI_VERSION] != EV_CURRENT ||
-		eh->e_machine != EM_MIPS ||
-		!eh->e_phoff ||
-		!eh->e_phnum ||
-		eh->e_phentsize != sizeof(Elf32_Phdr))
-	{
-		lcd_line(0, "!ELF LOAD FAIL !");
-		lcd_line(1, "  BAD HEADER");
-		fatal();
-	}
+	loadaddr = mem_bank[0] + mem_bank[1] - (32 << 10); // XXX
 
-	ph = (void *) eh + eh->e_phoff;
+	if(rfx->memsize > loadaddr)
+		loader_error(" OUT OF MEMORY");
 
-	for(indx = 0; indx < eh->e_phnum; ++indx)
+	loadaddr = (unsigned long) KSEG0((loadaddr - rfx->memsize) & 0xffff0000);
 
-		if(ph[indx].p_type == PT_LOAD) {
+	memcpy_w((void *) loadaddr, rfx + 1, rfx->imgsize);
+	memset_w((void *) loadaddr + rfx->imgsize, 0, rfx->memsize - rfx->imgsize);
 
-			if((ph[indx].p_vaddr & 3) ||
-				(ph[indx].p_offset & 3) ||
-				(ph[indx].p_filesz & 3) ||
-				(ph[indx].p_memsz & 3))
-			{
-				lcd_line(0, "!ELF LOAD FAIL !");
-				lcd_line(1, "  BAD SECTION");
-				fatal();
-			}
+	relocs = (void *)(rfx + 1) + rfx->imgsize;
 
-			memcpy_w((void *) ph[indx].p_vaddr, (void *) eh + ph[indx].p_offset, ph[indx].p_filesz);
-			memset_w((void *) ph[indx].p_vaddr + ph[indx].p_filesz, 0, ph[indx].p_memsz - ph[indx].p_filesz);
+	for(indx = 0; indx < rfx->nrelocs; ++indx) {
+
+		type = relocs[indx] & 3;
+		pfix = (void *) loadaddr + (relocs[indx] & ~3);
+		data = *pfix;
+
+		switch(type) {
+
+			case RFX_REL_32:
+				*pfix = data + loadaddr;
+				break;
+
+			case RFX_REL_26:
+				data += (loadaddr & 0x0fffffff) >> 2;
+				if((*pfix ^ data) & 0xfc000000)
+					loader_error(" BAD RELOCATION");
+				*pfix = data;
+				break;
+
+			case RFX_REL_H16:
+				*pfix = (data & 0xffff0000) | ((data + (loadaddr >> 16)) & 0x0000ffff);
+				break;
+
+			default:
+				loader_error(" UNKNOWN RELOC");
 		}
-
+	}
+	
 	/* ensure what we just loaded is in physical memory */
 
 	dcache_flush_all();
 
 	/* jump to it */
 
-	((void (*)(size_t, size_t, unsigned)) eh->e_entry)(mem_bank[0], mem_bank[1], switches);
+	((void (*)(size_t, size_t, unsigned))(rfx->entry + loadaddr))(mem_bank[0], mem_bank[1], switches);
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

@@ -127,7 +127,7 @@ void *stage1(void)
 
 	/* returns new SP */
 
-	return KSEG0(mem_bank[0] + mem_bank[1]);
+	return KSEG0(mem_bank[0] + mem_bank[1]); // XXX
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

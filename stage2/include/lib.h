@@ -73,7 +73,6 @@ extern int strncasecmp(const char *, const char *, size_t);
 extern int strncmp(const char *, const char *, size_t);
 extern int strcmp(const char *, const char *);
 extern void *memmove(void *, const void *, size_t);
-extern int memcmp(const void *, const void *, size_t);
 extern int sprintf(char *, const char *, ...);
 extern int printf(const char *, ...);
 extern unsigned long strtoul(const char *, char **, int);
@@ -84,6 +83,7 @@ extern int glob(const char *, const char *);
 
 extern void *memcpy(void *, const void *, size_t);
 extern void *memset(void *, int, size_t);
+extern int memcmp(const void *, const void *, size_t);
 
 /* vsprintf.c */
 

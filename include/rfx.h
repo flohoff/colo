@@ -2,6 +2,8 @@
  * (C) P.Horton 2004
  *
  * $Id$
+ *
+ * This code is covered by the GNU General Public License. For details see the file "COPYING".
  */
 
 #ifndef _RFX_H_
@@ -19,6 +21,7 @@ struct rfx_header
 {
 	char		magic[RFX_HDR_MAGIC_SZ];
 	unsigned	imgsize;
+	unsigned	memsize;
 	unsigned	entry;
 	unsigned	nrelocs;
 };

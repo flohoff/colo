@@ -24,12 +24,12 @@ static size_t next_size;
 
 void heap_reset(void)
 {
-	extern char __heap;
+	extern char __text;
 
-	assert(!((unsigned long) &__heap & 15));
+	assert(!((unsigned long) &__text & 15));
 
-	free_lo = &__heap;
-	free_hi = KSEG0(ram_size) - (32 << 10);
+	free_lo = KSEG0(0);
+	free_hi = KSEG0(&__text) - (32 << 10); // XXX
 
 	image_size = 0;
 	image_size_mark = 0;
@@ -132,7 +132,7 @@ int cmnd_heap(int opsz)
 				(unsigned long) image_base_mark, (unsigned long) image_base_mark + image_size_mark - 1,
 				image_size_mark, image_size_mark);
 	} else
-		puts("no image loaded");
+		printf("no image loaded (%uKB)\n", heap_space() >> 10);
 
 	return E_NONE;
 }

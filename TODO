@@ -1,5 +1,11 @@
 # $Id$
 
+* Fix case of loading non-compressed images via S-records.
+
+* Sort out exactly where $sp should point during the various stages.
+
+* Set $sp when chain loading kernel.
+
 * Make chain loader use LCD for error messages rather than serial.
 
 * Add support for network booting (TFTP and NFS) [WORK IN PROGRESS].

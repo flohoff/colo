@@ -10,7 +10,7 @@
 #include "cpu.h"
 #include "md5.h"
 
-extern char __heap;
+#define DEFAULT_ADDR					0x80000000
 
 /*
  * write byte/half/word to memory (possibly unaligned)
@@ -105,7 +105,7 @@ int cmnd_read(int opsz)
 		unsigned long	addr;
 		int				size;
 	} last = {
-		.addr = (unsigned long) &__heap,
+		.addr = DEFAULT_ADDR,
 		.size = 4,
 	};
 
@@ -141,7 +141,7 @@ int cmnd_write(int opsz)
 		unsigned long	addr;
 		int				size;
 	} last = {
-		.addr = (unsigned long) &__heap,
+		.addr = DEFAULT_ADDR,
 		.size = 4,
 	};
 
@@ -192,7 +192,7 @@ int cmnd_dump(int opsz)
 		unsigned			count;
 		int				size;
 	} last = {
-		.addr = (unsigned long) &__heap,
+		.addr = DEFAULT_ADDR,
 		.count = 0x100,
 		.size = 4
 	};

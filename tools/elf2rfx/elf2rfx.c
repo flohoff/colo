@@ -2,6 +2,8 @@
  * (C) P.Horton 2004
  *
  * $Id$
+ *
+ * This code is covered by the GNU General Public License. For details see the file "COPYING".
  */
 
 #include <stdio.h>
@@ -13,7 +15,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <linux/elf.h>
-#include "rfx.h"
+#include "../../include/rfx.h"
 
 #define VER_MAJOR					0
 #define VER_MINOR					1
@@ -30,6 +32,7 @@
 
 static unsigned va_base;
 static unsigned va_size;
+static unsigned va_memsz;
 static Elf32_Ehdr *eh;
 static Elf32_Shdr *sh;
 static int verbose;
@@ -130,6 +133,7 @@ static void output_rfx(int fd)
 
 	memcpy(rfx->magic, RFX_HDR_MAGIC, RFX_HDR_MAGIC_SZ);
 	rfx->imgsize = va_size;
+	rfx->memsize = va_memsz;
 	rfx->entry = eh->e_entry - va_base;
 	rfx->nrelocs = nrelocs;
 
@@ -201,6 +205,17 @@ static void load_elf(const char *name)
 				va_size = top;
 		}
 
+	va_memsz = va_size;
+
+	for(indx = 0; indx < eh->e_shnum; ++indx)
+		if(sh[indx].sh_type == SHT_NOBITS && (sh[indx].sh_flags & SHF_ALLOC)) {
+			if(sh[indx].sh_addr < va_base + va_size)
+				fatal(NO_ERRNO, "SHT_NOBITS section below SHT_PROGBITS");
+			top = sh[indx].sh_addr + sh[indx].sh_size - va_base;
+			if(top > va_memsz)
+				va_memsz = top;
+		}
+
 	if((va_base | va_size) & 3)
 		fatal(NO_ERRNO, "program misaligned");
 
@@ -213,6 +228,7 @@ static void load_elf(const char *name)
 	if(verbose) {
 		printf("load address 0x%08x\n", va_base);
 		printf("load size    0x%08x (%u)\n", va_size, va_size);
+		printf("memory size  0x%08x (%u)\n", va_memsz, va_memsz);
 		printf("entry point  0x%08x\n", eh->e_entry);
 	}
 }

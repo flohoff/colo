@@ -3,6 +3,8 @@
 #
 # $Id$
 #
+# This code is covered by the GNU General Public License. For details see the file "COPYING".
+#
 
 TARGET1= colo-rom-image.bin
 TARGET2= colo-chain.elf
