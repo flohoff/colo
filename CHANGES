@@ -1,5 +1,12 @@
 # $Id$
 
+CoLo 1.13 (xxxx-xx-xx)
+----------------------
+
+*	Added 'colo-perm' and 'md5rom' to build.
+
+*	Added missing include to paneld.c.
+
 CoLo 1.12 (2004-08-20)
 ----------------------
 
