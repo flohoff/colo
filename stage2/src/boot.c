@@ -102,12 +102,15 @@ int boot(int which)
 	sprintf(buf, "%d", which);
 	env_put("boot-option", buf, VAR_OTHER);
 
-	if(script_exec(script[which]) != E_NONE)
+	if(script_exec(script[which], -1) != E_NONE)
 		return E_UNSPEC;
 
 	return E_NONE;
 }
 
+/*
+ * shell command - boot
+ */
 int cmnd_boot(int opsz)
 {
 	unsigned indx, size;

@@ -8,23 +8,69 @@
 
 #include "lib.h"
 
+#define MAX_SCRIPT_DEPTH					10
+
+struct context
+{
+	struct context	*link;
+	unsigned			depth;
+	unsigned			etext;
+};
+
+static char scripts[16384];
+
+static struct context root =
+{
+	.link		= NULL,
+	.depth	= 0,
+	.etext	= 0,
+};
+
+static struct context *current = &root;
+
 /*
  * execute script
  */
-int script_exec(const char *script)
+int script_exec(const char *buf, int size)
 {
 	static char line[256];
 	int err, skip, escp;
+	struct context ctx;
 	unsigned indx;
+	char *scrp;
 
-	while(*script) {
+	if(current->depth >= MAX_SCRIPT_DEPTH) {
+		puts("script depth exceeded");
+		return E_UNSPEC;
+	}
+
+	if(size < 0)
+		size = strlen(buf);
+
+	if(current->etext + size >= sizeof(scripts)) {
+		puts("script too large");
+		return E_UNSPEC;
+	}
+
+	scrp = scripts + current->etext;
+
+	memcpy(scrp, buf, size);
+	scrp[size++] = '\0';
+
+	ctx.link = current;
+	ctx.depth = current->depth + 1;
+	ctx.etext = current->etext + size;
+
+	current = &ctx;
+
+	for(err = E_NONE; *scrp;) {
 
 		skip = 0;
 		escp = 0;
 
-		for(indx = 0; *script && indx < sizeof(line) - 1;) {
+		for(indx = 0; *scrp && indx < sizeof(line) - 1;) {
 
-			line[indx] = *script++;
+			line[indx] = *scrp++;
 
 			if(line[indx] == '\n' || line[indx] == '\r') {
 				if(indx)
@@ -43,29 +89,48 @@ int script_exec(const char *script)
 			}
 
 			if(!skip && (indx || !isspace(line[indx])) && isprint(line[indx]))
-				putchar(line[indx++]);
+				++indx;
 		}
 
 		line[indx] = '\0';
 
-		for(indx = 0; isspace(line[indx]); ++indx)
-			;
-		
-		if(line[indx]) {
+		if(indx) {
 
-			putchar('\n');
+			indx = 0;
 
-			err = execute_line(line);
+			if(line[0] == '@') {
 
-			if(err != E_NONE) {
-				puts(error_text(err));
-				puts("script aborted");
-				return err;
+				while(isspace(line[++indx]))
+					;
+			}
+
+			if(line[indx]) {
+
+				/* show what we're about to do */
+
+				printf("%d> ", ctx.depth);
+				while(line[indx])
+					putchar(line[indx++]);
+				putchar('\n');
+
+				/* recursion can occur here. it will trash the  *
+				 * current line and argc/argv etc but who cares */
+
+				err = execute_line(line);
+
+				if(err != E_NONE) {
+					if(err != E_UNSPEC)
+						puts(error_text(err));
+					printf("script aborted <%d>\n", ctx.depth);
+					break;
+				}
 			}
 		}
 	}
 
-	return E_NONE;
+	current = ctx.link;
+
+	return err;
 }
 
 /*
@@ -76,10 +141,9 @@ int cmnd_script(int opsz)
 #	define SCRIPT_SIGN			"#:CoLo:#"
 #	define SCRIPT_SIGN_SZ		(sizeof(SCRIPT_SIGN) - 1)
 
-	static char buf[4096];
+	const char *ptr;
 	unsigned indx;
 	size_t size;
-	void *ptr;
 
 	if(argc > 2)
 		return E_ARGS_OVER;
@@ -101,27 +165,18 @@ int cmnd_script(int opsz)
 		return E_UNSPEC;
 	}
 
-	if(size >= sizeof(buf)) {
-		puts("script too large");
-		return E_UNSPEC;
-	}
-
-	memcpy(buf, ptr, size);
-	
-	buf[size] = '\0';
-
 	if(argc == 1) {
-		script_exec(buf);
+		script_exec(ptr, size);
 		return E_NONE;
 	}
 
-	for(indx = 0; buf[indx]; ++indx) {
-		if(buf[indx] == '\r' && buf[indx + 1] == '\n')
+	for(indx = 0; indx < size; ++indx) {
+		if(ptr[indx] == '\r' && size - indx > 1 && ptr[indx + 1] == '\n')
 			++indx;
-		putchar((buf[indx] == '\n' || isprint(buf[indx])) ? buf[indx] : '?');
+		putchar((ptr[indx] == '\n' || isprint(ptr[indx])) ? ptr[indx] : '?');
 	}
 
-	if(indx && buf[indx - 1] != '\n')
+	if(indx && ptr[indx - 1] != '\n')
 		putchar('\n');
 
 	return E_NONE;

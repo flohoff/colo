@@ -497,10 +497,7 @@ const char *error_text(int error)
 	};
 	static char buf[48];
 
-	if(error == E_NONE || error == E_UNSPEC)
-		return NULL;
-
-	if(error >= elements(msgs) || !msgs[error]) {
+	if((unsigned) error >= elements(msgs) || !msgs[error]) {
 		sprintf(buf, "unknown error #%d", error);
 		return buf;
 	}
@@ -537,7 +534,7 @@ void shell(void)
 			history_add(line);
 
 		error = execute_line(line);
-		if(error != E_NONE)
+		if(error != E_NONE && error != E_UNSPEC)
 			puts(error_text(error));
 	}
 }

@@ -3,6 +3,8 @@
 CoLo 1.14 (xxxx-xx-xx)
 ----------------------
 
+*	Scripts can now be nested.
+
 *	The 'console-speed' variable is now only available when the serial port is
 	enabled.
 

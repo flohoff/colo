@@ -166,7 +166,7 @@ extern char *argv[];
 
 /* script.c */
 
-extern int script_exec(const char *);
+extern int script_exec(const char *, int);
 
 /* pci.c */
 

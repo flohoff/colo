@@ -123,10 +123,6 @@ will only be run if it begins with the text "#:CoLo:#".
 Execution of a script will be aborted if a command fails, unless the failing
 command is preceded by a '-'.
 
-Scripts can not (currently) be nested. If executed from within a script the
-existing script will be discarded and execution will continue with the new
-script.
-
 If passed a single argument of 'show' the currently loaded script is listed on
 the console.
 
