@@ -9,6 +9,8 @@
 #ifndef _LIB_H_
 #define _LIB_H_
 
+#include <string.h>
+
 typedef unsigned	UWORD32;
 
 #endif
