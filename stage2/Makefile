@@ -47,6 +47,7 @@ OBJS=	main.o\
 		boot.o\
 		nv.o\
 		nfs.o\
+		netcon.o\
 		start.o\
 
 include ../Rules.mak

@@ -50,7 +50,8 @@
 #define FRAME_SIZE(f)						((f)->end-(f)->offset)
 #define FRAME_STRIP(f,n)					do{(f)->offset+=(n);assert((f)->offset<=(f)->end);}while(0)
 #define FRAME_HEADER(f,n)					do{assert((f)->offset>=(n));(f)->offset-=(n);}while(0)
-#define FRAME_INIT(f,o,n)					do{(f)->offset=(o);(f)->end=(f)->offset+(n);assert((f)->end<=sizeof((f)->payload));}while(0)
+#define FRAME_GROW(f,n)						do{(f)->end+=(n);assert((f)->end<=sizeof((f)->payload));}while(0)
+#define FRAME_INIT(f,o,n)					do{(f)->offset=(o);(f)->end=(o);FRAME_GROW(f,n);}while(0)
 #define FRAME_CLIP(f,n)						do{assert((n)<=(f)->end-(f)->offset);(f)->end=(f)->offset+(n);}while(0)
 #define FRAME_BUMP(f)						do{++(f)->refs;}while(0)
 

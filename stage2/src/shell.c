@@ -45,6 +45,7 @@ extern int cmnd_goto(int);
 extern int cmnd_onerror(int);
 extern int cmnd_exit(int);
 extern int cmnd_abort(int);
+extern int cmnd_netcon(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
@@ -106,6 +107,7 @@ static struct
 	{ "select",			cmnd_menu,			0,					"title timeout option ...",							},
 	{ "noop",			cmnd_noop,			0,					"[arguments ...]",										},
 	{ "sleep",			cmnd_sleep,			0,					"sleep period",											},
+	{ "netcon",			cmnd_netcon,		0,					"host [port [port]]",									},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",										},

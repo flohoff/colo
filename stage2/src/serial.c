@@ -88,8 +88,36 @@ static unsigned stored_baud(void)
 	return rates[nv_store.baud - 1];
 }
 
+static unsigned flush_netcon(void)
+{
+	unsigned indx, copy, fill;
+
+	for(copy = queue_out;;) {
+
+		fill = queue_in - copy;
+		if(!fill)
+			break;
+
+		indx = copy % sizeof(out_queue);
+		if(indx + fill > sizeof(out_queue))
+			fill = sizeof(out_queue) - indx;
+
+		fill = netcon_write(out_queue + indx, fill);
+		if(!fill)
+			break;
+
+		copy += fill;
+	}
+
+	return copy - queue_out;
+}
+
 static void flush_ring(void)
 {
+	unsigned copy;
+
+	copy = flush_netcon();
+
 	if(state == ST_ENABLED)
 
 		while(queue_in != queue_out) {
@@ -99,6 +127,10 @@ static void flush_ring(void)
 
 			UART_THR = out_queue[queue_out++ % sizeof(out_queue)];
 		}
+
+	else
+
+		queue_out += copy;
 }
 
 void serial_enable(int enable)
@@ -189,6 +221,9 @@ int kbhit(void)
 		}
 	}
 
+	if(netcon_poll())
+		return 1;
+
 	yield();
 
 	return 0;
@@ -201,6 +236,9 @@ int kbhit(void)
 	if(state == ST_ENABLED && (UART_LSR & UART_LSR_RDR))
 		return 1;
 
+	if(netcon_poll())
+		return 1;
+
 	yield();
 
 	return 0;
@@ -210,10 +248,18 @@ int kbhit(void)
 
 int getch(void)
 {
+	uint8_t tmp;
+
 	while(!kbhit())
 		;
 
-	return UART_RHR;
+	if(UART_LSR & UART_LSR_RDR)
+		return UART_RHR;
+
+	if(netcon_read(&tmp, 1))
+		return tmp;
+
+	return 0;
 }
 
 void putchar(int chr)

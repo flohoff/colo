@@ -67,12 +67,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	env_put("unit-type", pci_unit_name(), VAR_OTHER);
 
-	if(do_boot(switches) == E_NONE) {
-
-		lcd_line(0, "running");
-		lcd_line(1, "boot shell");
-
-	} else {
+	if(do_boot(switches) != E_NONE) {
 
 		lcd_line(0, "!  UNIT BOOT   !");
 		lcd_line(1, "!   FAILED     !");

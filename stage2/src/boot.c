@@ -11,8 +11,6 @@
 
 #define MENU_TIMEOUT						(10 * 1000)
 
-#define SCRIPT_BOOT_SHELL				0
-
 static const char *option[] =
 {
 /*  |------------| */
@@ -22,6 +20,7 @@ static const char *option[] =
 	"Network (NFS)",
 	"Network (TFTP)",
 	"Boot shell",
+	"Network shell",
 };
 
 static const char *script[] =
@@ -56,7 +55,14 @@ static const char *script[] =
 
 	/* Boot shell */
 
-	(void *) SCRIPT_BOOT_SHELL,
+	"lcd 'Boot shell...'",
+
+	/* Network shell */
+
+	"lcd 'Network shell...'\n"
+	"net\n"
+	"lcd 'Network shell...' {ip-address}\n"
+	"netcon {dhcp-next-server}",
 };
 
 int boot(int which)
@@ -108,9 +114,6 @@ int boot(int which)
 	sprintf(buf, "%d", which);
 	env_put("boot-option", buf, VAR_OTHER);
 
-	if((int) script[which] == SCRIPT_BOOT_SHELL)
-		return E_NONE;
-
 	return script_exec(script[which], -1);
 }
 
@@ -159,8 +162,7 @@ int cmnd_boot(int opsz)
 
 			puts(option[which]);
 			printf("%.*s\n", (int) strlen(option[which]), "--------------");
-			if(script[which - 1] != (void *) SCRIPT_BOOT_SHELL)
-				puts(script[which - 1]);
+			puts(script[which - 1]);
 
 			return E_NONE;
 		}

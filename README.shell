@@ -418,6 +418,11 @@ sleep period
 
 Pauses for the specified number of tenths of a second.
 
+netcon
+------
+
+XXX XXX XXX
+
 -- Peter Horton, pdh@colonel-panic.org --
 
 # vi:set ts=3 sw=3 tw=78:
