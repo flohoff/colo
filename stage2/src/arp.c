@@ -114,8 +114,10 @@ void arp_in(struct frame *frame)
 
 			COPY_HW_ADDR(arp_table[indx].hw, data + 8);
 
+#if 0
 			if(arp_table[indx].state == ARP_UNRESOLVED)
 				DPRINTF("arp: resolved %s\n", inet_ntoa(ip));
+#endif
 
 			arp_table[indx].state = ARP_RESOLVED;
 
@@ -166,7 +168,9 @@ matched:
 
 		arp_out(frame, data + 8, HARDWARE_PROTO_ARP);
 
+#if 0
 		DPRINTF("arp: request from %s\n", inet_ntoa(ip));
+#endif
 	}
 }
 
@@ -246,7 +250,9 @@ void arp_ip_out(struct frame *frame, uint32_t ip)
 	memset(request + 18, 0, HARDWARE_ADDR_SIZE);
 	NET_WRITE_LONG(request + 24, ip);
 
+#if 0
 	DPRINTF("arp: sent request for %s\n", inet_ntoa(ip));
+#endif
 
 	arp_out(arpreq, NULL, HARDWARE_PROTO_ARP);
 }

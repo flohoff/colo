@@ -7,7 +7,7 @@ CoLo 1.17 (2005-02-20)
 	"server identifier" option from the server in the request. Fixed bug where
 	we weren't appending an "end options" tag to the options. [RFC2131]
 
-*	Dropped "no matching socket" diagnostic.
+*	Dropped "no matching socket" diagnostic message.
 
 *	Simplified display of memory size on boot.
 
@@ -20,6 +20,8 @@ CoLo 1.17 (2005-02-20)
 	'nvflags' command in README.shell).
 
 *	Reset menu timeout when a button is pressed.
+
+*	Removed ARP diagnostic messages.
 
 CoLo 1.16 (2004-12-16)
 ----------------------
