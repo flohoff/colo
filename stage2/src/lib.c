@@ -67,6 +67,16 @@ void *memmove(void *dst, const void *src, size_t size)
 	return memcpy(dst, src, size);
 }
 
+char *strcpy(char *dst, const char *src)
+{
+	char *ptr;
+
+	for(ptr = dst; (*dst++ = *src++);)
+		;
+
+	return dst;
+}
+
 int strncmp(const char *str1, const char *str2, size_t size)
 {
 	unsigned chr1, chr2;

@@ -307,6 +307,8 @@ int cmnd_execute(int opsz)
 		return E_UNSPEC;
 	}
 
+	/* XXX check for overlap of initrd */
+
 	if(targ < KSEG0(0) ||
 		targ + elfsz > (void *) &__text ||
 		(targ + elfsz > image && targ < image + imagesz)) {

@@ -71,6 +71,7 @@ typedef unsigned				UWORD32;
 
 extern size_t strlen(const char *);
 extern char *strchr(const char *, int);
+extern char *strcpy(char *, const char *);
 extern int strncasecmp(const char *, const char *, size_t);
 extern int strcasecmp(const char *, const char *);
 extern int strncmp(const char *, const char *, size_t);

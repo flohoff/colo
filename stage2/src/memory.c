@@ -255,10 +255,8 @@ int cmnd_dump(int opsz)
 
 		putchar('\n');
 
-		if(kbhit()) {
-			getch();
+		if(kbhit() && getch() == ' ')
 			break;
-		}
 
 		count -= indx;
 		last.addr += indx;

@@ -186,6 +186,29 @@ The flags currently defined are
 	    checking for the prescence of an IDE slave device. This flag must be
 		 set before the first 'mount' command for slave detection to work.
 
+net [{address netmask [gateway]} | down]
+----------------------------------------
+
+Configures the primary network interface with the specified IP address, subnet
+mask and (optionally) router address.
+
+A single argument of 'down' causes the network interface to be shutdown.
+
+If no arguments are passed the interface is configured by requesting
+configuration information from a DHCP server on the local network.
+
+*note*
+
+	IP address and netmask can be specified together by using the
+	<address>/<network bits> form eg. 192.168.1.0/24.
+
+tftp host path [path]
+---------------------
+
+Load the file from the specified host into memory using TFTP. An optional
+second file can be specified that will also be loaded and used as an 'initrd'
+image.
+
 -- Peter Horton, pdh@colonel-panic.org --
 
 # vi:set ts=3 sw=3 tw=78:

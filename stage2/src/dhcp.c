@@ -266,17 +266,16 @@ int dhcp(void)
 
 		for(mark = MFC0(CP0_COUNT);;) {
 
-			if(kbhit()) {
+			if(kbhit() && getch() == ' ') {
 
 				udp_close(sock);
 				net_down();
 
-				getch();
 				puts("aborted");
 				return 0;
 			}
 
-			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE * 3) {
+			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE * 2) {
 
 				if(++retries == DHCP_SEND_PACKETS_MAX) {
 
