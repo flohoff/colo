@@ -17,23 +17,28 @@
 #include "lib.h"
 #include "md5.h"
 
-#define APP_NAME					"md5rom"
+#define APP_NAME					"copy-rom"
 
 #define ROM_PHYS_ADDR			0x1fc00000
 #define ROM_PHYS_SIZE			(512 << 10)
 
+static int usage(void)
+{
+	puts("usage: " APP_NAME " [ file ]");
+
+	return 1;
+}
+
 int main(int argc, char *argv[])
 {
 	struct MD5Context ctx;
+	unsigned indx, copy;
 	uint8_t dig[16];
-	unsigned indx;
 	void *rom;
 	int fd;
 
-	if(argc != 1) {
-		puts("usage: " APP_NAME);
-		return 1;
-	}
+	if(argc > 2)
+		return usage();
 
 	fd = open("/dev/mem", O_RDONLY | O_SYNC);
 	if(fd == -1) {
@@ -48,6 +53,29 @@ int main(int argc, char *argv[])
 	}
 
 	close(fd);
+
+	if(argc > 1) {
+
+		fd = creat(argv[1], 0664);
+		if(fd == -1) {
+			fprintf(stderr, APP_NAME ": failed to create file (%s)\n", strerror(errno));
+			return 1;
+		}
+
+		for(indx = 0; indx < ROM_PHYS_SIZE;) {
+
+			copy = write(fd, rom + indx, ROM_PHYS_SIZE - indx);
+			if(copy == -1) {
+				if(errno != EINTR) {
+					fprintf(stderr, APP_NAME ": failed writing file (%s)\n", strerror(errno));
+					return 1;
+				}
+			} else
+				indx += copy;
+		}
+
+		close(fd);
+	}
 
 	MD5Init(&ctx);
 	MD5Update(&ctx, rom, ROM_PHYS_SIZE);

@@ -6,8 +6,8 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-TARG= md5rom
-OBJS= md5rom.o md5.o
+TARG= copy-rom
+OBJS= copy-rom.o md5.o
 STAGE2= ../../stage2
 
 include ../../Rules.mak
