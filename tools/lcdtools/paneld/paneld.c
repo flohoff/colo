@@ -21,8 +21,9 @@
 
 #define APP_NAME					"paneld"
 
-#define LCD_MENU_TIMEOUT		(-1)
-#define LCD_MENU_CANCEL			(-2)
+#define LCD_MENU_ERROR			(-1)
+#define LCD_MENU_TIMEOUT		(-2)
+#define LCD_MENU_CANCEL			(-3)
 
 #define BTN_DEBOUNCE				(50 * 1000)
 #define UPDATE_TICK				(500 * 1000)
@@ -38,6 +39,7 @@ static const char *menu_options[] =
 	"ADMIN MENU",
 	"Halt",
 	"Reboot",
+	"Cancel",
 };
 
 static const char *menu_messages[][2] =
@@ -67,28 +69,167 @@ const char *getapp(void)
 	return APP_NAME;
 }
 
-int lcd_menu(const char **options, unsigned count, unsigned timeout)
+static const char *lcd_symbols(const char *def)
 {
 	static const uint8_t arrow[][8] =
 	{
 		{ 0x01, 0x03, 0x07, 0x0f, 0x07, 0x03, 0x01, 0x00, },
 		{ 0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10, 0x00, },
 	};
-	static char symbol[][2] =
-	{
-		" ", "]", "[",
-	};
+	static char buf[3];
+
+	buf[0] = def[0];
+	buf[1] = def[1];
+
+	if(lcd_prog(1, arrow[0]))
+		buf[0] = '\001';
+
+	if(lcd_prog(2, arrow[1]))
+		buf[1] = '\002';
+
+	return buf;
+}
+
+static void lcd_centre(char *buf, const char *str, unsigned siz)
+{
+	unsigned ofs, len, idx;
+
+	ofs = 0;
+	len = strlen(str);
+	if(len < siz)
+		ofs = (siz - len) / 2;
+
+	for(idx = 0; idx < siz; ++idx) {
+
+		buf[idx] = ' ';
+		if(idx >= ofs && idx < ofs + len)
+			buf[idx] = *str++;
+	}
+}
+
+static void lcd_scroll(const char *str, int dir)
+{
+	static char lcd[LCD_WIDTH - 2];
+	char buf[LCD_WIDTH - 2];
+	unsigned idx, num;
+	const char *sym;
+
+	lcd_centre(buf, str, sizeof(buf));
+
+	if(!dir) {
+
+		memcpy(lcd, buf, sizeof(lcd));
+
+		sym = lcd_symbols("<>");
+
+		lcd_puts(1, 0, 1, &sym[0]);
+		lcd_puts(1, 1, sizeof(lcd), lcd);
+		lcd_puts(1, 1 + sizeof(lcd), 1, &sym[1]);
+
+		return;
+	}
+
+	for(num = sizeof(lcd);;) {
+
+		if(dir < 0) {
+
+			for(idx = 1; idx < sizeof(lcd); ++idx)
+				lcd[idx - 1] = lcd[idx];
+			lcd[sizeof(lcd) - 1] = buf[sizeof(lcd) - num];
+
+		} else {
+
+			for(idx = sizeof(lcd); --idx;)
+				lcd[idx] = lcd[idx - 1];
+			lcd[0] = buf[num - 1];
+		}
+
+		lcd_puts(1, 1, sizeof(lcd), lcd);
+
+		if(!--num)
+			break;
+
+		usleep(30 * 1000);
+	}
+}
+
+static int lcd_menu_horz(const char **options, unsigned count, unsigned timeout)
+{
+	unsigned exp, sel, btn, prv;
+	struct timeval mark, now;
+	char buf[LCD_WIDTH];
+	int dir;
+
+	if(count < 2)
+		return LCD_MENU_ERROR;
+
+	lcd_centre(buf, options[0], sizeof(buf));
+	lcd_puts(0, 0, sizeof(buf), buf);
+
+	lcd_scroll(options[1], 0);
+
+	prv = btn_read();
+
+	for(sel = 1;;) {
+
+		gettimeofday(&mark, NULL);
+		
+		for(;;) {
+
+			if(timeout) {
+
+				gettimeofday(&now, NULL);
+
+				exp = (now.tv_sec - mark.tv_sec) * 1000000 + now.tv_usec - mark.tv_usec;
+
+				if(exp >= timeout)
+					return LCD_MENU_TIMEOUT;
+			}
+
+			btn = btn_read();
+
+			btn ^= prv;
+			prv ^= btn;
+			btn &= prv;
+
+			if(btn & (BTN_ENTER | BTN_SELECT))
+				return sel - 1;
+
+			if(btn & (BTN_UP | BTN_DOWN))
+				return LCD_MENU_CANCEL;
+
+			if(btn & (BTN_LEFT | BTN_RIGHT)) {
+
+				dir = 1;
+				if(btn & BTN_RIGHT)
+					dir = -1;
+
+				sel -= dir;
+				if(sel < 1 || sel >= count)
+					sel = count - sel - dir;
+
+				lcd_scroll(options[sel], dir);
+
+			} else
+
+				usleep(BTN_DEBOUNCE);
+		}
+	}
+
+	return LCD_MENU_ERROR;
+}
+
+static int lcd_menu_vert(const char **options, unsigned count, unsigned timeout)
+{
 	unsigned exp, row, top, btn, prv;
 	struct timeval mark, now;
+	const char *sym;
 	char buf[2];
 
 	if(count < 2)
-		return -1;
+		return LCD_MENU_ERROR;
 
-	if(lcd_prog(1, arrow[0]) && lcd_prog(2, arrow[1])) {
-		symbol[1][0] = '\001';
-		symbol[2][0] = '\002';
-	}
+	sym = lcd_symbols("][");
 
 	prv = btn_read();
 
@@ -98,13 +239,13 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 
 	for(;;) {
 
-		lcd_puts(0, 0, 1, row ? symbol[0] : symbol[2]);
+		lcd_puts(0, 0, 1, row ? " " : &sym[1]);
 		lcd_puts(0, 1, LCD_WIDTH - 2, options[top]);
-		lcd_puts(0, LCD_WIDTH - 1, 1, row ? symbol[0] : symbol[1]);
+		lcd_puts(0, LCD_WIDTH - 1, 1, row ? " " : &sym[0]);
 
-		lcd_puts(1, 0, 1, row ? symbol[2] : symbol[0]);
+		lcd_puts(1, 0, 1, row ? &sym[1] : " ");
 		lcd_puts(1, 1, LCD_WIDTH - 2, options[top + 1]);
-		lcd_puts(1, LCD_WIDTH - 1, 1, row ? symbol[1] : symbol[0]);
+		lcd_puts(1, LCD_WIDTH - 1, 1, row ? &sym[0] : " ");
 
 		gettimeofday(&mark, NULL);
 		
@@ -163,26 +304,35 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 
 static void usage(void)
 {
-	puts("usage: " APP_NAME " [ -d ]");
+	puts("usage: " APP_NAME " [ -d ] [ -h ]");
 	exit(1);
 }
 
 int main(int argc, char *argv[])
 {
+	static int (* const menu[])(const char **, unsigned, unsigned) =
+	{
+		lcd_menu_vert,
+		lcd_menu_horz,
+	};
 	static char text[32];
 
 	unsigned count, update, active, roller;
-	int opt, daemon, which;
+	int opt, daemon, which, mtype;
 	time_t wall;
 
 	daemon = 0;
+	mtype = 0;
 
 	opterr = 0;
 
-	while((opt = getopt(argc, argv, "d")) != -1)
+	while((opt = getopt(argc, argv, "dh")) != -1)
 		switch(opt) {
 			case 'd':
 				daemon = 1;
+				break;
+			case 'h':
+				mtype = 1;
 				break;
 			default:
 				usage();
@@ -243,7 +393,7 @@ int main(int argc, char *argv[])
 			usleep(UPDATE_TICK);
 		}
 
-		which = lcd_menu(menu_options, ELEMENTS(menu_options), MENU_TIMEOUT);
+		which = menu[mtype](menu_options, ELEMENTS(menu_options), MENU_TIMEOUT);
 
 		if(which >= 0 && which < ELEMENTS(menu_actions)) {
 

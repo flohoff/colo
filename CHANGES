@@ -11,6 +11,11 @@ CoLo 1.17 (xxxx-xx-xx)
 
 *	Simplified display of memory size on boot.
 
+*	Added "Cancel" option to 'paneld' menus.
+
+*	Added horizontal scrolling menus to 'paneld' (controlled by the '-h'
+	parameter).
+
 CoLo 1.16 (2004-12-16)
 ----------------------
 
