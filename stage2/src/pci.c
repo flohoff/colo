@@ -161,7 +161,8 @@ static void pci_scan(void)
 					printf("%02x.%u %04x_%04x (%04x_%04x)\n", dev, fnc, id & 0xffff, id >> 16, ss & 0xffff, ss >> 16);
 					if(!fnc && !(pcicfg_read_byte(dev, fnc, 0x0e) & 0x80))
 						break;
-				}
+				} else
+					break;
 			}
 }
 
