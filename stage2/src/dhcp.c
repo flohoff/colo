@@ -276,8 +276,10 @@ int dhcp(void)
 	ip_mask = 0;
 	ip_gway = 0;
 
-	if(!net_up())
-		return E_NET_DOWN;
+	if(!net_up()) {
+		puts("no interface");
+		return 0;
+	}
 
 	sock = udp_socket();
 	if(sock < 0) {
