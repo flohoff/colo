@@ -11,7 +11,7 @@
 #include "cpu.h"
 
 #define SCRATCH_SIZE			EXT2_MAX_BLOCK_SIZE
-#define SYMLINK_DEPTH_MAX	10
+#define SYMLINK_PATH_MAX	100
 
 #define S_IFMT					0170000
 
@@ -487,7 +487,7 @@ unsigned ext2_lookup(struct volume *v, unsigned inum, const char *path)
 			if(prev < sizeof(scratch) - 1)
 				scratch[prev] = '/';
 
-			DPRINTF("{%s%s} --> {%s}\n", find.name, &scratch[prev], &scratch[curr]);
+			DPRINTF("ext2: {%s%s} --> {%s}\n", find.name, &scratch[prev], &scratch[curr]);
 
 			if(scratch[curr] == '/') {
 
