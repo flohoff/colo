@@ -50,7 +50,7 @@ static unsigned flash_id(void)
 {
 	unsigned id;
 
-	/* should give invalid ID is FLASH_P is cached */
+	/* should give invalid ID if FLASH_P is cached region */
 
 	FLASH_P[0] = CMND_RESET;
 	FLASH_P[1] = CMND_RESET;
@@ -204,9 +204,17 @@ static int key_wait(void)
 	int done;
 
 	gettimeofday(&tv, NULL);
-	match = ((tv.tv_sec * 100 + tv.tv_usec / 10000) ^ tv.tv_sec) % 26 + 'A';
+	srand48(tv.tv_sec ^ tv.tv_usec ^ getpid());
+	match = (unsigned) mrand48() / (unsigned)((0x100000000ULL + 25) / 26) + 'A';
 
-	printf("press <%c> to proceed ...", match);
+	fputs("\n****************************************************\n"
+			"****                                            ****\n"
+			"****  THIS WILL ERASE THE CURRENT FIRMWARE AND  ****\n"
+			"****                                            ****\n"
+			"****  WILL PROBABLY MAKE YOUR UNIT UNBOOTABLE   ****\n"
+			"****                                            ****\n"
+			"****************************************************\n\n"
+			"Are you sure you want to continue (Y/N) ? ", stdout);
 	fflush(stdout);
 
 	tcgetattr(0, &term);
@@ -214,17 +222,34 @@ static int key_wait(void)
 
 	term.c_lflag &= ~(ICANON | ECHO);
 	term.c_cc[VMIN] = 0;
-	term.c_cc[VTIME] = 2 * 10;
+	term.c_cc[VTIME] = 4 * 10;
 	tcsetattr(0, TCSANOW, &term);
 
 	tcflush(0, TCIFLUSH);
 	do
 		done = read(0, &key, 1);
 	while(done != 1 && errno == EINTR);
+
+	if(key == 'y' || key == 'Y') {
+
+		printf("Y\n\nPress '%c' to proceed ... ", match);
+		fflush(stdout);
+
+		tcflush(0, TCIFLUSH);
+		do
+			done = read(0, &key, 1);
+		while(done != 1 && errno == EINTR);
+
+	} else {
+
+		putchar('N');
+
+		key = '\0';
+	}
 	
 	tcsetattr(0, TCSANOW, &save);
 
-	putchar('\n');
+	puts("\n");
 
 	return done == 1 && key == match;
 }

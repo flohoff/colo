@@ -62,6 +62,7 @@
 #define KPHYS(a)							((void *)((unsigned long)(a)&0x1fffffff))
 #define KSEG0(a)							((void *)((unsigned long)KPHYS(a)|0x80000000))
 #define KSEG1(a)							((void *)((unsigned long)KPHYS(a)|0xa0000000))
+#define KSEG1SIZE							0x20000000
 
 static inline void udelay(unsigned delay)
 {

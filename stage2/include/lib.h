@@ -55,6 +55,7 @@
 typedef unsigned char		uint8_t;
 typedef unsigned short		uint16_t;
 typedef unsigned				uint32_t;
+typedef unsigned long long	uint64_t;
 
 typedef unsigned				size_t;
 
@@ -193,10 +194,29 @@ extern void *block_read(void *, unsigned long, size_t, size_t);
 extern void block_flush(void *);
 extern int block_init(void);
 
-/* elf.c */
+/* elf32.c */
 
-extern void *elf_check(const void *, size_t, size_t *);
-extern void *elf_load(const void *, size_t);
+struct elf_info
+{
+	unsigned long				load_addr;
+	unsigned						load_size;
+	unsigned long				entry_point;
+	union {
+		unsigned long long	region;
+		struct {
+			unsigned				region_lo;
+			unsigned				region_hi;
+		};
+	};
+};
+
+extern int elf32_validate(const void *, size_t, struct elf_info *);
+extern void elf32_load(const void *);
+
+/* elf64.c */
+
+extern int elf64_validate(const void *, size_t, struct elf_info *);
+extern void *elf64_load(const void *);
 
 /* inflate.c */
 

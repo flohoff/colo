@@ -25,7 +25,8 @@ OBJS=	main.o\
 		md5.o\
 		pci.o\
 		cache.o\
-		elf.o\
+		elf32.o\
+		exec.o\
 		inflate.o\
 		tulip.o\
 		keymap.o\

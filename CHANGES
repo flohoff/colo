@@ -10,6 +10,8 @@ CoLo 1.14 (xxxx-xx-xx)
 *	Added a '-n' command line option to 'putlcd' which allows the user to write
 	to a single line of the LCD without affecting the other line.
 
+*	Added big fat warning to 'flash-tool'.
+
 CoLo 1.13 (2004-08-30)
 ----------------------
 
