@@ -6,11 +6,14 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -mips2 -fno-strict-aliasing
+TARG= flash-tool
+OBJS= flash-tool.o
 
-flash-tool:
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -mips2 -fno-strict-aliasing
+
+$(TARG): $(OBJS)
 
 clean:
-	rm -f flash-tool
+	rm -f $(TARG) $(OBJS)
 
 .PHONY: clean

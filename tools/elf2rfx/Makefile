@@ -6,11 +6,16 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
+TARG= elf2rfx
+OBJS= elf2rfx.o
 
-binary: elf2rfx
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
+
+binary: $(TARG)
+
+$(TARG): $(OBJS)
 
 clean:
-	rm -rf elf2rfx
+	rm -rf $(TARG) $(OBJS)
 
-.PHONY: clean
+.PHONY: binary clean

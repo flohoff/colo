@@ -351,7 +351,9 @@ The following script produces a menu titled "BOOT KERNEL" with options of
 is selected and /boot/backup.colo is executed if "Linux-prev" is selected.
 
 	menu "BOOT KERNEL" 50 Linux default Linux-prev backup
-	load /boot/{menu-option}.colo
+	-load /boot/{menu-option}.colo
+	-script
+	load /boot/default.colo
 	script
 
 -- Peter Horton, pdh@colonel-panic.org --

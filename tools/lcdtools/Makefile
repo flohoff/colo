@@ -6,15 +6,12 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
+SUBDIRS= lcdlib putlcd paneld
 
-all: putlcd paneld
-
-putlcd: putlcd.o panel.o
-
-paneld: paneld.o panel.o
+all:
+	set -e; for x in $(SUBDIRS); do $(MAKE) -C $$x; done
 
 clean:
-	rm -f putlcd putlcd.o paneld paneld.o panel.o
+	for x in $(SUBDIRS); do $(MAKE) -C $$x clean; done
 
 .PHONY: all clean

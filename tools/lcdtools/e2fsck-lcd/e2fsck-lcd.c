@@ -21,6 +21,8 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 
+#include "panel.h"
+
 #define APP_NAME						"e2fsck-lcd"
 #define EXTENSION						".distrib"
 #define CHILD_DEFAULT				"fsck.ext2"
@@ -28,55 +30,13 @@
 
 #define LCD_WIDTH						16
 
-#define LCD_PHYS_ADDR				0x1f000000
-
-#define LCD_READ(r)					(lcd[!!(r)*4]>>24)
-#define LCD_WRITE(r,v)				do{lcd[!!(r)*4]=(unsigned)(v)<<24;}while(0)
-
-#define LCD_BUSY						(1 << 7)
-#define LCD_CLEAR						0x01
-#define LCD_DDRAM_ADDR				0x80
-#define LCD_ROW_OFFSET				0x40
-
 static const char spaces[] = { [0 ... (LCD_WIDTH - 1)] = ' ' };
-static volatile uint32_t *lcd;
 static unsigned thumb;
+static int lcd;
 
-static void lcd_write(int reg, unsigned val)
+const char *getapp(void)
 {
-	while(LCD_READ(0) & LCD_BUSY)
-		usleep(1);
-	
-	usleep(10);
-
-	LCD_WRITE(reg, val);
-}
-
-/*
- * clear display
- */
-static void disp_clear(void)
-{
-	lcd_write(0, LCD_CLEAR);
-}
-
-/*
- * write text to display
- */
-static void disp_text(const char *str, unsigned size)
-{
-	unsigned indx;
-
-	for(indx = 0; str[indx] && indx < size; ++indx)
-		lcd_write(1, str[indx]);
-}
-
-/*
- * move display cursor
- */
-static void disp_cursor_move(unsigned row, unsigned col)
-{
-	lcd_write(0, LCD_DDRAM_ADDR | (row * LCD_ROW_OFFSET + col));
+	return APP_NAME;
 }
 
 /*
@@ -84,39 +44,25 @@ static void disp_cursor_move(unsigned row, unsigned col)
  */
 static void disp_init(const char *devn)
 {
-	int fd;
-
-	fd = open("/dev/mem", O_RDWR | O_SYNC);
-	if(fd == -1) {
-		fprintf(stderr, APP_NAME ": failed to open \"/dev/mem\" (%s)\n", strerror(errno));
+	lcd = lcd_open();
+	if(!lcd)
 		return;
-	}
 
-	lcd = mmap(0, 32, PROT_READ | PROT_WRITE, MAP_SHARED, fd, LCD_PHYS_ADDR);
-	if(lcd == MAP_FAILED) {
-		fprintf(stderr, APP_NAME ": failed to map \"/dev/mem\" (%s)\n", strerror(errno));
-		lcd = NULL;
-		close(fd);
-		return;
-	}
-
-	close(fd);
-
-	disp_clear();
+	lcd_clear();
 
 	if(devn) {
 
-		disp_cursor_move(0, 0);
-		disp_text(devn, LCD_WIDTH - 7);
+		lcd_curs_move(0, 0);
+		lcd_text(devn, LCD_WIDTH - 7);
 	}
 
-	disp_cursor_move(0, LCD_WIDTH - 4);
-	disp_text("0.0%", -1);
+	lcd_curs_move(0, LCD_WIDTH - 4);
+	lcd_text("0.0%", -1);
 
-	disp_cursor_move(1, 0);
-	disp_text("[>", -1);
-	disp_cursor_move(1, LCD_WIDTH - 1);
-	disp_text("]", -1);
+	lcd_curs_move(1, 0);
+	lcd_text("[>", -1);
+	lcd_curs_move(1, LCD_WIDTH - 1);
+	lcd_text("]", -1);
 
 	thumb = 0;
 }
@@ -129,7 +75,7 @@ static void disp_cleanup(void)
 	usleep(500 * 1000);
 
 	if(lcd)
-		disp_clear();
+		lcd_clear();
 
 	fputs("       \r", stdout);
 	fflush(stdout);
@@ -154,16 +100,16 @@ static void disp_update(int pass, unsigned where, unsigned limit)
 
 	if(lcd) {
 
-		disp_cursor_move(0, LCD_WIDTH - 6);
-		disp_text(text, 6);
+		lcd_curs_move(0, LCD_WIDTH - 6);
+		lcd_text(text, 6);
 
 		prog = ((LCD_WIDTH - 2) * prog + 500) / 1000;
 		if(prog > thumb) {
-			disp_cursor_move(1, thumb + 1);
-			disp_text(bar, prog - thumb);
+			lcd_curs_move(1, thumb + 1);
+			lcd_text(bar, prog - thumb);
 			thumb = prog;
 			if(thumb < LCD_WIDTH - 2)
-				disp_text(">", -1);
+				lcd_text(">", -1);
 		}
 	}
 

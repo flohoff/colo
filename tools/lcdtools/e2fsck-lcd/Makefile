@@ -6,11 +6,16 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -mips2 -fno-strict-aliasing
+TARG= e2fsck-lcd
+OBJS= e2fsck-lcd.o
 
-e2fsck-lcd:
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -mips2 -fno-strict-aliasing
+CPPFLAGS= -I../lcdlib
+LOADLIBES= -L../lcdlib -lpanel
+
+$(TARG): $(OBJS)
 
 clean:
-	rm -f e2fsck-lcd
+	rm -f $(TARG) $(OBJS)
 
 .PHONY: clean

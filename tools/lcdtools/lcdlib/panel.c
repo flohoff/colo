@@ -28,6 +28,7 @@
 #define LCD_WRITE(r,v)			do{lcd[!!(r)*4]=(unsigned)(v)<<24;}while(0)
 
 #define LCD_BUSY					(1 << 7)
+#define LCD_CLEAR					0x0c
 #define LCD_CGRAM_ADDR			0x40
 #define LCD_DDRAM_ADDR			0x80
 #define LCD_ROW_OFFSET			0x40
@@ -45,6 +46,11 @@ static void lcd_write(int reg, unsigned val)
 	LCD_WRITE(reg, val);
 }
 
+void lcd_clear(void)
+{
+	lcd_write(0, LCD_CLEAR);
+}
+
 void lcd_prog(unsigned which, const void *data)
 {
 	unsigned indx;
@@ -57,11 +63,24 @@ void lcd_prog(unsigned which, const void *data)
 	lcd_write(0, LCD_DDRAM_ADDR);
 }
 
+void lcd_curs_move(unsigned row, unsigned col)
+{
+	lcd_write(0, LCD_DDRAM_ADDR | (LCD_ROW_OFFSET * row + col));
+}
+
+void lcd_text(const char *str, unsigned max)
+{
+	unsigned indx;
+
+	for(indx = 0; str[indx] && indx < max; ++indx)
+		lcd_write(1, str[indx]);
+}
+
 void lcd_puts(unsigned row, unsigned col, unsigned wid, const char *str)
 {
 	unsigned indx;
 
-	lcd_write(0, LCD_DDRAM_ADDR | (LCD_ROW_OFFSET * row + col));
+	lcd_curs_move(row, col);
 
 	for(indx = 0; str[indx] && indx < wid; ++indx)
 		lcd_write(1, str[indx]);

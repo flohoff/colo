@@ -10,8 +10,8 @@ TARG= md5rom
 OBJS= md5rom.o md5.o
 STAGE2= ../../stage2
 
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
 CPPFLAGS= -I$(STAGE2)/include
-CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
 
 $(TARG): $(OBJS)
 
