@@ -81,7 +81,7 @@ int boot(int which)
 
 			case LCD_MENU_ABORT:
 				puts("aborted");
-				return 0;
+				return E_UNSPEC;
 
 			default:
 				++which;
@@ -91,25 +91,21 @@ int boot(int which)
 	if(which)
 		--which;
 
+	if(which >= elements(script)) {
+		DPRINTF("boot: no script #%d\n", which);
+		return E_UNSPEC;
+	}
+
+	if((int) script[which] == SCRIPT_BOOT_SHELL)
+		return E_NONE;
+
 	sprintf(buf, "%d", which);
 	env_put("boot-option", buf, VAR_OTHER);
 
-	if(which >= elements(script)) {
-		DPRINTF("boot: no script #%d\n", which);
-		return 0;
-	}
+	if(script_exec(script[which]) != E_NONE)
+		return E_UNSPEC;
 
-	switch((int) script[which]) {
-
-		case SCRIPT_BOOT_SHELL:
-			lcd_line(0, "Running");
-			lcd_line(1, "boot shell");
-			return 0;
-	}
-	
-	script_exec(script[which]);
-
-	return 1;
+	return E_NONE;
 }
 
 int cmnd_boot(int opsz)
@@ -161,9 +157,7 @@ int cmnd_boot(int opsz)
 		}
 	}
 
-	boot(which);
-
-	return E_NONE;
+	return boot(which);
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

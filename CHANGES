@@ -7,7 +7,7 @@ CoLo 1.14 (xxxx-xx-xx)
 	enabled.
 
 *	Fixed up support for booting 64-bit kernels (32-bit support was reorganised
-	too).
+	too). Kernel must be linked for CKSEG0, CKSEG1 or XKPHYS.
 
 *	Ensure we read from Galileo PCI RETRY/TIMEOUT register before writing to
 	it. A comment in the kernel source indicates this might be necessary to

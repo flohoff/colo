@@ -40,15 +40,14 @@ extern int cmnd_nfs(int);
 extern int cmnd_serial(int);
 extern int cmnd_restrict(int);
 extern int cmnd_menu(int);
+extern int cmnd_script(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
 static int cmnd_eval(int);
 static int cmnd_reboot(int);
 static int cmnd_nvflags(int);
-static int cmnd_script(int);
 
-static const char *script;
 size_t argsz[32];
 char *argv[32];
 unsigned argc;
@@ -467,17 +466,24 @@ static int execute(void)
 }
 
 /*
- * run script
+ * split line and execute
  */
-void script_exec(const char *run)
+int execute_line(char *line)
 {
-	script = run;
+	int error;
+
+	error = split_line(line);
+
+	if(error == E_NONE && argc)
+		error = execute();
+
+	return error;
 }
 
 /*
- * loop reading command lines and dispatching
+ * translate error code to text
  */
-void shell(void)
+const char *error_text(int error)
 {
 	static const char *msgs[] = {
 		[E_INVALID_CMND]	= "unrecognised command",
@@ -489,8 +495,26 @@ void shell(void)
 		[E_NO_SUCH_VAR]	= "no such variable",
 		[E_NET_DOWN]		= "no interface",
 	};
+	static char buf[48];
+
+	if(error == E_NONE || error == E_UNSPEC)
+		return NULL;
+
+	if(error >= elements(msgs) || !msgs[error]) {
+		sprintf(buf, "unknown error #%d", error);
+		return buf;
+	}
+
+	return msgs[error];
+}
+
+/*
+ * loop reading command lines and dispatching
+ */
+void shell(void)
+{
 	static char line[256], hist[256];
-	int error, skip, escp;
+	int error /*, skip, escp*/;
 	unsigned indx;
 
 	assert(elements(argv) == elements(argsz));
@@ -499,47 +523,7 @@ void shell(void)
 
 		putstring("> ");
 
-		indx = 0;
-
-		if(script) {
-
-			skip = 0;
-			escp = 0;
-
-			while(indx < sizeof(line) - 1) {
-
-				line[indx] = *script++;
-
-				if(!line[indx]) {
-					script = NULL;
-					break;
-				}
-
-				if(line[indx] == '\n' || line[indx] == '\r') {
-					if(indx)
-						break;
-					skip = 0;
-					escp = 0;
-				}
-
-				if(escp)
-					escp = 0;
-				else {
-					if(line[indx] == '#')
-						skip = 1;
-					if(line[indx] == '\\')
-						escp = 1;
-				}
-
-				if(!skip && (indx || !isspace(line[indx])) && isprint(line[indx]))
-					putchar(line[indx++]);
-			}
-
-			line[indx] = '\0';
-		}
-
-		if(!indx)
-			line_edit(line, sizeof(line));
+		line_edit(line, sizeof(line));
 
 		putchar('\n');
 
@@ -549,88 +533,13 @@ void shell(void)
 		if(!line[indx])
 			continue;
 
-		if(!script && (!history_fetch(hist, sizeof(hist), 0) || strcmp(line, hist)))
+		if(!history_fetch(hist, sizeof(hist), 0) || strcmp(line, hist))
 			history_add(line);
 
-		error = split_line(line);
-
-		if(error == E_NONE && argc)
-			error = execute();
-
-		if(error != E_NONE) {
-
-			if(error != E_UNSPEC) {
-				if(error >= elements(msgs) || !msgs[error])
-					printf("unkown error #%d\n", error);
-				else
-					puts(msgs[error]);
-			}
-
-			if(script) {
-				script = NULL;
-				puts("script aborted");
-			}
-		}
+		error = execute_line(line);
+		if(error != E_NONE)
+			puts(error_text(error));
 	}
-}
-
-/*
- * shell command - script
- */
-static int cmnd_script(int opsz)
-{
-#	define SCRIPT_SIGN			"#:CoLo:#"
-#	define SCRIPT_SIGN_SZ		(sizeof(SCRIPT_SIGN) - 1)
-
-	static char buf[2048];
-	unsigned indx;
-	size_t size;
-	void *ptr;
-
-	if(argc > 2)
-		return E_ARGS_OVER;
-
-	if(argc > 1 && strncasecmp(argv[1], "show", strlen(argv[1]))) {
-		puts("invalid argument");
-		return E_UNSPEC;
-	}
-
-	ptr = heap_image(&size);
-
-	if(!size) {
-		puts("no script loaded");
-		return E_UNSPEC;
-	}
-
-	if(size < SCRIPT_SIGN_SZ || strncasecmp(ptr, SCRIPT_SIGN, SCRIPT_SIGN_SZ)) {
-		puts("missing script header");
-		return E_UNSPEC;
-	}
-
-	if(size >= sizeof(buf)) {
-		puts("script too large");
-		return E_UNSPEC;
-	}
-
-	memcpy(buf, ptr, size);
-	
-	buf[size] = '\0';
-
-	if(argc == 1) {
-		script_exec(buf);
-		return E_NONE;
-	}
-
-	for(indx = 0; buf[indx]; ++indx) {
-		if(buf[indx] == '\r' && buf[indx + 1] == '\n')
-			++indx;
-		putchar((buf[indx] == '\n' || isprint(buf[indx])) ? buf[indx] : '?');
-	}
-
-	if(indx && buf[indx - 1] != '\n')
-		putchar('\n');
-
-	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

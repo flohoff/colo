@@ -90,7 +90,7 @@ void serial_enable(int enable)
 
 		if(state == ST_ENABLED) {
 			state = ST_DISABLED;
-			env_puts("console-speed", NULL, 0);
+			env_put("console-speed", NULL, 0);
 		}
 
 		return;

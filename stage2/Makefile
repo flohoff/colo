@@ -14,6 +14,7 @@ OBJS=	main.o\
 		vsprintf.o\
 		serial.o\
 		shell.o\
+		script.o\
 		expr.o\
 		edit.o\
 		history.o\

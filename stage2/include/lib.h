@@ -157,11 +157,16 @@ enum {
 };
 
 extern void __attribute__((noreturn)) shell(void);
-extern void script_exec(const char *);
+extern const char *error_text(int);
+extern int execute_line(char *);
 
 extern size_t argsz[];
 extern unsigned argc;
 extern char *argv[];
+
+/* script.c */
+
+extern int script_exec(const char *);
 
 /* pci.c */
 
@@ -294,6 +299,9 @@ extern const char *env_get(const char *);
 extern void env_remove_tag(unsigned);
 
 /* boot.c */
+
+#define BOOT_DEFAULT							-1
+#define BOOT_MENU								0
 
 extern int boot(int);
 

@@ -20,7 +20,6 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 	extern char __text;
 
 	unsigned long mark;
-	int noshell;
 
 	ram_size = bank0 + bank1;
 	ram_restrict = ram_size;
@@ -51,25 +50,24 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	if(!nv_store.boot || (switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
 
-		noshell = boot(0);
+		boot(BOOT_MENU);
 
 	else if(nv_store.flags & NVFLAG_CONSOLE_DISABLE)
 
-		noshell = boot(-1);
+		boot(BOOT_DEFAULT);
 
-	else {
-
-		noshell = 0;
+	else
 
 		for(mark = MFC0(CP0_COUNT); !BREAK();)
 			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE * 3 / 2) {
-				noshell = boot(-1);
+				boot(BOOT_DEFAULT);
 				break;
 			}
-	}
 
-	if(!noshell)
-		serial_enable(1);
+	lcd_line(0, "Running");
+	lcd_line(1, "boot shell");
+
+	serial_enable(1);
 
 	shell();
 }
