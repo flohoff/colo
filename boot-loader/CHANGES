@@ -1,0 +1,18 @@
+# $Id$
+
+CoLo 1.5 (2004-04-11)
+---------------------
+
+*	The boot loader now has a name, "CoLo".
+	[suggested by Kumba]
+
+*	Added support for loading initial RamDisk. A second path passed to the
+	'load' command is interpreted as a file to be loaded as an initial RamDisk.
+	The 2004-04-11 2.4.x kernel patch includes the kernel side of this
+	functionality.
+	[suggested by Martin Michlmayr]
+
+*	The chain loader now halts with an error message if it's loaded from "CoLo"
+	rather than from the original Cobalt loader.
+
+# vi:set ts=3 sw=3 tw=78 ai:
