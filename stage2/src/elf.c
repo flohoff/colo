@@ -284,11 +284,11 @@ int cmnd_execute(int opsz)
 
 	if(!imagesz) {
 		puts("no image loaded");
-		return E_SUCCESS;
+		return E_UNSPEC;
 	}
 
 	if(gzip_check(image, imagesz) && !unzip(image, imagesz))
-		return E_SUCCESS;
+		return E_UNSPEC;
 
 	image = heap_image(&imagesz);
 
@@ -296,7 +296,7 @@ int cmnd_execute(int opsz)
 
 	if(!targ) {
 		puts("ELF image invalid");
-		return E_SUCCESS;
+		return E_UNSPEC;
 	}
 
 	if(targ < (void *) &__heap ||
@@ -304,12 +304,12 @@ int cmnd_execute(int opsz)
 		(targ + elfsz > image && targ < image + imagesz)) {
 
 		puts("ELF image won't fit");
-		return E_SUCCESS;
+		return E_UNSPEC;
 	}
 
 	func = elf_load(image, imagesz);
 	if(!func)
-		return E_SUCCESS;
+		return E_UNSPEC;
 
 	/* turn on the light bar on the Qube FIXME */
 
@@ -326,7 +326,7 @@ int cmnd_execute(int opsz)
 
 	printf("exited #%08x\n", code);
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

@@ -11,10 +11,14 @@
 #include "pci.h"
 #include "galileo.h"
 
+#define PIO_MODE_DEFAULT			0
+
 #define TIMEOUT_RESET				(30 * 100)
 #define TIMEOUT_IDENTIFY			(2 * 100)
-#define TIMEOUT_DEV_DIAG			(5 * 100)
-#define TIMEOUT_READ					(5 * 100)
+#define TIMEOUT_ATA_READ			(5 * 100)
+#define TIMEOUT_ATAPI_READ			(10 * 100)
+#define TIMEOUT_PACKET				(1 * 100)
+#define TIMEOUT_REQUEST_SENSE		(1 * 100)
 
 #define IDE_REG_DATA					(*(volatile uint16_t *) &BRDG_ISA_SPACE[0x1f0])
 #define IDE_REG_ERROR				(BRDG_ISA_SPACE[0x1f1])
@@ -39,13 +43,33 @@
 
 #define ATA_READ						0x20
 #define ATA_READ_EXT					0x24
-#define ATA_DEV_DIAG					0x90
+#define ATA_PACKET					0xa0
+#define ATA_ATAPI_IDENTIFY			0xa1
 #define ATA_IDENTIFY					0xec
+#define ATAPI_REQUEST_SENSE		0x03
+#define ATAPI_READ_10				0x28
+
+#define ATA_READ_BLOCK				64
+#define ATAPI_READ_BLOCK			64
 
 #define FLAG_RESETTING				(1 << 0)
 #define FLAG_IDENTIFIED				(1 << 1)
 #define FLAG_LBA						(1 << 2)
 #define FLAG_LBA_48					(1 << 3)
+#define FLAG_ATAPI					(1 << 4)
+
+static struct ide_device
+{
+	unsigned			select;
+	unsigned			flags;
+	unsigned			mode;
+
+	unsigned long	devsize;
+	unsigned			nsects;
+	unsigned			ncyls;
+	unsigned			nheads;
+
+} ide_bus[2];
 
 struct part_entry
 {
@@ -58,61 +82,118 @@ struct part_entry
 
 } __attribute__((packed));
 
-static unsigned flags;
-static unsigned long disk_size;
-static unsigned disk_sects;
-static unsigned disk_cyls;
-static unsigned disk_heads;
-
-static void ide_mode_4(void)
+static struct
 {
-#	define PCI_CLOCKS(t)			((unsigned)((1LL*PCI_CLOCK*(t)+999999999)/1000000000))
+	struct ide_device	*dev;
+	unsigned long		offset;
+	unsigned				block;
 
-#	define NCLKS_SETUP			PCI_CLOCKS(25)
-#	define NCLKS_ACTIVE			PCI_CLOCKS(70)
-#	define NCLKS_RECOVER			PCI_CLOCKS(25)
+} selected;
 
-	DPUTS("ide: mode 4 timing");
+static unsigned reg_head;
 
-	/* set port timing */
+/*
+ * select drive
+ */
+static void ide_select(struct ide_device *dev)
+{
+	unsigned head;
 
-	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x4b, ((NCLKS_ACTIVE - 1) << 4) | (NCLKS_RECOVER - 1));
-	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x4c, ((NCLKS_SETUP - 1) << 6) | 0x3f);
-	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x4f, ((NCLKS_ACTIVE - 1) << 4) | (NCLKS_RECOVER - 1));
+	head = REG_HEAD_DEFAULT | dev->select;
 
-	/* enable prefetch buffer */
+	if(reg_head != head) {
 
-	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x41, 0x80 |
-		pcicfg_read_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x41));
+		reg_head = head;
+
+		IDE_REG_HEAD = reg_head;
+
+		udelay(500);
+	}
 }
 
 /*
- * reset drive
+ * reset drives but don't wait
  */
-static void ide_reset(void)
+static void ide_reset_async(void)
 {
-	IDE_REG_CONTROL = REG_CONTROL_DEFAULT | REG_CONTROL_RESET;
-	udelay(10);
-	IDE_REG_CONTROL = REG_CONTROL_DEFAULT;
-	udelay(1000);
+	if(!(ide_bus[0].flags & FLAG_RESETTING)) {
 
-	flags = FLAG_RESETTING;
+		DPUTS("ide: resetting");
+
+		IDE_REG_CONTROL = REG_CONTROL_DEFAULT | REG_CONTROL_RESET;
+		udelay(500);
+		IDE_REG_CONTROL = REG_CONTROL_DEFAULT;
+		udelay(500);
+
+		memset(ide_bus, 0, sizeof(ide_bus));
+
+		ide_bus[0].flags = FLAG_RESETTING;
+		ide_bus[1].flags = FLAG_RESETTING;
+
+		ide_bus[1].select = REG_HEAD_SLAVE;
+
+		reg_head = -1;
+	}
+}
+
+/*
+ * reset drives
+ */
+static int ide_reset(void)
+{
+	unsigned mark, timeout;
+	int drive;
+
+	ide_reset_async();
+
+	/* do a full reset if we come back this way */
+
+	ide_bus[0].flags = 0;
+	ide_bus[1].flags = 0;
+
+	timeout = TIMEOUT_RESET;
+
+	drive = 0;
+
+	ide_select(&ide_bus[drive]);
+
+	for(mark = MFC0(CP0_COUNT);;)
+
+		if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE / 100) {
+
+			if(!(IDE_REG_STATUS & REG_STATUS_BSY)) {
+
+				if(++drive == 2)
+					break;
+
+				ide_select(&ide_bus[drive]);
+
+			} else
+
+				if((int) --timeout <= 0) {
+					DPUTS("ide: reset timeout");
+					return -1;
+				}
+
+			mark += CP0_COUNT_RATE / 100;
+		}
+
+	return 0;
 }
 
 /*
  * issue ATA read command to drive
  */
-static int ata_read(unsigned cmnd, void *data, unsigned count, unsigned timeout)
+static int ata_read(struct ide_device *dev, unsigned cmnd, void *data, unsigned count, unsigned timeout)
 {
 	unsigned stat, expire;
 	unsigned long mark;
 	void *end;
 
-	assert((flags & FLAG_IDENTIFIED) || cmnd == ATA_DEV_DIAG || cmnd == ATA_IDENTIFY);
-	assert(!((unsigned long) data & 3));
+	assert(!((unsigned long) data & 1));
 	
 	if(IDE_REG_STATUS & (REG_STATUS_BSY | REG_STATUS_DRQ)) {
-		printf("ide: %02x drive busy\n", cmnd);
+		printf("ide: 0x%02x drive busy\n", cmnd);
 		return -1;
 	}
 
@@ -126,10 +207,14 @@ static int ata_read(unsigned cmnd, void *data, unsigned count, unsigned timeout)
 		for(mark = MFC0(CP0_COUNT);;) {
 
 			stat = IDE_REG_STATUS;
+
 			if(!(stat & REG_STATUS_BSY)) {
 
 				if(stat & REG_STATUS_ERR) {
-					printf("ide: %02x error %02x\n", cmnd, IDE_REG_ERROR);
+
+					if(cmnd != ATA_IDENTIFY)
+						printf("ide: 0x%02x error 0x%02x\n", cmnd, IDE_REG_ERROR);
+
 					return -1;
 				}
 
@@ -143,7 +228,7 @@ static int ata_read(unsigned cmnd, void *data, unsigned count, unsigned timeout)
 			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE / 100) {
 
 				if((int) --expire <= 0) {
-					printf("ide: %02x command timeout\n", cmnd);
+					printf("ide: 0x%02x command timeout\n", cmnd);
 					return -1;
 				}
 
@@ -153,89 +238,129 @@ static int ata_read(unsigned cmnd, void *data, unsigned count, unsigned timeout)
 
 		for(end = data + 512; data < end; data += 16) {
 
-			((uint16_t *) data)[0x0] = IDE_REG_DATA;
-			((uint16_t *) data)[0x1] = IDE_REG_DATA;
-			((uint16_t *) data)[0x2] = IDE_REG_DATA;
-			((uint16_t *) data)[0x3] = IDE_REG_DATA;
-			((uint16_t *) data)[0x4] = IDE_REG_DATA;
-			((uint16_t *) data)[0x5] = IDE_REG_DATA;
-			((uint16_t *) data)[0x6] = IDE_REG_DATA;
-			((uint16_t *) data)[0x7] = IDE_REG_DATA;
+			((uint16_t *) data)[0] = IDE_REG_DATA;
+			((uint16_t *) data)[1] = IDE_REG_DATA;
+			((uint16_t *) data)[2] = IDE_REG_DATA;
+			((uint16_t *) data)[3] = IDE_REG_DATA;
+			((uint16_t *) data)[4] = IDE_REG_DATA;
+			((uint16_t *) data)[5] = IDE_REG_DATA;
+			((uint16_t *) data)[6] = IDE_REG_DATA;
+			((uint16_t *) data)[7] = IDE_REG_DATA;
 		}
 
-		IDE_REG_STATUS_ALT;
-
 		--count;
+
+		IDE_REG_STATUS_ALT;
 	}
 }
 
 /*
- * identify drive
+ * extract model name from identify information
  */
-static int ide_identify(void)
+static const char *ide_model(const void *info)
 {
-	static union {
-		uint32_t	w[512 / 4];
-		uint16_t	h[1];
-		uint8_t	b[1];
+	static char model[(47 - 27) * 2 + 1];
+	unsigned indx;
+
+	for(indx = 0; indx < (47 - 27) * 2; ++indx)
+		model[indx] = ((char *) info)[27 * 2 + (indx ^ 1)];
+	while(indx && isspace(model[indx - 1]))
+		--indx;
+	model[indx] = '\0';
+
+	return model;
+}
+
+/*
+ * establish PIO mode from identify information
+ */
+static unsigned ide_identify_mode(const void *info)
+{
+	unsigned timing, mode;
+	union {
+		const void	*info;
+		uint8_t		*b;
+		uint16_t		*h;
+		uint32_t		*w;
 	} data;
 
-	char model[(47 - 27) * 2];
-	unsigned timeout, timing;
-	unsigned long mark;
+	data.info = info;
 
-	/* if we're resetting wait for completion */
+	mode = PIO_MODE_DEFAULT;
 
-	if(flags & FLAG_RESETTING) {
-
-		IDE_REG_HEAD = REG_HEAD_DEFAULT;			/* select master */
-
-		timeout = TIMEOUT_RESET;
-
-		for(mark = MFC0(CP0_COUNT);;)
-
-			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE / 100) {
-
-				if(!(IDE_REG_STATUS & REG_STATUS_BSY))
-					break;
-
-				if((int) --timeout <= 0) {
-					puts("ide: reset timeout");
-					return -1;
-				}
-
-				mark += CP0_COUNT_RATE / 100;
-			}
-
-		DPUTS("ide: reset complete");
+	if(data.h[53] & (1 << 1)) {
+		timing = data.h[64];
+		if(timing & (1 << 1))
+			mode = 4;
+		else if(timing & (1 << 0))
+			mode = 3;
 	}
 
-	flags = 0;
+	DPRINTF("ide: supports PIO mode %u\n", mode);
 
-	/* check there's a drive there */
+	return mode;
+}
 
-	IDE_REG_CYL_LO = 0x55;
-	IDE_REG_CYL_HI = 0x55;
+/*
+ * parse ATAPI identify information
+ */
+static int ide_atapi_identify(struct ide_device *dev, const void *info)
+{
+	union {
+		const void	*info;
+		uint8_t		*b;
+		uint16_t		*h;
+		uint32_t		*w;
+	} data;
 
-	if(ata_read(ATA_DEV_DIAG, NULL, 0, TIMEOUT_DEV_DIAG))
-		return -1;
+	data.info = info;
 
-	if((IDE_REG_ERROR & 0x7f) != 0x01 ||
-		IDE_REG_NSECT != 0x01 || IDE_REG_SECTOR != 0x01 ||
-		IDE_REG_CYL_LO != 0x00 || IDE_REG_CYL_HI != 0x00) {
+	dev->flags = 0;
 
-		puts("ide: no drive found");
+	if((data.h[0] & 0xc000) != 0x8000) {
+		puts("ide: not ATAPI device");
 		return -1;
 	}
 
-	IDE_REG_HEAD = REG_HEAD_DEFAULT;			/* select master */
-
-	DPUTS("ide: diagnostic complete");
-
-	/* read IDENTIFY data */
-	
-	if(ata_read(ATA_IDENTIFY, data.b, 1, TIMEOUT_IDENTIFY))
+	if((data.h[0] & 0x1f00) != 0x0500) {
+		puts("ide: not a CDROM drive");
 		return -1;
+	}
+
+	if((data.h[0] & 3) != 0) {
+		puts("ide: unsupported ATAPI packet size");
+		return -1;
+	}
+
+#ifdef _DEBUG
+	putstring("ide: {");
+	putstring_safe(ide_model(info), -1);
+	puts("}");
+#endif
+
+	dev->mode = ide_identify_mode(info);
+
+	dev->flags |= FLAG_IDENTIFIED | FLAG_ATAPI;
+
+	return 0;
+}
+
+/*
+ * parse ATA identify information
+ */
+static int ide_ata_identify(struct ide_device *dev, const void *info)
+{
+	union {
+		const void	*info;
+		uint8_t		*b;
+		uint16_t		*h;
+		uint32_t		*w;
+	} data;
+
+	data.info = info;
+
+	dev->flags = 0;
+	dev->select &= REG_HEAD_SLAVE;
 
 	if(data.h[0] & (1 << 15)) {
 		puts("ide: not ATA device");
@@ -243,61 +368,357 @@ static int ide_identify(void)
 	}
 
 #ifdef _DEBUG
-	{
-		unsigned indx;
-
-		for(indx = 0; indx < sizeof(model); ++indx)
-			model[indx] = data.b[27 * 2 + (indx ^ 1)];
-		while(indx && isspace(model[indx - 1]))
-			--indx;
-
-		putstring("ide: {");
-		putstring_safe(model, indx);
-		puts("}");
-	}
+	putstring("ide: {");
+	putstring_safe(ide_model(info), -1);
+	puts("}");
 #endif
-
-	flags = 0;
 
 	if((data.h[49] & (1 << 9)) &&
 		!(debug_flags & DFLAG_IDE_DISABLE_LBA))
 	{
-		flags |= FLAG_LBA;
+		dev->flags |= FLAG_LBA;
 		if((data.h[83] & ((1 << 15) | (1 << 14) | (1 << 10))) == ((1 << 14) | (1 << 10)) &&
 			!(debug_flags & DFLAG_IDE_DISABLE_LBA48))
 		{
-			flags |= FLAG_LBA_48;
+			dev->flags |= FLAG_LBA_48;
 			if(data.w[102 / 2]) {
-				disk_size = ~0;
+				dev->devsize = ~0;
 				puts("disk size capped at 2TB!");
 			} else
-				disk_size = data.w[100 / 2];
-			DPRINTF("ide: LBA48 %lu\n", disk_size);
+				dev->devsize = data.w[100 / 2];
+			DPRINTF("ide: LBA48 %lu\n", dev->devsize);
 		} else {
-			disk_size = data.w[60 / 2];
-			DPRINTF("ide: LBA %lu\n", disk_size);
+			dev->devsize = data.w[60 / 2];
+			DPRINTF("ide: LBA %lu\n", dev->devsize);
 		}
+		dev->select |= REG_HEAD_LBA;
 	}
 
-	if(!(flags & FLAG_LBA)) {
-		disk_cyls = data.h[54];
-		disk_heads = data.h[55];
-		disk_sects = data.h[56];
-		disk_size = (unsigned long) disk_cyls * disk_heads * disk_sects;
-		if(!disk_size || disk_heads > 16 || disk_cyls > 65536 || disk_sects >= 256) {
+	if(!(dev->flags & FLAG_LBA)) {
+		dev->ncyls = data.h[54];
+		dev->nheads = data.h[55];
+		dev->nsects = data.h[56];
+		dev->devsize = (unsigned long) dev->ncyls * dev->nheads * dev->nsects;
+		if(!dev->devsize || dev->nheads > 16 || dev->ncyls > 65536 || dev->nsects >= 256) {
 			puts("ide: invalid CHS values");
 			return -1;
 		}
-		DPRINTF("ide: CHS %u/%u/%u (%lu)\n", disk_cyls, disk_heads, disk_sects, disk_size);
+		DPRINTF("ide: CHS %u/%u/%u (%lu)\n", dev->ncyls, dev->nheads, dev->nsects, dev->devsize);
 	}
 
-	if(data.h[53] & (1 << 0)) {
-		timing = data.h[67];
-		if(timing && timing <= 120 && !(debug_flags & DFLAG_IDE_DISABLE_TIMING))
-			ide_mode_4();
+	dev->mode = ide_identify_mode(info);
+
+	dev->flags |= FLAG_IDENTIFIED;
+
+	return 0;
+}
+
+/*
+ * identify drive
+ */
+static int ide_identify(struct ide_device *dev)
+{
+	static uint8_t data[512];
+
+	ide_select(dev);
+
+	dev->flags = 0;
+
+	IDE_REG_CYL_LO = 0x55;
+	IDE_REG_CYL_HI = 0xaa;
+
+	if(IDE_REG_CYL_LO == 0x55 ||
+		IDE_REG_CYL_HI == 0xaa) {
+
+		if(!ata_read(dev, ATA_IDENTIFY, data, 1, TIMEOUT_IDENTIFY)) 
+			return ide_ata_identify(dev, data);
+
+		if(IDE_REG_CYL_LO == 0x14 &&
+			IDE_REG_CYL_HI == 0xeb &&
+			!ata_read(dev, ATA_ATAPI_IDENTIFY, data, 1, TIMEOUT_IDENTIFY)) {
+
+			return ide_atapi_identify(dev, data);
+		}
 	}
 
-	flags |= FLAG_IDENTIFIED;
+	puts("ide: no drive found");
+
+	return -1;
+}
+
+/*
+ * issue ATAPI read command to drive
+ */
+static int atapi_read(struct ide_device *dev, const void *cmnd, void *data, unsigned blksz, unsigned count, unsigned timeout)
+{
+	unsigned stat, expire, indx;
+	unsigned long mark;
+
+	assert((dev->flags & FLAG_IDENTIFIED) && (dev->flags & FLAG_ATAPI));
+	assert(!((unsigned long) data & 1));
+	assert(!((unsigned long) cmnd & 1));
+	assert(!(blksz & 1));
+	
+	if(IDE_REG_STATUS & (REG_STATUS_BSY | REG_STATUS_DRQ)) {
+		printf("ide: 0x%04x drive busy\n", ((uint16_t *) cmnd)[0]);
+		return -1;
+	}
+
+	IDE_REG_CYL_LO = blksz;
+	IDE_REG_CYL_HI = blksz >> 8;
+
+	IDE_REG_COMMAND = ATA_PACKET;
+	udelay(1);
+
+	expire = TIMEOUT_PACKET;
+
+	for(mark = MFC0(CP0_COUNT);;) {
+
+		stat = IDE_REG_STATUS;
+
+		if(!(stat & REG_STATUS_BSY)) {
+
+			if(stat & REG_STATUS_ERR) {
+
+				printf("ide: packet error 0x%04x 0x%02x\n", ((uint16_t *) cmnd)[0], IDE_REG_ERROR);
+
+				return -1;
+			}
+
+			if(stat & REG_STATUS_DRQ)
+				break;
+		}
+
+		if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE / 100) {
+
+			if((int) --expire <= 0) {
+				printf("ide: packet timeout 0x%04x\n", ((uint16_t *) cmnd)[0]);
+				return -1;
+			}
+
+			mark += CP0_COUNT_RATE / 100;
+		}
+	}
+
+	IDE_REG_DATA = ((uint16_t *) cmnd)[0];
+	IDE_REG_DATA = ((uint16_t *) cmnd)[1];
+	IDE_REG_DATA = ((uint16_t *) cmnd)[2];
+	IDE_REG_DATA = ((uint16_t *) cmnd)[3];
+	IDE_REG_DATA = ((uint16_t *) cmnd)[4];
+	IDE_REG_DATA = ((uint16_t *) cmnd)[5];
+
+	for(blksz >>= 1;;) {
+
+		IDE_REG_STATUS_ALT;
+
+		expire = timeout;
+
+		for(mark = MFC0(CP0_COUNT);;) {
+
+			stat = IDE_REG_STATUS;
+
+			if(!(stat & REG_STATUS_BSY)) {
+
+				if(stat & REG_STATUS_ERR) {
+
+					printf("ide: command error 0x%04x\n", ((uint16_t *) cmnd)[0]);
+
+					return -1;
+				}
+
+				if(!count)
+					return 0;
+
+				if(stat & REG_STATUS_DRQ)
+					break;
+			}
+
+			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE / 100) {
+
+				if((int) --expire <= 0) {
+					printf("ide: command timeout 0x%04x\n", ((uint16_t *) cmnd)[0]);
+					return -1;
+				}
+
+				mark += CP0_COUNT_RATE / 100;
+			}
+		}
+
+		for(indx = 0; indx < blksz; ++indx)
+			((uint16_t *) data)[indx] = IDE_REG_DATA;
+
+		--count;
+	}
+}
+
+/*
+ * read sectors from drive
+ */
+int ata_read_sectors(struct ide_device *dev, void *data, unsigned long addr, unsigned count)
+{
+	unsigned long sector;
+	unsigned cmnd, nsect;
+
+	assert(dev->flags & FLAG_IDENTIFIED);
+
+	if(addr + count >= dev->devsize) {
+		puts("ide: attempt to read past end of disk");
+		return -1;
+	}
+
+	ide_select(dev);
+
+	for(cmnd = ATA_READ; count;) {
+
+		if(dev->flags & FLAG_LBA) {
+
+			assert(reg_head & REG_HEAD_LBA);
+
+			if(dev->flags & FLAG_LBA_48) {
+
+				cmnd = ATA_READ_EXT;
+
+				IDE_REG_CYL_HI = 0;
+				IDE_REG_CYL_LO = 0;
+				IDE_REG_SECTOR = addr >> 24;
+
+				IDE_REG_NSECT = 0;
+
+			} else
+
+				IDE_REG_HEAD = reg_head | (addr >> 24);
+
+			IDE_REG_CYL_HI = addr >> 16;
+			IDE_REG_CYL_LO = addr >> 8;
+			IDE_REG_SECTOR = addr;
+
+		} else {
+
+			assert(!(reg_head & REG_HEAD_LBA));
+
+			IDE_REG_SECTOR = addr % dev->nsects + 1;
+			sector = addr / dev->nsects;
+			IDE_REG_HEAD = reg_head | sector % dev->nheads;
+			sector /= dev->nheads;
+			IDE_REG_CYL_HI = sector >> 8;
+			IDE_REG_CYL_LO = sector;
+		}
+
+		nsect = count > ATA_READ_BLOCK ? ATA_READ_BLOCK : count;
+		IDE_REG_NSECT = nsect;
+
+		if(ata_read(dev, cmnd, data, nsect, TIMEOUT_ATA_READ))
+			return -1;
+
+		addr += ATA_READ_BLOCK;
+		data += ATA_READ_BLOCK * 512;
+		count -= nsect;
+	}
+
+	return 0;
+}
+
+/*
+ * request sense from ATAPI device
+ */
+static int atapi_sense(struct ide_device *dev)
+{
+	union {
+		uint16_t	h[6];
+		uint8_t	b[1];
+	} cmnd;
+	union {
+		uint16_t	h[9];
+		uint8_t	b[1];
+	} sense;
+
+	assert((dev->flags & FLAG_IDENTIFIED) && (dev->flags & FLAG_ATAPI));
+
+	cmnd.b[0]	= ATAPI_REQUEST_SENSE;
+	cmnd.b[1]	= 0x00;
+	cmnd.b[2]	= 0x00;
+	cmnd.b[3]	= 0x00;
+	cmnd.b[4]	= sizeof(sense);
+	cmnd.b[5]	= 0x00;
+	cmnd.b[6]	= 0x00;
+	cmnd.b[7]	= 0x00;
+	cmnd.b[8]	= 0x00;
+	cmnd.b[9]	= 0x00;
+	cmnd.b[10]	= 0x00;
+	cmnd.b[11]	= 0x00;
+
+	if(atapi_read(dev, cmnd.b, sense.b, sizeof(sense), 1, TIMEOUT_REQUEST_SENSE))
+		return -1;
+
+	return ((unsigned) sense.b[2] << 16) | ((unsigned) sense.b[12] << 8) | sense.b[13];
+}
+
+/*
+ * read sectors from ATAPI device
+ */
+int atapi_read_sectors(struct ide_device *dev, void *data, unsigned long addr, unsigned count)
+{
+	unsigned work, retry, mark;
+	unsigned long end;
+	union {
+		uint16_t	h[6];
+		uint8_t	b[1];
+	} cmnd;
+	int sense;
+
+	ide_select(dev);
+
+	cmnd.b[0]	= ATAPI_READ_10;
+	cmnd.b[1]	= 0x00;
+	cmnd.b[6]	= 0x00;
+	cmnd.b[9]	= 0x00;
+	cmnd.b[10]	= 0x00;
+	cmnd.b[11]	= 0x00;
+
+	for(end = addr + count; addr < end;) {
+
+		work = end - addr;
+		if(work > ATAPI_READ_BLOCK)
+			work = ATAPI_READ_BLOCK;
+
+		cmnd.b[2] = addr >> 24;
+		cmnd.b[3] = addr >> 16;
+		cmnd.b[4] = addr >> 8;
+		cmnd.b[5] = addr;
+
+		cmnd.b[7] = work >> 8;
+		cmnd.b[8] = work;
+
+		for(retry = 1;; ++retry) {
+
+			if(!atapi_read(dev, cmnd.b, data, 2048, work, TIMEOUT_ATAPI_READ))
+				break;
+
+			if(retry == 20)
+				return -1;
+
+			/*
+			 * 062800 medium change
+			 * 062900 reset complete
+			 * 023a00 medium not present
+			 * 020401 spinning up
+			 */
+
+			sense = atapi_sense(dev);
+
+			if(sense < 0)
+				ide_reset();
+			else
+				DPRINTF("ide: ATAPI retry (sense 0x%06x)\n", sense);
+
+			for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE / 2;)
+				;
+		}
+
+
+		addr += work;
+		data += work * 2048;
+	}
 
 	return 0;
 }
@@ -307,62 +728,51 @@ static int ide_identify(void)
  */
 int ide_read_sectors(void *device, void *data, unsigned long addr, unsigned count)
 {
-	unsigned long sector;
-	unsigned cmnd, nsect;
+	assert(device == &selected);
 
-	assert(flags & FLAG_IDENTIFIED);
+	addr += selected.offset;
 
-	if(device)
-		addr += ((struct part_entry *) device)->start_lba;
+	return (selected.dev->flags & FLAG_ATAPI) ?
+		atapi_read_sectors(selected.dev, data, addr, count) :
+		ata_read_sectors(selected.dev, data, addr, count);
+}
 
-	if(addr + count > disk_size) {
-		puts("ide: attempt to read past end of disk");
-		return -1;
-	}
+/*
+ * get drive sector size
+ */
+int ide_block_size(void *device)
+{
+	assert(device == &selected);
 
-	for(cmnd = ATA_READ; count;) {
+	return selected.block;
+}
 
-		if(flags & FLAG_LBA) {
+/*
+ * set timing for PIO mode
+ */
+static void ide_timing(unsigned mode)
+{
+	if(mode != 4)
+		return;
 
-			if(flags & FLAG_LBA_48) {
+	DPUTS("ide: mode 4 timing");
 
-				cmnd = ATA_READ_EXT;
+#	define PCI_CLOCKS(t)			((unsigned)((1LL*PCI_CLOCK*(t)+999999999)/1000000000))
 
-				IDE_REG_CYL_HI = 0;
-				IDE_REG_CYL_LO = 0;
-				IDE_REG_SECTOR = addr >> 24;
+#	define NCLKS_SETUP			PCI_CLOCKS(25)
+#	define NCLKS_ACTIVE			PCI_CLOCKS(70)
+#	define NCLKS_RECOVER			PCI_CLOCKS(25)
 
-				IDE_REG_NSECT = 0;
-			}
+	/* set port timing */
 
-			IDE_REG_CYL_HI = addr >> 16;
-			IDE_REG_CYL_LO = addr >> 8;
-			IDE_REG_SECTOR = addr;
+	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x4b, ((NCLKS_ACTIVE - 1) << 4) | (NCLKS_RECOVER - 1));
+	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x4c, ((NCLKS_SETUP - 1) << 6) | 0x3f);
+	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x4f, ((NCLKS_ACTIVE - 1) << 4) | (NCLKS_RECOVER - 1));
 
-			IDE_REG_HEAD = REG_HEAD_DEFAULT | REG_HEAD_LBA;
-			 
-		} else {
+	/* enable prefetch buffer */
 
-			IDE_REG_SECTOR = addr % disk_sects + 1;
-			sector = addr / disk_sects;
-			IDE_REG_HEAD = sector % disk_heads | REG_HEAD_DEFAULT;
-			sector /= disk_heads;
-			IDE_REG_CYL_HI = sector >> 8;
-			IDE_REG_CYL_LO = sector;
-		}
-
-		nsect = count > 255 ? 255 : count;
-		IDE_REG_NSECT = nsect;
-
-		if(ata_read(cmnd, data, nsect, TIMEOUT_READ))
-			return -1;
-
-		addr += 255;
-		data += 255 * 512;
-		count -= nsect;
-	}
-
-	return 0;
+	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x41, 0x80 |
+		pcicfg_read_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x41));
 }
 
 /*
@@ -380,11 +790,13 @@ void ide_init(void)
 	pcicfg_write_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x40, 0x02 |
 		pcicfg_read_byte(PCI_DEV_VIA, PCI_FNC_VIA_IDE, 0x40));
 
-	ide_reset();
+	ide_timing(PIO_MODE_DEFAULT);
+
+	ide_reset_async();
 }
 
 /*
- * return handle to disk partition
+ * return handle to drive/partition
  */
 void *ide_open(const char *name)
 {
@@ -396,32 +808,92 @@ void *ide_open(const char *name)
 
 	} __attribute__((packed));
 
+	static const char *prefix[] = { "/dev/hd", "hd" };
+	unsigned indx, size, drive, mode;
 	static struct part_table table;
-	unsigned long part;
-	unsigned indx;
 	char *ptr;
+	int part;
 
 	assert(sizeof(table) == 512);
 
-	part = 0;
+	if(!((ide_bus[0].flags | ide_bus[1].flags) & FLAG_IDENTIFIED)) {
+
+		ide_reset();
+		ide_identify(&ide_bus[0]);
+		if(debug_flags & DFLAG_IDE_ENABLE_SLAVE)
+			ide_identify(&ide_bus[1]);
+
+		if(!((ide_bus[0].flags | ide_bus[1].flags) & FLAG_IDENTIFIED)) {
+			puts("no devices found");
+			return NULL;
+		}
+
+		if(!(debug_flags & DFLAG_IDE_DISABLE_TIMING)) {
+
+			mode = 10;
+
+			if((ide_bus[0].flags & FLAG_IDENTIFIED) && ide_bus[0].mode < mode)
+				mode = ide_bus[0].mode;
+
+			if((ide_bus[1].flags & FLAG_IDENTIFIED) && ide_bus[1].mode < mode)
+				mode = ide_bus[1].mode;
+
+			ide_timing(mode);
+		}
+	}
+
+	drive = !(ide_bus[0].flags & FLAG_IDENTIFIED);
+	part = -1;
 
 	if(name) {
-		part = evaluate(name, &ptr);
-		if(*ptr || !part || part > 4) {
-			puts("invalid device");
+
+		for(indx = 0; indx < elements(prefix); ++indx) {
+			size = strlen(prefix[indx]);
+			if(!strncmp(name, prefix[indx], size)) {
+				name += size;
+				break;
+			}
+		}
+
+		if(*name == 'a' || *name == 'b')
+			drive = (*name++ == 'b');
+
+		part = 0;
+
+		if(*name) {
+			part = evaluate(name, &ptr);
+			if(*ptr || !part) {
+				puts("invalid device specification");
+				return NULL;
+			}
+		}
+
+		if(!(ide_bus[drive].flags & FLAG_IDENTIFIED)) {
+			puts("no such device");
 			return NULL;
 		}
 	}
 
-	if((flags & (FLAG_RESETTING | FLAG_IDENTIFIED)) != FLAG_IDENTIFIED) {
-		ide_identify();
-		if((flags & (FLAG_RESETTING | FLAG_IDENTIFIED)) != FLAG_IDENTIFIED) {
-			ide_reset();
-			return NULL;
-		}
+	selected.dev = &ide_bus[drive];
+	selected.offset = 0;
+	selected.block = (ide_bus[drive].flags & FLAG_ATAPI) ? 2048 : 512;
+
+	if(!part)
+		return &selected;
+
+	if(selected.dev->flags & FLAG_ATAPI) {
+		if(part < 0)
+			return &selected;
+		puts("no partition support for CDROMs");
+		return NULL;
 	}
 
-	if(ide_read_sectors(NULL, &table, 0, 1) < 0) {
+	if(part > elements(table.p)) {
+		puts("logical partitions not supported");
+		return NULL;
+	}
+
+	if(ide_read_sectors(&selected, &table, 0, 1) < 0) {
 		ide_reset();
 		return NULL;
 	}
@@ -431,9 +903,9 @@ void *ide_open(const char *name)
 		return NULL;
 	}
 
-	if(part) {
+	if(part > 0) {
 	
-		if(table.p[part - 1].type != 0x83) {
+		if(table.p[--part].type != 0x83) {
 			puts("not an EXT2 partition");
 			return NULL;
 		}
@@ -442,28 +914,30 @@ void *ide_open(const char *name)
 
 		/* find bootable ext2 partition, failing that find first ext2 partition */
 
-		for(indx = 0; indx < 4; ++indx)
+		for(indx = 0; indx < elements(table.p); ++indx)
 
 			if(table.p[indx].type == 0x83) {
 
 				if(table.p[indx].boot & 0x80) {
-					part = indx + 1;
+					part = indx;
 					break;
 				}
 
-				if(!part)
-					part = indx + 1;
+				if(part < 0)
+					part = indx;
 			}
 
-		if(!part) {
+		if(part < 0) {
 			puts("no EXT2 partitions");
 			return NULL;
 		}
 
-		DPRINTF("ide: partition %lu\n", part);
+		DPRINTF("ide: partition %d\n", part + 1);
 	}
 
-	return &table.p[part - 1];
+	selected.offset = table.p[part].start_lba;
+
+	return &selected;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

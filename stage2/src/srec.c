@@ -192,7 +192,7 @@ int cmnd_srec(int opsz)
 		getch();
 	}
 
-	return E_SUCCESS;
+	return (long) size >= 0 ? E_NONE : E_UNSPEC;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

@@ -1,7 +1,5 @@
 # $Id$
 
-* Add support for passing a command line to the kernel [WORK IN PROGRESS].
-
 * Add support for network booting (TFTP and NFS) [WORK IN PROGRESS].
 
 * Add boot menu using LCD.

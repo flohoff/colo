@@ -36,6 +36,7 @@ static char scratch[SCRATCH_SIZE];
 struct volume
 {
 	void							*device;
+	unsigned						sector_size;
 	unsigned						block_size;
 	unsigned						super_block;
 	unsigned						large_file_mask;
@@ -70,7 +71,7 @@ static void *ext2_read_block(struct volume *v, unsigned long block)
 	if(!block)
 		return zero;
 
-	return block_read(v->device, block, v->block_size);
+	return block_read(v->device, block, v->block_size, v->sector_size);
 }
 
 /*
@@ -90,7 +91,7 @@ static int ext2_read_block_raw(struct volume *v, void *data, unsigned long block
 		return 0;
 	}
 
-	return !!block_read_raw(v->device, data, block, v->block_size);
+	return !!block_read_raw(v->device, data, block, v->block_size, v->sector_size);
 }
 
 /*
@@ -570,14 +571,16 @@ int cmnd_mount(int opsz)
 
 	vol.device = ide_open(argc > 1 ? argv[1] : NULL);
 	if(!vol.device)
-		return E_SUCCESS;
+		return E_UNSPEC;
+
+	vol.sector_size = ide_block_size(vol.device);
 
 	if(!ext2_mount(&vol, 0))
-		return E_SUCCESS;
+		return E_UNSPEC;
 
 	curdir = EXT2_ROOT_INO;
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /*
@@ -644,7 +647,7 @@ int cmnd_ls(int opsz)
 
 	if(!vol.mounted) {
 		puts("not mounted");
-		return E_SUCCESS;
+		return E_UNSPEC;
 	}
 
 	if(argc == 1)
@@ -658,7 +661,7 @@ int cmnd_ls(int opsz)
 			printf("file not found \"%s\"\n", argv[indx]);
 	}
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /*
@@ -676,21 +679,21 @@ int cmnd_cd(int opsz)
 
 		if(!vol.mounted) {
 			puts("not mounted");
-			return E_SUCCESS;
+			return E_UNSPEC;
 		}
 
 		inum = ext2_lookup(&vol, curdir, argv[1]);
 		if(!inum) {
 			puts("directory not found");
-			return E_SUCCESS;
+			return E_UNSPEC;
 		}
 
 		if(!ext2_inode_fetch(&vol, &inode, inum))
-			return E_SUCCESS;
+			return E_UNSPEC;
 
 		if(!S_ISDIR(inode.i_mode)) {
 			puts("not a directory");
-			return E_SUCCESS;
+			return E_UNSPEC;
 		}
 
 		curdir = inum;
@@ -699,7 +702,86 @@ int cmnd_cd(int opsz)
 	if(ext2_dirpath(&vol, scratch, sizeof(scratch), curdir))
 		puts(scratch);
 
-	return E_SUCCESS;
+	return E_NONE;
+}
+
+/*
+ * open file and return handle
+ */
+void *file_open(const char *path, unsigned long *size)
+{
+	struct ext2_inode inode;
+	unsigned inum;
+
+	if(!vol.mounted) {
+		puts("not mounted");
+		return NULL;
+	}
+
+	inum = ext2_lookup(&vol, curdir, path);
+	if(!inum) {
+		puts("file not found");
+		return NULL;
+	}
+
+	if(!ext2_inode_fetch(&vol, &inode, inum))
+		return NULL;
+
+	if(!S_ISREG(inode.i_mode)) {
+		puts("not a file");
+		return NULL;
+	}
+
+	if(vol.large_file_mask & inode.i_size_high) {
+		puts("file too large");
+		return NULL;
+	}
+
+	if(size)
+		*size = inode.i_size;
+
+	return (void *) inum;
+}
+
+/*
+ * load file into memory
+ */
+int file_load(void *hdl, void *where, unsigned long size)
+{
+	struct ext2_inode inode;
+	unsigned long seek;
+	unsigned block;
+	void *copy;
+
+	if(!ext2_inode_fetch(&vol, &inode, (unsigned) hdl))
+		return 0;
+
+	for(seek = 0; size;) {
+
+		block = seek / vol.block_size;
+
+		if(!ext2_block_map(&vol, &inode, &block))
+			return 0;
+
+		if(size < vol.block_size) {
+
+			copy = ext2_read_block(&vol, block);
+			if(!copy)
+				return 0;
+
+			memcpy(where + seek, copy, size);
+
+			break;
+		}
+
+		if(!ext2_read_block_raw(&vol, where + seek, block))
+			return 0;
+
+		seek += vol.block_size;
+		size -= vol.block_size;
+	}
+
+	return 1;
 }
 
 /*
@@ -707,10 +789,8 @@ int cmnd_cd(int opsz)
  */
 int cmnd_load(int opsz)
 {
-	unsigned long size, seek;
-	struct ext2_inode inode;
-	unsigned inum, block;
-	void *base, *copy;
+	unsigned long size;
+	void *hdl, *base;
 
 	if(argc < 2)
 		return E_ARGS_UNDER;
@@ -718,65 +798,24 @@ int cmnd_load(int opsz)
 	if(argc > 2)
 		return E_ARGS_OVER;
 
-	if(!vol.mounted) {
-		puts("not mounted");
-		return E_SUCCESS;
-	}
-
-	inum = ext2_lookup(&vol, curdir, argv[1]);
-	if(!inum) {
-		puts("file not found");
-		return E_SUCCESS;
-	}
-
-	if(!ext2_inode_fetch(&vol, &inode, inum))
-		return E_SUCCESS;
-
-	if(!S_ISREG(inode.i_mode)) {
-		puts("not a file");
-		return E_SUCCESS;
-	}
-
-	size = inode.i_size;
+	hdl = file_open(argv[1], &size);
+	if(!hdl)
+		return E_UNSPEC;
 
 	heap_reset();
-
 	base = heap_reserve_hi(size);
-
-	if((vol.large_file_mask & inode.i_size_high) || !base) {
+	if(!base) {
 		puts("file too large");
-		return E_SUCCESS;
+		return E_UNSPEC;
 	}
 
-	for(seek = 0; size;) {
-
-		block = seek / vol.block_size;
-
-		if(!ext2_block_map(&vol, &inode, &block))
-			return E_SUCCESS;
-
-		if(size < vol.block_size) {
-
-			copy = ext2_read_block(&vol, block);
-			if(!copy)
-				return E_SUCCESS;
-
-			memcpy(base + seek, copy, size);
-
-			break;
-		}
-
-		if(!ext2_read_block_raw(&vol, base + seek, block))
-			return E_SUCCESS;
-
-		seek += vol.block_size;
-		size -= vol.block_size;
-	}
+	if(!file_load(hdl, base, size))
+		return E_UNSPEC;
 
 	heap_alloc();
 	heap_info();
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

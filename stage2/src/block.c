@@ -37,31 +37,34 @@ void block_flush(void *device)
 }
 
 /*
- * read block from disk
- */
-int block_read_raw(void *device, void *buf, unsigned long block, size_t size)
-{
-	unsigned nsect;
-
-	nsect = size / 512;
-
-	return !ide_read_sectors(device, buf, block * nsect, nsect);
-}
-
-/*
  * read block via cache
  */
-void *block_read(void *device, unsigned long block, size_t size)
+void *block_read(void *device, unsigned long block, size_t size, size_t hwsize)
 {
+	unsigned blksz, count, offset;
 	int which, tail, prev;
+
+	assert(size <= BLOCK_SIZE && hwsize <= BLOCK_SIZE && hwsize);
+
+	blksz = size;
+	offset = 0;
+
+	/* if block size is smaller than sector size cache whole sectors */
+
+	count = hwsize / size;
+	if(count > 1) {
+		blksz = hwsize;
+		offset = (block % count) * size;
+		block /= count;
+	}
 
 	/* search for block, MRU first */
 
 	prev = 0;
 	tail = 0;
 	for(which = cache[head].next; which >= 0; which = cache[which].next) {
-		if(cache[which].device == device && cache[which].block == block && cache[which].size == size)
-			return cache[which].data;
+		if(cache[which].device == device && cache[which].block == block && cache[which].size == blksz)
+			return cache[which].data + offset;
 		prev = tail;
 		tail = which;
 	}
@@ -70,9 +73,10 @@ void *block_read(void *device, unsigned long block, size_t size)
 
 	cache[tail].device = device;
 	cache[tail].block = block;
-	cache[tail].size = size;
+	cache[tail].size = blksz;
 
-	if(!block_read_raw(device, cache[tail].data, block, size)) {
+	count = blksz / hwsize;
+	if(ide_read_sectors(device, cache[tail].data, block * count, count)) {
 		cache[tail].device = NULL;
 		return NULL;
 	}
@@ -83,7 +87,30 @@ void *block_read(void *device, unsigned long block, size_t size)
 	cache[tail].next = head;
 	head = tail;
 
-	return cache[tail].data;
+	return cache[tail].data + offset;
+}
+
+/*
+ * read block from disk avoiding cache if we can
+ */
+int block_read_raw(void *device, void *buf, unsigned long block, size_t size, size_t hwsize)
+{
+	unsigned count;
+	void *data;
+
+	count = size / hwsize;
+	if(count)
+		return !ide_read_sectors(device, buf, block * count, count);
+
+	/* block size is smaller than sector size so use cache to split sector */
+
+	data = block_read(device, block, size, hwsize);
+	if(!data)
+		return 0;
+
+	memcpy(buf, data, size);
+
+	return 1;
 }
 
 /*

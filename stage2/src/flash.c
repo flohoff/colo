@@ -227,7 +227,7 @@ int cmnd_flash(int opsz)
 
 		if(!size) {
 			puts("do data loaded");
-			return E_SUCCESS;
+			return E_UNSPEC;
 		}
 	}
 
@@ -258,14 +258,14 @@ int cmnd_flash(int opsz)
 	for(mark = MFC0(CP0_COUNT); !kbhit();)
 		if(MFC0(CP0_COUNT) - mark >= 2 * CP0_COUNT_RATE) {
 			puts("\naborted");
-			return E_SUCCESS;
+			return E_UNSPEC;
 		}
 
 	putchar('\n');
 
 	if(getch() != key) {
 		puts("aborted");
-		return E_SUCCESS;
+		return E_UNSPEC;
 	}
 
 	stat = flash_program_block(targ, KSEG0(addr), size);
@@ -276,9 +276,10 @@ int cmnd_flash(int opsz)
 		printf("programming failed at offset %06x\n", stat);
 		if(flash_locked(stat))
 			puts("** block is locked **");
+		return E_UNSPEC;
 	}
 
-	return E_SUCCESS;
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */
