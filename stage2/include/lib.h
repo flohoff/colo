@@ -358,8 +358,10 @@ extern void nv_put(void);
 /* netcon.c */
 
 extern int netcon_poll(void);
+extern void netcon_disable(void);
 extern unsigned netcon_read(void *, unsigned);
 extern unsigned netcon_write(const void *, unsigned);
+extern int netcon_enabled(void);
 
 #endif
 

@@ -93,6 +93,9 @@ ip-address				Interface IP address.
 ip-netmask				Interface subnet mask.
 ip-gateway				Interface gateway address.
 menu-option				Number of selected menu option (0 on cancel/timeout).
+nc-host					Net console host.
+nc-port					Net console destination port.
+nc-source				Net console source port.
 
 See the 'variable' command for more information.
 
@@ -418,10 +421,25 @@ sleep period
 
 Pauses for the specified number of tenths of a second.
 
-netcon
-------
+netcon [host [port [source]]]
+-----------------------------
 
-XXX XXX XXX
+If called with no arguments this command disables the UDP network console.
+Otherwise it enables the network console to the specified host and port, using
+the specified source port. The default destination port is 6666, and the
+default source port 6665 (matching the kernel's netconsole support).
+
+Whilst the net console is enabled the console configuration is available in
+the nc-* variables (see VARIABLES above). To propagate this configuration to
+the kernel's netconsole facility you could add something like this to the
+kernel command line :-
+
+	netconsole={nc-source}@{ip-address}/,{nc-port}@{nc-host}/
+
+*note*
+
+	The 'net' command unconditionally disables the net console functionality,
+	so it shouldn't be used whilst the net console is enabled.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

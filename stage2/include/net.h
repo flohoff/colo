@@ -90,6 +90,7 @@ extern uint32_t ip_nsvr;
 extern void arp_in(struct frame *);
 extern void arp_ip_out(struct frame *, uint32_t);
 extern void arp_flush_all(void);
+extern void arp_pressure(void);
 
 /* ip.c */
 

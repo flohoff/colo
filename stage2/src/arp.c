@@ -88,6 +88,9 @@ static void arp_spool(unsigned indx)
 	}
 }
 
+/*
+ * handle incoming ARP frame
+ */
 void arp_in(struct frame *frame)
 {
 	void *data, *reply;
@@ -174,6 +177,32 @@ matched:
 	}
 }
 
+/*
+ * stack needs frames so give up some of ours
+ */
+void arp_pressure(void)
+{
+	unsigned indx, mark;
+
+	mark = (MFC0(CP0_COUNT) / 16) % elements(arp_table);
+	
+	indx = mark;
+	do {
+
+		if(arp_table[indx].state == ARP_UNRESOLVED && arp_table[indx].head) {
+			arp_discard(indx);
+			break;
+		}
+
+		if(++indx >= elements(arp_table))
+			indx = 0;
+
+	} while(indx != mark);
+}
+
+/*
+ * transmit IP frame resolving MAC address as required
+ */
 void arp_ip_out(struct frame *frame, uint32_t ip)
 {
 	unsigned indx, unused;
@@ -218,10 +247,6 @@ void arp_ip_out(struct frame *frame, uint32_t ip)
 
 	arpreq = frame_alloc();
 	if(arpreq) {
-
-		/* XXX only queue a single frame for now */
-
-		arp_discard(indx);
 
 		frame->link = NULL;
 		if(arp_table[indx].head)

@@ -107,7 +107,7 @@ static struct
 	{ "select",			cmnd_menu,			0,					"title timeout option ...",							},
 	{ "noop",			cmnd_noop,			0,					"[arguments ...]",										},
 	{ "sleep",			cmnd_sleep,			0,					"sleep period",											},
-	{ "netcon",			cmnd_netcon,		0,					"host [port [port]]",									},
+	{ "netcon",			cmnd_netcon,		0,					"[host [port [port]]]",									},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",										},

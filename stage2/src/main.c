@@ -73,7 +73,8 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 		lcd_line(1, "!   FAILED     !");
 	}
 
-	serial_enable(1);
+	if(!netcon_enabled())
+		serial_enable(1);
 
 	shell();
 }

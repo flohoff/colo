@@ -6,6 +6,8 @@ CoLo 1.18 (xxxx-xx-xx)
 *	Added UDP network console support. This adds a 'netcon' command and
 	associated variables, and a new boot menu item "Network Shell".
 
+*	Added "ncon" to tools directory. Very simple net console client.
+
 CoLo 1.17 (2005-02-20)
 ----------------------
 

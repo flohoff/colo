@@ -74,7 +74,7 @@ static const unsigned rates[] =
 };
 
 static unsigned queue_in, queue_out;
-static char out_queue[1024];
+static char out_queue[2048];
 static unsigned baud;
 static enum { ST_UNINIT = 0, ST_DISABLED, ST_ENABLED } state;
 static volatile uint8_t *uart_base;
@@ -253,7 +253,7 @@ int getch(void)
 	while(!kbhit())
 		;
 
-	if(UART_LSR & UART_LSR_RDR)
+	if(state == ST_ENABLED && (UART_LSR & UART_LSR_RDR))
 		return UART_RHR;
 
 	if(netcon_read(&tmp, 1))

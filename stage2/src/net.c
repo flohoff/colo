@@ -22,6 +22,9 @@ struct frame *frame_alloc(void)
 {
 	struct frame *frame;
 
+	if(!pool)
+		arp_pressure();
+
 	frame = pool;
 
 	if(frame) {
@@ -140,6 +143,8 @@ void net_down(int dhcp)
 {
 	if(!net_alive)
 		return;
+
+	netcon_disable();
 
 	tulip_down();
 	net_alive = 0;

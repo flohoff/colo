@@ -14,12 +14,55 @@
 #define DEFAULT_SRC_PORT						6665
 #define DEFAULT_DST_PORT						6666
 
+#define TRANSMIT_POLL_COUNT					20
+
 static struct frame *rx_head;
 static struct frame *rx_tail;
 static struct frame *tx_head;
 static struct frame *tx_tail;
 static unsigned rx_part;
+static unsigned tx_seen;
 static int udp_sock = -1;
+
+/*
+ * is net console enabled
+ */
+int netcon_enabled(void)
+{
+	return udp_sock >= 0;
+}
+
+/*
+ * disable net console
+ */
+void netcon_disable(void)
+{
+	struct frame *frame;
+
+	if(udp_sock >= 0) {
+
+		udp_close(udp_sock);
+		udp_sock = -1;
+
+		while(rx_head) {
+
+			frame = rx_head->link;
+			frame_free(rx_head);
+			rx_head = frame;
+		}
+
+		while(tx_head) {
+			
+			frame = tx_head->link;
+			frame_free(tx_head);
+			tx_head = frame;
+		}
+
+		DPUTS("netcon: disabled");
+
+		env_remove_tag(VAR_NETCON);
+	}
+}
 
 /*
  * do net console transmit / receive
@@ -30,14 +73,23 @@ int netcon_poll(void)
 
 	if(udp_sock >= 0) {
 
-		if(tx_head) {
+		while(tx_head) {
+
 			frame = tx_head->link;
+			if(!frame && ++tx_seen < TRANSMIT_POLL_COUNT)
+				break;
+
 			udp_send(udp_sock, tx_head);
+
 			tx_head = frame;
+			tx_seen = 0;
 		}
 
-		frame = udp_recv(udp_sock);
-		if(frame) {
+		for(;;) {
+
+			frame = udp_recv(udp_sock);
+			if(!frame)
+				break;
 
 			if(FRAME_SIZE(frame)) {
 
@@ -150,38 +202,6 @@ unsigned netcon_write(const void *data, unsigned size)
 		}
 
 	return copy;
-}
-
-/*
- * disable net console
- */
-static void netcon_disable(void)
-{
-	struct frame *frame;
-
-	if(udp_sock >= 0) {
-
-		udp_close(udp_sock);
-		udp_sock = -1;
-
-		while(rx_head) {
-
-			frame = rx_head->link;
-			frame_free(rx_head);
-			rx_head = frame;
-		}
-
-		while(tx_head) {
-			
-			frame = tx_head->link;
-			frame_free(tx_head);
-			tx_head = frame;
-		}
-
-		DPUTS("netcon: disabled");
-
-		env_remove_tag(VAR_NETCON);
-	}
 }
 
 /*
