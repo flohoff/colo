@@ -105,6 +105,7 @@ extern void icmp_in(struct frame *);
 extern void udp_in(struct frame *);
 extern int udp_socket(void);
 extern void udp_close(int);
+extern unsigned udp_bind_range(int, unsigned, unsigned);
 extern unsigned udp_bind(int, unsigned);
 extern unsigned udp_connect(int, uint32_t, unsigned);
 extern struct frame *udp_recv(int);

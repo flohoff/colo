@@ -11,14 +11,12 @@
 
 unsigned ip_checksum(unsigned sum, const void *data, unsigned size)
 {
-	// XXX we can do this better
-
 	unsigned indx;
 
 	assert(!((unsigned long) data & 1));
+	assert(size);
 
-	while(sum > 0xffff)
-		sum = (sum & 0xffff) + (sum >> 16);
+	sum = (sum >> 16) + (sum & 0xffff);
 
 	for(indx = 0; indx < size - 1; indx += 2)
 		sum += NET_READ_SHORT(data + indx);
@@ -26,8 +24,8 @@ unsigned ip_checksum(unsigned sum, const void *data, unsigned size)
 	if(indx < size)
 		sum += NET_READ_BYTE(data + indx) << 8;
 
-	while(sum > 0xffff)
-		sum = (sum & 0xffff) + (sum >> 16);
+	sum = (sum >> 16) + (sum & 0xffff);
+	sum = (sum >> 16) + (sum & 0xffff);
 
 	return sum;
 }

@@ -12,7 +12,7 @@
 #include "galileo.h"
 
 #define VER_MAJOR					1
-#define VER_MINOR					8
+#define VER_MINOR					9
 
 unsigned debug_flags;
 size_t ram_size;

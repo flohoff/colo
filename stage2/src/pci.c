@@ -7,6 +7,7 @@
  */
 
 #include "lib.h"
+#include "cpu.h"
 #include "galileo.h"
 #include "pci.h"
 
@@ -62,8 +63,8 @@ unsigned pcicfg_read_byte(unsigned dev, unsigned func, unsigned addr)
 unsigned pci_init(size_t bank0, size_t bank1)
 {
 	static const char *name[] = {
-		[UNIT_ID_QUBE1]	= "Qube1",
-		[UNIT_ID_RAQ1]		= "RaQ1",
+		[UNIT_ID_QUBE1]	= "Qube",
+		[UNIT_ID_RAQ1]		= "RaQ",
 		[UNIT_ID_QUBE2]	= "Qube2",
 		[UNIT_ID_RAQ2]		= "RaQ2",
 	};
@@ -86,6 +87,8 @@ unsigned pci_init(size_t bank0, size_t bank1)
 
 	pcicfg_write_half(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x04, 0x0006 |
 		pcicfg_read_half(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x04));
+
+	pcicfg_write_byte(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x0c, DCACHE_LINE_SIZE / 4);
 
 	pcicfg_write_byte(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x0d, 32);
 

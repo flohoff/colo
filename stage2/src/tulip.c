@@ -21,9 +21,16 @@
 #define RX_RING_SIZE						4
 #define TX_RING_SIZE						4
 
+#define _RX_BUFFER_SIZE					(sizeof(((struct frame *) 0)->payload))
+
 #define CSR(n)								(((volatile unsigned *) KSEG1(IO_BASE_ETH0))[(n)*2])
 
 #define CSR0_SWR							(1 << 0)
+#define CSR0_PBL							(0 << 8)			/* unlimited burst length */
+#define CSR0_CAL							(3 << 14)		/* 32 byte cache line     */
+#define CSR0_RME							(1 << 21)
+#define CSR0_RLE							(1 << 23)
+#define CSR0_WIE							(1 << 24)
 
 #define CSR6_SR							(1 << 1)
 #define CSR6_ST							(1 << 13)
@@ -52,6 +59,8 @@
 #define TX_DESC_LENGTH_LS				(1 << 30)
 
 #define ADDR_FILT_SIZE					192
+
+#define RX_BUFFER_SIZE					((_RX_BUFFER_SIZE&(DCACHE_LINE_SIZE-1))?_RX_BUFFER_SIZE:_RX_BUFFER_SIZE-4)
 
 struct descriptor
 {
@@ -90,7 +99,7 @@ static void rx_ring_fill(void)
 		if(!rx_frame[curr])
 			break;
 
-		dcache_flush((unsigned long) rx_frame[curr]->payload, sizeof(rx_frame[curr]->payload));
+		dcache_flush((unsigned long) rx_frame[curr]->payload, RX_BUFFER_SIZE);
 
 		rx_desc[curr].buffer1 = (unsigned long) KPHYS(rx_frame[curr]->payload);
 		rx_desc[curr].status = RX_DESC_STATUS_OWN;
@@ -105,7 +114,7 @@ static void rx_ring_fill(void)
  */
 static void rx_ring_init(void)
 {
-	static struct descriptor ring[RX_RING_SIZE] __attribute__((aligned(16)));
+	static struct descriptor ring[RX_RING_SIZE];
 	unsigned indx;
 
 	rx_desc = KSEG1(ring);
@@ -115,10 +124,10 @@ static void rx_ring_init(void)
 	for(indx = 0; indx < RX_RING_SIZE; ++indx) {
 
 		rx_desc[indx].status = 0;
-		rx_desc[indx].length = sizeof(rx_frame[indx]->payload);
+		rx_desc[indx].length = RX_BUFFER_SIZE;
 	}
 
-	rx_desc[RX_RING_SIZE - 1].length = RX_DESC_LENGTH_RER | sizeof(rx_frame[indx]->payload);
+	rx_desc[RX_RING_SIZE - 1].length = RX_DESC_LENGTH_RER | RX_BUFFER_SIZE;
 
 	CSR(3) = (unsigned long) KPHYS(rx_desc);
 
@@ -130,7 +139,7 @@ static void rx_ring_init(void)
  */
 static void tx_ring_init(void)
 {
-	static struct descriptor ring[TX_RING_SIZE] __attribute__((aligned(16)));
+	static struct descriptor ring[TX_RING_SIZE];
 	unsigned indx;
 
 	tx_desc = KSEG1(ring);
@@ -148,7 +157,7 @@ static void tx_ring_init(void)
  */
 static void rx_filter_init(void)
 {
-	static unsigned filt[ADDR_FILT_SIZE / sizeof(unsigned)] __attribute__((aligned(16)));
+	static unsigned filt[ADDR_FILT_SIZE / sizeof(unsigned)];
 	unsigned indx, curr, size;
 
 	assert(tx_next - tx_curr < TX_RING_SIZE);
@@ -343,6 +352,8 @@ static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 	pcicfg_write_half(dev, fnc, 0x04,
 		pcicfg_read_half(dev, fnc, 0x04) | (1 << 0));
 
+	pcicfg_write_byte(dev, fnc, 0x0c, DCACHE_LINE_SIZE / 4);
+
 	pcicfg_write_byte(dev, fnc, 0x0d, 32);
 
 	return 1;
@@ -351,6 +362,9 @@ static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 static void tulip_reset(void)
 {
 	CSR(0) = CSR0_SWR;
+	udelay(1000);
+
+	CSR(0) = 0;
 	udelay(1000);
 
 	CSR(6) = CSR6_MBO | CSR6_HBD | CSR6_PS;

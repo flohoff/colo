@@ -108,19 +108,24 @@ void udp_close(int s)
 	socks[s].inuse = 0;
 }
 
-static unsigned alloc_port(void)
+unsigned udp_bind_range(int s, unsigned min, unsigned max)
 {
 	static unsigned next;
-	unsigned indx;
+	unsigned indx, port;
+
+	assert(!socks[s].port);
+
+	min |= !min;		/* ensure non-zero value */
 
 	for(;;) {
 
-		if(++next < 1024)
-			next = 1024;
+		port = next++ % (max - min) + min;
 
-		for(indx = 0; !socks[indx].inuse || socks[indx].port != next; ++indx)
-			if(indx == elements(socks))
-				return next;
+		for(indx = 0; !socks[indx].inuse || socks[indx].port != port; ++indx)
+			if(indx == elements(socks)) {
+				socks[s].port = port;
+				return port;
+			}
 	}
 }
 
@@ -128,7 +133,10 @@ unsigned udp_bind(int s, unsigned port)
 {
 	assert(!socks[s].port);
 
-	socks[s].port = port ? port : alloc_port();
+	if(port)
+		socks[s].port = port;
+	else
+		udp_bind_range(s, 1024, 32768);
 
 	return socks[s].port;
 }
@@ -136,7 +144,7 @@ unsigned udp_bind(int s, unsigned port)
 unsigned udp_connect(int s, uint32_t ip, unsigned port)
 {
 	if(!socks[s].port)
-		socks[s].port = alloc_port();
+		udp_bind(s, 0);
 
 	socks[s].peer_ip = ip;
 	socks[s].peer_port = port;

@@ -63,23 +63,22 @@ void icmp_in(struct frame *frame)
 
 		case ICMP_TYPE_ECHO_REQUEST:
 
-			// XXX we can probably fix up checksum and drop the copy (alignment?)
-
-			frame = frame_alloc();
-			if(!frame)
-				return;
-
+			FRAME_BUMP(frame);
 			FRAME_INIT(frame, HARDWARE_HDRSZ + IP_HDRSZ, size);
 
 			reply = FRAME_PAYLOAD(frame);
+			memmove(reply, data, size);
 
 			NET_WRITE_BYTE(reply + 0, ICMP_TYPE_ECHO_REPLY);
-			NET_WRITE_BYTE(reply + 1, ICMP_CODE_ECHO_REQUEST_REPLY);
-			NET_WRITE_SHORT(reply + 2, 0);
 
-			memcpy(reply + 4, data + 4, size - 4);
+			/* fix up checksum (RFC 1624) */
 
-			cksum = ip_checksum(0, reply, size);
+			cksum = (NET_READ_SHORT(reply + 2) ^ 0xffff) +
+				(ICMP_TYPE_ECHO_REQUEST ^ 0xffff) +
+				ICMP_TYPE_ECHO_REPLY;
+
+			while(cksum & 0xffff0000)
+				cksum = (cksum >> 16) + (cksum & 0xffff);
 
 			NET_WRITE_SHORT(reply + 2, ~cksum);
 

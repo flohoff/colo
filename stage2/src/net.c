@@ -48,15 +48,13 @@ static void net_init(void)
 	struct frame *prev;
 	void *base;
 
-	/* allocate buffers on 16 byte boundaries */
-
-	curr = (unsigned long) store & 15;
+	curr = (unsigned long) store & (DCACHE_LINE_SIZE - 1);
 	base = store - curr;
 	prev = NULL;
 
 	for(indx = 0; indx < BUFFER_COUNT; ++indx) {
 
-		curr += -curr & 31;
+		curr += -curr & (DCACHE_LINE_SIZE - 1);
 
 		pool = (struct frame *)(base + curr);
 
@@ -108,8 +106,12 @@ int net_up(void)
 	udp_close_all();
 	net_alive = tulip_up();
 
-	if(net_alive)
+	if(net_alive) {
 		DPUTS("net: interface up");
+		DPRINTF("  address %s\n", inet_ntoa(ip_addr));
+		DPRINTF("  netmask %s\n", inet_ntoa(ip_mask));
+		DPRINTF("  gateway %s\n", inet_ntoa(ip_gway));
+	}
 
 	return net_alive;
 }
@@ -209,10 +211,6 @@ int cmnd_net(int opsz)
 		puts("no interface");
 		return E_UNSPEC;
 	}
-
-	DPRINTF("net: address %s\n", inet_ntoa(ip_addr));
-	DPRINTF("     netmask %s\n", inet_ntoa(ip_mask));
-	DPRINTF("     gateway %s\n", inet_ntoa(ip_gway));
 
 	return E_NONE;
 }

@@ -227,10 +227,6 @@ static int dhcp_config(void)
 		return 0;
 	}
 
-	DPRINTF("dhcp: address %s\n", inet_ntoa(ip_addr));
-	DPRINTF("      netmask %s\n", inet_ntoa(ip_mask));
-	DPRINTF("      gateway %s\n", inet_ntoa(ip_gway));
-
 	return 1;
 }
 

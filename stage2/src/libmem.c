@@ -7,12 +7,13 @@
  */
 
 #include "lib.h"
+#include "cpu.h"
 
 void *memcpy(void *dst, const void *src, size_t size)
 {
 	void *ptr, *end;
 
-	if(!size)
+	if(!size || dst == src)
 		return dst;
 
 	ptr = dst;
@@ -23,11 +24,10 @@ void *memcpy(void *dst, const void *src, size_t size)
 		++ptr, ++src;
 	}
 
-	if(!((unsigned long) src & 3))
-		while(ptr < end - 3) {
-			*(uint32_t *) ptr = *(uint32_t *) src;
-			ptr += 4, src += 4;
-		}
+	while(ptr < end - 3) {
+		*(uint32_t *) ptr = unaligned_load((void *) src);
+		ptr += 4, src += 4;
+	}
 
 	while(ptr < end) {
 		*(uint8_t *) ptr = *(uint8_t *) src;
@@ -42,29 +42,29 @@ void *memmove(void *dst, const void *src, size_t size)
 	const void *esrc;
 	void *edst;
 
-	if(src != dst) {
+	if(!size || src == dst)
+		return dst;
 
-		esrc = src + size;
-		edst = dst + size;
+	esrc = src + size;
+	
+	if(src >= dst || esrc <= dst)
+		return memcpy(dst, src, size);
 
-		if(src >= edst || esrc <= dst)
-			return memcpy(dst, src, size);
+	edst = dst + size;
 
-		while(edst > dst && ((unsigned long) edst & 3)) {
-			--edst, --esrc;
-			*(uint8_t *) edst = *(uint8_t *) esrc;
-		}
+	while(edst > dst && ((unsigned long) edst & 3)) {
+		--edst, --esrc;
+		*(uint8_t *) edst = *(uint8_t *) esrc;
+	}
 
-		if(!((unsigned long) esrc & 3))
-			while(edst > dst + 3) {
-				edst -= 4, esrc -= 4;
-				*(uint32_t *) edst = *(uint32_t *) esrc;
-			}
+	while(edst > dst + 3) {
+		edst -= 4, esrc -= 4;
+		*(uint32_t *) edst = unaligned_load((void *) esrc);
+	}
 
-		while(edst > dst) {
-			--edst, --esrc;
-			*(uint8_t *) edst = *(uint8_t *) esrc;
-		}
+	while(edst > dst) {
+		--edst, --esrc;
+		*(uint8_t *) edst = *(uint8_t *) esrc;
 	}
 
 	return dst;
