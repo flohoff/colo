@@ -13,7 +13,7 @@
 #include "galileo.h"
 
 #define VER_MAJOR					1
-#define VER_MINOR					9
+#define VER_MINOR					10
 
 size_t ram_size;
 
