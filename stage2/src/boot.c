@@ -44,6 +44,8 @@ static const char *script[] =
 
 void boot(int which)
 {
+	static char buf[16];
+
 	if(which < 0)
 		which = nv_store.boot;
 
@@ -62,6 +64,9 @@ void boot(int which)
 				which = 0;
 		}
 	}
+
+	sprintf(buf, "%d", which);
+	env_put("boot-option", buf, VAR_OTHER);
 
 	if(which < elements(script))
 		script_exec(script[which]);

@@ -64,6 +64,7 @@ The following variables are set by the shell when appropriate :-
 
 console-speed			Set to the boot loader baud rate (currently 115200).
 mounted-volume			Set to the name of the currently mounted volume (eg hda2).
+boot-option				Number of selected boot option.
 dhcp-next-server		'next server' returned by DHCP server.
 dhcp-boot-file			'boot file' returned by DHCP server.
 dhcp-root-path			'root path' returned by DHCP server.
