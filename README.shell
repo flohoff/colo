@@ -45,8 +45,8 @@ Non-volatile parameters (non-volatile flags, baud rate, default boot option
 etc) can be set back to their default values by pressing the recessed "CLEAR"
 switch whilst the unit is booting.
 
-The default radix for all numbers used in the shell is 16 (hexadecimal).
-Values are interpreted as decimal values if they are suffixed with a 't').
+The default radix for most numbers used in the shell is 16 (hexadecimal).
+Values are interpreted as decimal values if they are suffixed with a 't'.
 
 The shell implements a command history which can be stepped through using the
 UP and DOWN cursor keys on the terminal (assuming the keymap is set

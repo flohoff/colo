@@ -3,9 +3,12 @@
 CoLo 1.15 (xxxx-xx-xx)
 ----------------------
 
+*	Added link detection to network driver.
+
 *	Added support for 21041 network controller (early units).
 
-*	Added clock speed detection (stage2 only).
+*	Added clock speed detection (stage2 only) to ensure timeouts and delays are
+	consistent regardless of CPU speed.
 
 *	Added new command 'sleep'.
 

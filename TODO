@@ -2,19 +2,24 @@
 
 In no particular order ...
 
-* Remove excess debugging messages.
+*	Document radix of shell parameters. Add default radix parameter to
+	evaluate() to tidy this up.
 
-* Add support for booting from LVM setups.
+*	Allow break from IDE reset busy loop.
 
-* Add support for loading initrd via S-records (more generic initrd support).
+*	Remove excess debugging messages.
 
-* Sort out exactly where $sp should point during the various stages.
+*	Add support for booting from LVM setups.
 
-* Set $sp when chain loading kernel.
+*	Add support for loading initrd via S-records (more generic initrd support).
 
-* Add support for booting from logical (extended) partitions.
+*	Sort out exactly where $sp should point during the various stages.
 
-* Add support for second IDE channel (NASRaQ).
+*	Set $sp when chain loading kernel.
+
+*	Add support for booting from logical (extended) partitions.
+
+*	Add support for second IDE channel (NASRaQ).
 
 -- Peter Horton, pdh@colonel-panic.org --
 
