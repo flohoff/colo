@@ -213,8 +213,8 @@ struct elf_info
 		struct {
 			unsigned				region_lo;
 			unsigned				region_hi;
-		};
-	};
+		} w;
+	} r;
 };
 
 extern int elf32_validate(const void *, size_t, struct elf_info *);

@@ -49,20 +49,11 @@ OBJS=	main.o\
 		nfs.o\
 		start.o\
 
-LOADADDR=0x80000000
+include ../Rules.mak
 
-CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&\
-	echo "-mcpu=r5000 -EL" ||\
-	echo "-mtune=r5000 -G0")
-
-CC_INC:= $(shell dirname `$(CC) --print-libgcc-file-name`)/include
-
-MIPSFLAGS= -mno-abicalls -fno-pic -mips2 $(CC_DEP)
-
-LDFLAGS= -T $(TARG).lnk -Map $(TARG).map --emit-relocs --section-start .text=$(LOADADDR)
-CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-builtin -nostdlib -fno-strict-aliasing $(MIPSFLAGS)
-ASFLAGS= $(MIPSFLAGS)
-CPPFLAGS= -nostdinc -Iinclude -I../include -I$(CC_INC) -D_DEBUG
+LDFLAGS= -nostdlib -Wl,-T,$(TARG).lnk,-Map,$(TARG).map,--emit-relocs
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-strict-aliasing $(CFLAGS_CPU) $(CFLAGS_COLO)
+CPPFLAGS= -nostdinc -Iinclude -I../include -D_DEBUG $(CPPFLAGS_GCC)
 
 all:
 	$(MAKE) -C .. binary
@@ -70,10 +61,13 @@ all:
 binary: $(TARG).elf
 
 $(TARG).bin: $(TARG)
-	objcopy -O binary $^ $@
+	$(OBJCOPY) -O binary $^ $@
 
-$(TARG).elf: $(TARG).rfx
-	echo -e '\t.section .stage2\n\t.incbin "$^"' | $(AS) -o $@
+$(TARG)-wrap.S: $(TARG).rfx
+	echo -e '\t.section .stage2\n\t.incbin "$^"' > $@
+
+$(TARG).elf: $(TARG)-wrap.S
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(TARG).rfx: $(TARG)
 	$(TOOLDIR)/elf2rfx/elf2rfx -f $^ $@
@@ -86,16 +80,16 @@ test-rfx: $(TARG).bin $(TARG).tmp
 	@echo '***  SUCCESS  ***'
 
 clean:
-	rm -f $(TARG){,.elf,.rfx,.map,.bin,.tmp} $(OBJS)
+	rm -f $(TARG){,.elf,.rfx,.map,.bin,.tmp,-wrap.S} $(OBJS)
 
 $(TARG): $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(CC) $(LDFLAGS) -o $@ $^
 
 %.o: src/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
 
 %.o: src/%.S
-	$(CC) $(ASFLAGS) $(CPPFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
 
 .PHONY: all binary clean test-rfx
 

@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <linux/elf.h>
+#include <elf.h>
 #include "../../include/rfx.h"
 
 #define VER_MAJOR					0

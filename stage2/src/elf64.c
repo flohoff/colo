@@ -48,15 +48,15 @@ int elf64_validate(const void *image, size_t imagesz, struct elf_info *info)
 	if(phoff < sizeof(Elf64_Ehdr) || phoff > imagesz || imagesz - phoff < eh->e_phnum * sizeof(Elf64_Phdr))
 		return 0;
 
-	info->region = eh->e_entry;
-	info->entry_point = info->region_lo;
-	info->region_lo = 0;
+	info->r.region = eh->e_entry;
+	info->entry_point = info->r.w.region_lo;
+	info->r.w.region_lo = 0;
 	
 	/* region must be CKSEG or XKPHYS */
 
-	if(~info->region_hi && (info->region_hi >> 30) != 2) {
+	if(~info->r.w.region_hi && (info->r.w.region_hi >> 30) != 2) {
 
-		DPRINTF("elf64: invalid region %08x\n", info->region_hi);
+		DPRINTF("elf64: invalid region %08x\n", info->r.w.region_hi);
 		return 0;
 	}
 			
@@ -71,7 +71,7 @@ int elf64_validate(const void *image, size_t imagesz, struct elf_info *info)
 
 			if((ph[indx].p_offset >> 32) ||
 				(ph[indx].p_filesz >> 32) ||
-				(ph[indx].p_vaddr >> 32) != info->region_hi ||
+				(ph[indx].p_vaddr >> 32) != info->r.w.region_hi ||
 				(ph[indx].p_memsz >> 32)) {
 
 				return 0;
@@ -110,14 +110,14 @@ int elf64_validate(const void *image, size_t imagesz, struct elf_info *info)
 	DPRINTF("elf64: %08lx - %08lx (%08x:%08lx)\n",
 			info->load_addr,
 			info->load_addr + info->load_size - 1,
-			info->region_hi,
+			info->r.w.region_hi,
 			info->entry_point);
 
 	/* map XKPHYS or CKSEG1 load address to KSEG0 */
 
 	info->load_offset = 0;
 
-	if(~info->region_hi)
+	if(~info->r.w.region_hi)
 
 		info->load_offset = (long) KSEG0(0);
 

@@ -9,7 +9,7 @@
 TARG= elf2rfx
 OBJS= elf2rfx.o
 
-CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -fno-strict-aliasing
 
 binary: $(TARG)
 

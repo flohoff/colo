@@ -94,7 +94,7 @@ int cmnd_execute(int opsz)
 
 	code = launch(
 			KSEG_TO_CKSEG(&__text),
-			info.region | info.entry_point,
+			info.r.region | info.entry_point,
 			KSEG_TO_CKSEG((unsigned long) KSEG0(ram_restrict) | (argc > 1 ? argc : 0)),
 			KSEG_TO_CKSEG(argv));
 

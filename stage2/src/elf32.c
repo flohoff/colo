@@ -75,13 +75,13 @@ int elf32_validate(const void *image, size_t imagesz, struct elf_info *info)
 
 	info->entry_point = eh->e_entry;
 
-	info->region_lo = 0;
-	info->region_hi = (long) info->load_addr >> 31;
+	info->r.w.region_lo = 0;
+	info->r.w.region_hi = (long) info->load_addr >> 31;
 
 	DPRINTF("elf32: %08lx - %08lx (%08x:%08lx)\n",
 			info->load_addr,
 			info->load_addr + info->load_size - 1,
-			info->region_hi,
+			info->r.w.region_hi,
 			info->entry_point);
 
 	/* map KSEG1 load address to KSEG0 */
@@ -118,7 +118,7 @@ void elf32_load(const void *image, long offset)
 
 			vaddr = ph[indx].p_vaddr + offset;
 
-			DPRINTF("elf32: %08x (%08lx) <-- %08x %ut + %ut\n",
+			DPRINTF("elf32: %08lx (%08lx) <-- %08x %ut + %ut\n",
 				vaddr - offset,
 				vaddr,
 				ph[indx].p_offset,

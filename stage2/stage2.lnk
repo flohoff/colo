@@ -8,6 +8,8 @@
 
 __stack = __ebss + (32 << 10);
 
+. = 0x80000000;
+
 SECTIONS
 {
 	.text :
