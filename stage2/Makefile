@@ -32,6 +32,11 @@ OBJS=	main.o\
 		flash.o\
 		heap.o\
 		launch.o\
+		net.o\
+		arp.o\
+		ip.o\
+		icmp.o\
+		udp.o\
 		start.o\
 
 LOADADDR=0x80000000

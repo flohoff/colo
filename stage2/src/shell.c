@@ -29,6 +29,7 @@ extern int cmnd_keyshow(int);
 extern int cmnd_flash(int);
 extern int cmnd_heap(int);
 extern int cmnd_unzip(int);
+extern int cmnd_ether(int);		// XXX
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
@@ -73,6 +74,8 @@ static struct
 	{ "cd",				cmnd_cd,				0,					"[path]",						},
 	{ "load",			cmnd_load,			0,					"path [path]",					},
 	{ "script",			cmnd_script,		0,					"path",							},
+
+	{ "ether",			cmnd_ether,			FLAG_NO_HELP,	NULL,								},		// XXX
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",			},

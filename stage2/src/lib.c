@@ -208,4 +208,13 @@ int glob(const char *str, const char *pat)
 	}
 }
 
+const char *inet_ntoa(unsigned ip)
+{
+	static char buf[20];
+
+	sprintf(buf, "%u.%u.%u.%u", ip >> 24, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff);
+
+	return buf;
+}
+
 /* vi:set ts=3 sw=3 cin path=include,../include: */

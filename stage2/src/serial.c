@@ -9,6 +9,8 @@
 #include "lib.h"
 #include "galileo.h"
 
+#define BAUD_RATE						115200
+
 #define UART_REGISTER				((volatile uint8_t *) BRDG_NCS1_BASE)
 
 #define UART_THR						(UART_REGISTER[0])
@@ -35,7 +37,7 @@ void serial_init(void)
 {
 	UART_MCR = UART_MCR_OP1 | UART_MCR_RTS | UART_MCR_DTR;
 	UART_LCR = UART_LCR_DL_EN | UART_LCR_STOP2 | UART_LCR_DATA8;
-	UART_BRL = (18432000 + 115200 * 8) / (115200 * 16);
+	UART_BRL = (18432000 + BAUD_RATE * 8) / (BAUD_RATE * 16);
 	UART_BRH = 0x00;
 	UART_LCR = UART_LCR_STOP2 | UART_LCR_DATA8;
 	UART_FCR = UART_FCR_FIFO_EN;

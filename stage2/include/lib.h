@@ -78,6 +78,7 @@ extern int printf(const char *, ...);
 extern unsigned long strtoul(const char *, char **, int);
 extern void putstring_safe(const void *, int);
 extern int glob(const char *, const char *);
+extern const char *inet_ntoa(unsigned);
 
 /* libmem.c */
 
