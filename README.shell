@@ -11,11 +11,11 @@ If no SPACE character is detected the boot loader starts the boot process
 using the default script :-
 
 	mount
-	-script /boot/default.boot
+	-script /boot/default.colo
 	load /boot/vmlinux.gz
 	execute
 
-An example /boot/default.boot might look like this (just an example) :-
+An example /boot/default.colo might look like this (just an example) :-
 
 	# load default kernel from hda2
 	mount hda2
