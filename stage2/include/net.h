@@ -38,6 +38,12 @@
 #define NET_WRITE_SHORT(p,v)				do{NET_WRITE_BYTE((p),(v)>>8);NET_WRITE_BYTE((void*)(p)+1,(v)&0xff);}while(0)
 #define NET_WRITE_LONG(p,v)				do{NET_WRITE_SHORT((p),(v)>>16);NET_WRITE_SHORT((void*)(p)+2,(v)&0xffff);}while(0)
 
+#define COPY_HW_ADDR(d,s)					do{\
+														((uint16_t*)(d))[0]=((uint16_t*)(s))[0];\
+														((uint16_t*)(d))[1]=((uint16_t*)(s))[1];\
+														((uint16_t*)(d))[2]=((uint16_t*)(s))[2];\
+													}while(0)
+
 /* net.c */
 
 #define FRAME_PAYLOAD(f)					((void *)(f)->payload+(f)->offset)
@@ -63,19 +69,18 @@ struct frame
 extern struct frame *frame_alloc(void);
 extern void frame_free(struct frame *);
 extern void net_in(struct frame *);
-extern const char *inet_ntoa(uint32_t);
-
-extern void net_init(void);
 
 /* tulip.c */
 
+extern uint16_t hw_addr[3];
+
 extern void tulip_out(struct frame *);
+extern int tulip_up(void);
+extern void tulip_down(void);
 extern void tulip_poll(void);
-extern int tulip_init_net(void);
 
 /* arp.c */
 
-extern uint16_t hw_addr[3];
 extern uint32_t ip_addr;
 extern uint32_t ip_mask;
 extern uint32_t ip_gway;
@@ -99,12 +104,17 @@ extern void icmp_in(struct frame *);
 
 extern void udp_in(struct frame *);
 extern int udp_socket(void);
+extern void udp_close(int);
 extern unsigned udp_bind(int, unsigned);
 extern unsigned udp_connect(int, uint32_t, unsigned);
 extern struct frame *udp_read(int);
 extern void udp_sendto(int, struct frame *, uint32_t, unsigned);
 extern void udp_send(int, struct frame *);
 extern void udp_close_all(void);
+
+/* dhcp.c */
+
+extern int dhcp(void);
 
 #endif
 

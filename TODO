@@ -17,6 +17,8 @@
 
 * Add support for booting from logical (extended) partitions.
 
+* Add support for second IDE channel (NASRaQ).
+
 -- Peter Horton, pdh@colonel-panic.org --
 
 # vi:set ts=3 sw=3 tw=78:

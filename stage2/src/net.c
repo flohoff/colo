@@ -8,8 +8,11 @@
 
 #include "lib.h"
 #include "net.h"
+#include "cpu.h"
 
 #define BUFFER_COUNT						16
+
+int net_alive;
 
 static struct frame *pool;
 
@@ -37,7 +40,7 @@ void frame_free(struct frame *frame)
 	}
 }
 
-void net_init(void)
+static void net_init(void)
 {
 	static uint8_t store[BUFFER_COUNT * ((sizeof(struct frame) + 31) & ~31) + 31];
 
@@ -90,6 +93,128 @@ void net_in(struct frame *frame)
 	}
 
 	frame_free(frame);
+}
+
+/*
+ * bring up network interface
+ */
+int net_up(void)
+{
+	if(net_alive)
+		return 1;
+
+	net_init();
+	arp_flush_all();
+	udp_close_all();
+	net_alive = tulip_up();
+
+	if(net_alive)
+		DPUTS("net: interface up");
+
+	return net_alive;
+}
+
+/*
+ * shutdown network interface
+ */
+void net_down(void)
+{
+	if(!net_alive)
+		return;
+
+	net_alive = 0;
+	tulip_down();
+
+	DPUTS("net: interface down");
+}
+
+int cmnd_net(int opsz)
+{
+	unsigned addr, mask, gway, argn;
+	char *ptr, *end;
+
+	if(argc < 2)
+		return dhcp() ? E_NONE : E_UNSPEC;
+
+	if(!strcasecmp(argv[1], "down")) {
+
+		if(argc > 2)
+			return E_ARGS_OVER;
+
+		net_down();
+
+		return E_NONE;
+	}
+
+	/* parse addresses from arguments */
+
+	ptr = strchr(argv[1], '/');
+	if(ptr) {
+
+		*ptr++ = '\0';
+
+		mask = strtoul(ptr, &end, 10);
+		if(*end || ptr == end || mask > 32) {
+			puts("invalid subnet specification");
+			return E_UNSPEC;
+		}
+
+		if(mask)
+			mask = -1 << (32 - mask);
+
+		argn = 2;
+
+	} else {
+
+		if(argc < 3)
+			return E_ARGS_UNDER;
+
+		if(!inet_aton(argv[2], &mask)) {
+			puts("invalid subnet mask");
+			return E_UNSPEC;
+		}
+
+		argn = 3;
+	}
+
+	switch(argc - argn) {
+
+		case 0:
+			gway = 0;
+			break;
+
+		case 1:
+			if(!inet_aton(argv[argn], &gway)) {
+				puts("invalid gateway address");
+				return E_UNSPEC;
+			}
+			break;
+
+		default:
+			return E_ARGS_OVER;
+	}
+
+	if(!inet_aton(argv[1], &addr)) {
+		puts("invalid IP address");
+		return E_UNSPEC;
+	}
+
+	net_down();
+
+	ip_addr = addr;
+	ip_mask = mask;
+	ip_gway = gway;
+
+	if(!net_up()) {
+		puts("no interface");
+		return E_UNSPEC;
+	}
+
+	DPRINTF("net: address %s\n", inet_ntoa(ip_addr));
+	DPRINTF("     netmask %s\n", inet_ntoa(ip_mask));
+	DPRINTF("     gateway %s\n", inet_ntoa(ip_gway));
+
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

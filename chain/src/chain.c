@@ -15,21 +15,6 @@
 #define VER_MAJOR				0
 #define VER_MINOR				9
 
-#define __STR(x)				#x
-#define _STR(x)				__STR(x)
-
-extern void *memcpy(void *, const void *, size_t);
-extern void *memset(void *, int, size_t);
-extern int memcmp(const void *, const void *, size_t);
-
-/* serial.c */
-
-extern void serial_init(void);
-extern void putstring(const char *);
-extern void puts(const char *);
-extern void drain(void);
-extern void putchar(int);
-
 /*
  * fatal error, hang
  */

@@ -11,6 +11,8 @@
 
 unsigned ip_checksum(unsigned sum, const void *data, unsigned size)
 {
+	// XXX we can do this better
+
 	unsigned indx;
 
 	assert(!((unsigned long) data & 1));

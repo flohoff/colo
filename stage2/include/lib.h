@@ -35,9 +35,11 @@
 #ifdef _DEBUG
 # define DPUTS(s)				do{puts(s);}while(0)
 # define DPRINTF(f,a...)	do{printf((f),##a);}while(0)
+# define DPUTCHAR(c)			do{putchar(c);}while(0)
 #else
 # define DPUTS(s)
 # define DPRINTF(f,a...)
+# define DPUTCHAR(c)
 #endif
 
 #define isspace(c)			(!!((c)==' '))
@@ -70,6 +72,7 @@ typedef unsigned				UWORD32;
 extern size_t strlen(const char *);
 extern char *strchr(const char *, int);
 extern int strncasecmp(const char *, const char *, size_t);
+extern int strcasecmp(const char *, const char *);
 extern int strncmp(const char *, const char *, size_t);
 extern int strcmp(const char *, const char *);
 extern void *memmove(void *, const void *, size_t);
@@ -79,6 +82,7 @@ extern unsigned long strtoul(const char *, char **, int);
 extern void putstring_safe(const void *, int);
 extern int glob(const char *, const char *);
 extern const char *inet_ntoa(unsigned);
+extern int inet_aton(const char *, unsigned *);
 
 /* libmem.c */
 
@@ -206,6 +210,22 @@ extern void *heap_mark_image(size_t *);
 
 extern void *file_open(const char *, unsigned long *);
 extern int file_load(void *, void *, unsigned long);
+
+/* net.c */
+
+extern int net_up(void);
+extern void net_down(void);
+
+#define net_is_up()							({ extern int net_alive; net_alive; })
+
+static inline void yield(void)
+{
+	extern void tulip_poll(void);
+	extern int net_alive;
+
+	if(net_alive)
+		tulip_poll();
+}
 
 #endif
 

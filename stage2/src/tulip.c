@@ -73,6 +73,8 @@ static struct descriptor *rx_desc;
 static unsigned rx_curr;
 static unsigned rx_fill;
 
+static int nic_avail;
+
 /*
  * refill receive ring
  */
@@ -176,6 +178,8 @@ void tulip_poll(void)
 {
 	unsigned curr, stat, size;
 	struct frame *frame;
+
+	assert(nic_avail);
 
 	while(rx_curr != rx_fill) {
 
@@ -330,84 +334,84 @@ static void read_hw_addr(void)
 #endif
 }
 
-int cmnd_ether(int opsz)
+/*
+ * set up PCI I/O mapping
+ */
+static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 {
-	unsigned mark;
+	if(pcicfg_read_word(dev, fnc, 0x00) != ((TULIP_DEV_ID << 16) | TULIP_VND_ID))
+		return 0;
 
-	if(pcicfg_read_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x00) != ((TULIP_DEV_ID << 16) | TULIP_VND_ID)) {
-		puts("no ethernet controller");
-		return E_UNSPEC;
-	}
-
-	/* initialise stack */
-
-	net_init();
-	arp_flush_all();
-	udp_close_all();
-
-	/* setup PCI stuff */
+	pcicfg_write_word(dev, fnc, 0x10, iob);
 
 	pcicfg_write_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
-		pcicfg_read_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) | (1 << 2) | (1 << 0));
+		pcicfg_read_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) | (1 << 0));
+
+	return 1;
+}
+
+static void tulip_reset(void)
+{
+	CSR(0) = CSR0_SWR;
+	udelay(1000);
+
+	CSR(6) = CSR6_MBO | CSR6_HBD | CSR6_PS;
+	udelay(1000);
+}
+
+void tulip_init(void)
+{
+	nic_avail = tulip_setup(PCI_DEV_ETH0, PCI_FNC_ETH0, IO_BASE_ETH0);
+	tulip_setup(PCI_DEV_ETH1, PCI_FNC_ETH1, IO_BASE_ETH1);
+
+	/* without this Tulip bus mastering doesn't work correctly */
+
+	BRDG_REG_WORD(BRDG_REG_TIMEOUT_RETRY) = 0xffff;
+
+	if(!nic_avail)
+		return;
 
 	/* wake up device */
 
 	pcicfg_write_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x40, 0x00000000);
 	udelay(1000);
 
-	/* reset device */
-
-	CSR(6) = CSR6_MBO | CSR6_HBD | CSR6_PS;
-
-	CSR(0) = CSR0_SWR;
-	udelay(1000);
-	CSR(0);
-	udelay(1000);
-
-	CSR(6) = CSR6_MBO | CSR6_HBD | CSR6_PS;
+	tulip_reset();
 
 	read_hw_addr();
+}
+
+int tulip_up(void)
+{
+	if(!nic_avail)
+		return 0;
+
+	tulip_reset();
 
 	rx_ring_init();
 	tx_ring_init();
+
+	pcicfg_write_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
+		pcicfg_read_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) | (1 << 2));
+	udelay(1000);
 
 	CSR(6) = CSR6_MBO | CSR6_HBD | CSR6_PS | CSR6_ST | CSR6_SR;
 
 	rx_filter_init();
 
-	for(mark = MFC0(CP0_COUNT); !kbhit();) {
+	return 1;
+}
 
-		if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE) {
-			mark += CP0_COUNT_RATE;
-			putchar('.');
-		}
+void tulip_down(void)
+{
+	if(!nic_avail)
+		return;
 
-		tulip_poll();
-	}
+	tulip_reset();
 
-	CSR(0) = CSR0_SWR;
+	pcicfg_write_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
+		pcicfg_read_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) & ~(1 << 2));
 	udelay(1000);
-
-	getch();
-	putchar('\n');
-
-	return E_NONE;
-}
-
-static void tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
-{
-	if(pcicfg_read_word(dev, fnc, 0x00) == ((TULIP_DEV_ID << 16) | TULIP_VND_ID))
-		pcicfg_write_word(dev, fnc, 0x10, iob);
-}
-
-void tulip_init(void)
-{
-	tulip_setup(PCI_DEV_ETH0, PCI_FNC_ETH0, IO_BASE_ETH0);
-	tulip_setup(PCI_DEV_ETH1, PCI_FNC_ETH1, IO_BASE_ETH1);
-
-	/* without this Tulip bus mastering doesn't work correctly */
-
-	BRDG_REG_WORD(BRDG_REG_TIMEOUT_RETRY) = 0xffff;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

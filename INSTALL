@@ -12,7 +12,7 @@ Just copy 'chain.bin' to your boot directory, rename into 'vmlinux' and gzip
 it to 'vmlinux.gz'
 
 	cp -f /boot/vmlinux.gz /boot/backup.gz
-	cp chain.bin /boot/vmlinux
+	cp colo-chain.elf /boot/vmlinux
 	gzip -9 /boot/vmlinux
 	reboot
 

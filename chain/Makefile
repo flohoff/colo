@@ -43,7 +43,7 @@ $(TARG): $(OBJS)
 %.o: src/%.S
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c -o $@ $^
 
-# pick up libmem.c & serial.c from stage2 source
+# pick up libmem.c from stage2 source
 
 %.o: ../stage2/src/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^

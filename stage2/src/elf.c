@@ -319,6 +319,8 @@ int cmnd_execute(int opsz)
 	if(!func)
 		return E_UNSPEC;
 
+	net_down();
+
 	/* turn on the light bar on the Qube FIXME */
 
 	*(volatile uint8_t *) BRDG_NCS0_BASE = LED_QUBE_LEFT | LED_QUBE_RIGHT;

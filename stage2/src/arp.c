@@ -10,19 +10,15 @@
 #include "net.h"
 #include "cpu.h"
 
+// XXX expire old ARP entries
+
 #define ARP_PAYLOAD_SIZE				28
 #define ARP_OP_REQUEST					1
 #define ARP_OP_REPLY						2
 
-#define COPY_HW_ADDR(d,s)				do{\
-													((uint16_t*)(d))[0]=((uint16_t*)(s))[0];\
-													((uint16_t*)(d))[1]=((uint16_t*)(s))[1];\
-													((uint16_t*)(d))[2]=((uint16_t*)(s))[2];\
-												}while(0)
-
-uint32_t	ip_addr = 0xc0a8017d;
-uint32_t ip_mask = 0xffffff00;
-uint32_t ip_gway = 0xc0a80101;
+uint32_t	ip_addr;
+uint32_t ip_mask;
+uint32_t ip_gway;
 
 static struct
 {
@@ -146,6 +142,8 @@ static int arp_out_resolved(struct frame *frame, uint32_t ip)
 	return 0;
 }
 
+// XXX ARP lookup should be done in the background
+
 void arp_ip_out(struct frame *frame, uint32_t ip)
 {
 	static struct frame *head, *tail;
@@ -178,6 +176,8 @@ void arp_ip_out(struct frame *frame, uint32_t ip)
 		tail = frame;
 		return;
 	}
+
+	/* not recursive here */
 
 	tail = frame;
 
@@ -233,8 +233,7 @@ void arp_ip_out(struct frame *frame, uint32_t ip)
 			}
 
 			for(mark = MFC0(CP0_COUNT); arp_table[indx].state != ARP_RESOLVED && MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE;)
-				tulip_poll();  
-
+				yield();
 		}
 
 		next = head->link;

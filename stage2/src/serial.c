@@ -8,8 +8,7 @@
 
 #include "lib.h"
 #include "galileo.h"
-
-#define BAUD_RATE						115200
+#include "cobalt.h"
 
 #define UART_REGISTER				((volatile uint8_t *) BRDG_NCS1_BASE)
 
@@ -46,12 +45,17 @@ void serial_init(void)
 void drain(void)
 {
 	while(~UART_LSR & (UART_LSR_THRE | UART_LSR_TEMPTY))
-		;
+		yield();
 }
 
 int kbhit(void)
 {
-	return !!(UART_LSR & UART_LSR_RDR);
+	if(UART_LSR & UART_LSR_RDR)
+		return 1;
+
+	yield();
+
+	return 0;
 }
 
 int getch(void)

@@ -33,6 +33,8 @@ void icmp_in(struct frame *frame)
 
 	targ = frame->ip_src;
 
+	// XXX we can probably fix up checksum and drop the copy
+
 	frame = frame_alloc();
 	if(!frame)
 		return;

@@ -93,6 +93,21 @@ int strcmp(const char *str1, const char *str2)
 	return (int) *(unsigned char *) str1 - (int) *(unsigned char *) str2;
 }
 
+int strcasecmp(const char *str1, const char *str2)
+{
+	unsigned chr1, chr2;
+
+	do {
+
+		chr1 = toupper(*(unsigned char *) str1);
+		chr2 = toupper(*(unsigned char *) str2);
+		++str1, ++str2;
+
+	} while(chr1 == chr2 && chr1);
+
+	return (int) chr1 - (int) chr2;
+}
+
 int strncasecmp(const char *str1, const char *str2, size_t size)
 {
 	unsigned chr1, chr2;
@@ -215,6 +230,40 @@ const char *inet_ntoa(unsigned ip)
 	sprintf(buf, "%u.%u.%u.%u", ip >> 24, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff);
 
 	return buf;
+}
+
+int inet_aton(const char *str, unsigned *res)
+{
+	unsigned ip, val, indx;
+	char *ptr;
+
+	ip = 0;
+
+	for(indx = 1;; ++indx) {
+
+		val = strtoul(str, &ptr, 10);
+		if(ptr == str || val > 255)
+			break;
+
+		if(indx == 4) {
+
+			if(*ptr)
+				break;
+
+			if(res)
+				*res = (ip << 8) | val;
+
+			return 1;
+		}
+
+		if(*ptr != '.')
+			break;
+		str = ptr + 1;
+
+		ip = (ip << 8) | val;
+	}
+
+	return 0;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */
