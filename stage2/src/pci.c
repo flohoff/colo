@@ -11,11 +11,6 @@
 #include "galileo.h"
 #include "pci.h"
 
-#define UNIT_ID_QUBE1			3
-#define UNIT_ID_RAQ1				4
-#define UNIT_ID_QUBE2			5
-#define UNIT_ID_RAQ2				6
-
 unsigned cp0_count_freq = CP0_COUNT_RATE_DEFAULT;
 
 static unsigned unit;
@@ -94,6 +89,11 @@ unsigned pcicfg_read_byte(unsigned dev, unsigned func, unsigned addr)
 {
 	BRDG_REG_WORD(0xcf8) = 0x80000000 | (dev << 11) | (func << 8) | addr;
 	return BRDG_REG_BYTE(0xcfc | (addr & 3));
+}
+
+unsigned pci_unit_id(void)
+{
+	return unit;
 }
 
 const char *pci_unit_name(void)

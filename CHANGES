@@ -1,7 +1,9 @@
 # $Id$
 
-CoLo 1.16 (xxxx-xx-xx)
+CoLo 1.16 (2004-12-16)
 ----------------------
+
+*	Force menu choice of console on/off on upgrade from earlier versions.
 
 *	Fix 'flash-tool' and 'flash' command to work with TMS29F040 Flash.
 

@@ -12,9 +12,7 @@
 
 #define RTC_ADDR_STORE			0x20
 
-struct nv_store nv_store = {
-	.flags = NVFLAG_CONSOLE_DISABLE,
-};
+struct nv_store nv_store;
 
 /*
  * write byte to RTC
@@ -72,21 +70,46 @@ static unsigned nv_crc(struct nv_store *store)
 /*
  * load 'nv_store' from RTC RAM
  */
-int nv_get(void)
+void nv_get(void)
 {
+	static const char *option[][3] = {
+		{
+/*			 |------------| */
+			"CONSOLE STATE",
+			"Console on",
+			"Console off",
+		}, {
+			"CONSOLE STATE",
+			"Console off",
+			"Console on",
+		}
+	};
 	struct nv_store copy;
 	unsigned indx;
+	int select;
 
 	for(indx = 0; indx < sizeof(copy); ++indx)
 		((uint8_t *) &copy)[indx] = rtc_read(RTC_ADDR_STORE + indx);
 
-	if(copy.vers != NV_STORE_VERSION || copy.size < 3 || copy.size > sizeof(copy) || copy.crc != nv_crc(&copy))
-		return 0;
+	if(copy.vers == NV_STORE_VERSION && copy.size >= 3 && copy.size <= sizeof(copy) && copy.crc == nv_crc(&copy)) {
+		memset(&nv_store, 0, sizeof(nv_store));
+		memcpy(&nv_store, &copy, copy.size);
+	}
 
-	memset(&nv_store, 0, sizeof(nv_store));
-	memcpy(&nv_store, &copy, copy.size);
+	if(!(nv_store.flags & NVFLAG_CONSOLE_CONFIGURED)) {
 
-	return 1;
+		nv_store.flags |= NVFLAG_CONSOLE_CONFIGURED | NVFLAG_CONSOLE_DISABLE;
+
+		select = (pci_unit_id() == UNIT_ID_QUBE1);
+
+		if(lcd_menu(option[select], 3, 0) == 1)
+			select = !select;
+
+		if(!select)
+			nv_store.flags &= ~NVFLAG_CONSOLE_DISABLE;
+
+		nv_put();
+	}
 }
 
 /*

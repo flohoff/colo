@@ -189,8 +189,14 @@ extern int script_exec(const char *, int);
 
 /* pci.c */
 
+#define UNIT_ID_QUBE1					3
+#define UNIT_ID_RAQ1						4
+#define UNIT_ID_QUBE2					5
+#define UNIT_ID_RAQ2						6
+
 extern unsigned cpu_clock_khz(void);
 extern void pci_init(size_t, size_t);
+extern unsigned pci_unit_id(void);
 extern const char *pci_unit_name(void);
 
 /* ide.c */
@@ -326,6 +332,7 @@ extern int boot(int);
 #define NVFLAG_IDE_DISABLE_TIMING		(1 << 2)
 #define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
 #define NVFLAG_CONSOLE_DISABLE			(1 << 4)
+#define NVFLAG_CONSOLE_CONFIGURED		(1 << 7)
 
 #define NV_STORE_VERSION					1
 
@@ -343,7 +350,7 @@ struct nv_store
 
 extern struct nv_store nv_store;
 
-extern int nv_get(void);
+extern void nv_get(void);
 extern void nv_put(void);
 
 #endif
