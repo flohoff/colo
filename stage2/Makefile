@@ -43,6 +43,7 @@ OBJS=	main.o\
 		env.o\
 		boot.o\
 		nv.o\
+		nfs.o\
 		start.o\
 
 LOADADDR=0x80000000

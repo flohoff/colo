@@ -293,8 +293,10 @@ int cmnd_tftp(int opsz)
 	base = heap_reserve_lo(0);
 
 	size = tftp_get(server, argv[2], base, heap_space());
-	if((long) size < 0)
+	if((long) size < 0) {
+		heap_reset();
 		return E_UNSPEC;
+	}
 
 	memmove(heap_reserve_hi(size), base, size);
 
