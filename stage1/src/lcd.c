@@ -12,7 +12,7 @@
 
 #define LCD_TIMEOUT					(CP0_COUNT_RATE/50)	// 20ms
 #define LCD_COLUMNS					16
-#define LCD_ROW_OFFSET				40
+#define LCD_ROW_OFFSET				0x40
 
 #define LCD_BASE						((volatile unsigned *) BRDG_NCS3_BASE)
 #define _LCD_WRITE(r,d)				do{LCD_BASE[!!(r)*4]=(unsigned)(d)<<24;}while(0)

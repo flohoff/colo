@@ -25,7 +25,7 @@
 
 #define LCD_BUSY					(1 << 7)
 #define LCD_DDRAM_ADDR			0x80
-#define LCD_ROW_OFFSET			0x28
+#define LCD_ROW_OFFSET			0x40
 
 static volatile uint32_t *lcd;
 
