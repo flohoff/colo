@@ -22,6 +22,15 @@
 #define CHIP_ID_21041					0
 #define CHIP_ID_21143					1
 
+#define PHY_ID								1
+
+#define PHY_REG_CSTAT					20
+# define PHY_REG_CSTAT_100MBPS		(1 << 11)
+# define PHY_REG_CSTAT_DUPLEX			(1 << 12)
+# define PHY_REG_CSTAT_LINK			(1 << 13)
+
+#define LINK_WAIT							5
+
 #define RX_RING_SIZE						4
 #define TX_RING_SIZE						4
 
@@ -54,10 +63,17 @@
 #define CSR9_SROM_DO						(1 << 3)
 #define CSR9_SR							(1 << 11)
 #define CSR9_RD							(1 << 14)
+#define CSR9_MDC							(1 << 16)
+#define CSR9_MDO							(1 << 17)
+#define CSR9_MII							(1 << 18)
+#define CSR9_MDI							(1 << 19)
 
 #define CSR12_21041_LKF					(1 << 2)
 #define CSR12_ANS_MASK					(7 << 12)
 # define CSR12_ANS_COMPLETE			(5 << 12)
+#define CSR12_LPN							(1 << 15)
+#define CSR12_LPC_SHIFT					16
+
 #define CSR13_SRL							(1 << 0)
 #define CSR13_SDM							(0xef0 << 4)
 
@@ -95,6 +111,8 @@
 
 #define RX_BUFFER_SIZE					((_RX_BUFFER_SIZE&(DCACHE_LINE_SIZE-1))?_RX_BUFFER_SIZE:_RX_BUFFER_SIZE-4)
 
+#define bit_bang_delay()				do{CSR(5);udelay(2);}while(0)
+
 struct descriptor
 {
 	unsigned	status;
@@ -115,9 +133,61 @@ static struct descriptor *rx_desc;
 static unsigned rx_curr;
 static unsigned rx_fill;
 
+static unsigned reg_csr6;
 static int nic_avail;
 static int phy_avail;
 static int chip_id;
+
+/*
+ * read MII PHY register
+ */
+static unsigned phy_read_mii(unsigned phy, unsigned reg)
+{
+	unsigned data;
+	int indx;
+
+	reg |= (6 << 10) | (phy << 5);
+
+	for(indx = 0; indx < 32; ++indx) {
+
+		CSR(9) = CSR9_MDO;
+		bit_bang_delay();
+
+		CSR(9) = CSR9_MDO | CSR9_MDC;
+		bit_bang_delay();
+	}
+
+	for(indx = 0; indx < 14; ++indx) {
+
+		data = 0;
+		if(reg & (1 << 13))
+			data = CSR9_MDO;
+		reg <<= 1;
+
+		CSR(9) = data;
+		bit_bang_delay();
+
+		CSR(9) = data | CSR9_MDC;
+		bit_bang_delay();
+	}
+
+	for(indx = 0; indx < 18; ++indx) {
+
+		CSR(9) = CSR9_MII;
+		bit_bang_delay();
+
+		CSR(9) = CSR9_MII | CSR9_MDC;
+		bit_bang_delay();
+
+		data <<= 1;
+		if(CSR(9) & CSR9_MDI)
+			data |= 1;
+	}
+
+	CSR(9) = 0;
+
+	return (data >> 1) & 0xffff;
+}
 
 /*
  * refill receive ring
@@ -314,9 +384,9 @@ static unsigned eeprom_read(unsigned addr)
 	unsigned indx, data;
 
 	CSR(9) = CSR9_RD | CSR9_SR;
-	udelay(5);
+	bit_bang_delay();
 	CSR(9) = CSR9_RD | CSR9_SR | CSR9_SROM_CS;
-	udelay(5);
+	bit_bang_delay();
 
 	addr |= 6 << 6;
 
@@ -327,9 +397,9 @@ static unsigned eeprom_read(unsigned addr)
 			data |= CSR9_SROM_DI;
 
 		CSR(9) = data;
-		udelay(5);
+		bit_bang_delay();
 		CSR(9) = data | CSR9_SROM_CK;
-		udelay(5);
+		bit_bang_delay();
 
 		addr <<= 1;
 	}
@@ -339,9 +409,9 @@ static unsigned eeprom_read(unsigned addr)
 	for(indx = 0; indx < 16; ++indx) {
 
 		CSR(9) = CSR9_RD | CSR9_SR | CSR9_SROM_CS;
-		udelay(5);
+		bit_bang_delay();
 		CSR(9) = CSR9_RD | CSR9_SR | CSR9_SROM_CK | CSR9_SROM_CS;
-		udelay(5);
+		bit_bang_delay();
 
 		data <<= 1;
 		if(CSR(9) & CSR9_SROM_DO)
@@ -398,7 +468,7 @@ static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 		if(chip_id >= elements(chip_dev))
 			return 0;
 
-	DPRINTF("tulip: device %s\n", chip_name[chip_id]);
+	DPRINTF("tulip: #%d device %s\n", (dev != PCI_DEV_ETH0), chip_name[chip_id]);
 
 	pcicfg_write_word(dev, fnc, 0x10, iob);
 
@@ -440,49 +510,107 @@ void tulip_init(void)
 
 	/* reset device */
 
+	reg_csr6 = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
+
 	CSR(0) = CSR0_SWR;
 	udelay(1000);
 
 	CSR(0) = 0;
 	udelay(1000);
 
-	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
+	CSR(6) = reg_csr6;
 	udelay(1000);
 
 	read_hw_addr();
 }
 
 /*
- * initialise PHY
+ * initialise SIA PHY
  */
-static void setup_phy(void)
+static int setup_phy_sia(void)
 {
-	unsigned mark;
+	unsigned mark, info;
 
-	assert(!phy_avail);
+	assert(!phy_avail && chip_id == CHIP_ID_21041);
 
 	CSR(13) = 0;
+	CSR(14) = CSR14_SPP | CSR14_APE | CSR14_LTE | CSR14_SQE | CSR14_CLD |
+		CSR14_CSQ | CSR14_RSQ | CSR14_ANE | CSR14_MBO | CSR14_CPEN_NORMAL |
+		CSR14_LSE | CSR14_DREN | CSR14_LBK | CSR14_ECEN;
+	CSR(15) = CSR15_ABM;
+	CSR(13) = CSR13_SDM | CSR13_SRL;
 
-	if(chip_id == CHIP_ID_21041) {
+	udelay(10 * 1000);
 
-		CSR(14) = CSR14_SPP | CSR14_APE | CSR14_LTE | CSR14_SQE | CSR14_CLD |
-			CSR14_CSQ | CSR14_RSQ | CSR14_ANE | CSR14_MBO | CSR14_CPEN_NORMAL |
-			CSR14_LSE | CSR14_DREN | CSR14_LBK | CSR14_ECEN;
-		CSR(15) = CSR15_ABM;
-		CSR(13) = CSR13_SDM | CSR13_SRL;
+	/* wait for link */
+
+	for(mark = MFC0(CP0_COUNT);;) {
+
+		info = CSR(12);
+		if((info & (CSR12_ANS_MASK | CSR12_21041_LKF)) == CSR12_ANS_COMPLETE)
+			break;
+
+		if(MFC0(CP0_COUNT) - mark >= LINK_WAIT * CP0_COUNT_RATE)
+			return 0;
 
 		udelay(10 * 1000);
-
-		/* wait for link */
-
-		for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < 3 * CP0_COUNT_RATE;)
-			if((CSR(12) & (CSR12_ANS_MASK | CSR12_21041_LKF)) == CSR12_ANS_COMPLETE) {
-				DPUTS("tulip: link up");
-				break;
-			}
 	}
 
-	phy_avail = 1;
+#ifdef _DEBUG
+	{
+		static char word[16];
+
+		word[0] = '\0';
+		if(info & CSR12_LPN)
+			sprintf(word, " (#%04x)", info >> CSR12_LPC_SHIFT);
+
+		DPRINTF("tulip: link up%s\n", word);
+	}
+#endif
+
+	return 1;
+}
+
+/*
+ * initialise MII PHY
+ */
+static int setup_phy_mii(void)
+{
+	unsigned mark, info;
+
+	assert(!phy_avail && chip_id == CHIP_ID_21143);
+
+	CSR(13) = 0;
+	CSR(14) = 0;
+	CSR(15) = CSR15_ABM;
+
+	udelay(10 * 1000);
+
+	/* wait for link */
+
+	for(mark = MFC0(CP0_COUNT);;) {
+
+		info = phy_read_mii(PHY_ID, PHY_REG_CSTAT);
+		if(info & PHY_REG_CSTAT_LINK)
+			break;
+
+		if(MFC0(CP0_COUNT) - mark >= LINK_WAIT * CP0_COUNT_RATE)
+			return 0;
+
+		udelay(10 * 1000);
+	}
+
+#ifdef _DEBUG
+	{
+		static const char *link[] = {
+			"10Mbps", "100Mbps", "10Mbps full-duplex", "100Mbps full-duplex",
+		};
+
+		DPRINTF("tulip: link up (%s)\n", link[(info >> 11) & 3]);
+	}
+#endif
+
+	return 1;
 }
 
 /*
@@ -495,8 +623,26 @@ int tulip_up(void)
 	if(!nic_avail)
 		return 0;
 
-	if(!phy_avail)
-		setup_phy();
+	if(!phy_avail) {
+
+		if(chip_id == CHIP_ID_21041)
+			phy_avail = setup_phy_sia();
+		else
+			phy_avail = setup_phy_mii();
+
+		if(!phy_avail) {
+			DPUTS("tulip: link down");
+			return 0;
+		}
+	}
+
+	/* enable/disable full duplex */
+
+	reg_csr6 |= CSR6_FD;
+	if(chip_id == CHIP_ID_21143 && !(phy_read_mii(PHY_ID, PHY_REG_CSTAT) & PHY_REG_CSTAT_DUPLEX))
+		reg_csr6 &= ~CSR6_FD;
+
+	/* reset rings */
 
 	rx_ring_init();
 	tx_ring_init();
@@ -509,8 +655,8 @@ int tulip_up(void)
 
 	/* start transmitter and receiver */
 
-	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
-	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD | CSR6_ST | CSR6_SR;
+	CSR(6) = reg_csr6;
+	CSR(6) = reg_csr6 | CSR6_ST | CSR6_SR;
 
 	rx_filter_init();
 
@@ -526,7 +672,7 @@ void tulip_down(void)
 
 	/* stop transmitter and receiver */
 
-	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
+	CSR(6) = reg_csr6;
 	while((CSR(5) & (CSR5_TS_MASK | CSR5_RS_MASK)) != (CSR5_TS_STOPPED | CSR5_RS_STOPPED))
 		udelay(1000);
 

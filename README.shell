@@ -414,7 +414,7 @@ whether a variable is defined e.g.
 sleep period
 ------------
 
-Pauses for the specified number of milliseconds.
+Pauses for the specified number of tenths of a second.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

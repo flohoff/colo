@@ -162,6 +162,40 @@ void drain(void)
 			yield();
 }
 
+#ifdef PCI_SERIAL
+
+/*
+ * don't hog the PCI bus whilst polling the serial
+ */
+int kbhit(void)
+{
+	static unsigned hit, mark;
+	unsigned diff;
+
+	if(state == ST_ENABLED) {
+
+		if(hit && (UART_LSR & UART_LSR_RDR))
+				return 1;
+
+		diff = MFC0(CP0_COUNT) - mark;
+
+		if(diff >= CP0_COUNT_RATE / 100) {
+
+			mark += diff;
+
+			hit = UART_LSR & UART_LSR_RDR;
+			if(hit)
+				return 1;
+		}
+	}
+
+	yield();
+
+	return 0;
+}
+
+#else
+
 int kbhit(void)
 {
 	if(state == ST_ENABLED && (UART_LSR & UART_LSR_RDR))
@@ -171,6 +205,8 @@ int kbhit(void)
 
 	return 0;
 }
+
+#endif
 
 int getch(void)
 {

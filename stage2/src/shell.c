@@ -150,17 +150,15 @@ static int cmnd_sleep(int opsz)
 	if(ptr == argv[1] || *ptr)
 		return E_BAD_EXPR;
 
-	for(; delay > 100; delay -= 100) {
-
-		udelay(100 * 1000);
+	while(delay--) {
 
 		if(BREAK()) {
 			puts("aborted");
 			return E_UNSPEC;
 		}
-	}
 
-	udelay(delay * 1000);
+		udelay(100 * 1000);
+	}
 
 	return E_NONE;
 }
