@@ -32,7 +32,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	serial_init();
 
-	puts("\n[ \"CoLo\" v" _STR(VER_MAJOR) "." _STR(VER_MINOR) "]");
+	puts("\n[ \"CoLo\" v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]");
 
 	printf("stage2: %08lx-%08lx\n", (unsigned long) &__text, (unsigned long) KSEG0(ram_size));
 
