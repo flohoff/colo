@@ -50,8 +50,12 @@
 #define CSR9_SR							(1 << 11)
 #define CSR9_RD							(1 << 14)
 
+#define CSR12_21041_LKF					(1 << 2)
+#define CSR12_ANS_MASK					(7 << 12)
+# define CSR12_ANS_COMPLETE			(5 << 12)
 #define CSR13_SRL							(1 << 0)
 #define CSR13_SDM							(0xef0 << 4)
+
 #define CSR14_ECEN						(1 << 0)
 #define CSR14_LBK							(1 << 1)
 #define CSR14_DREN						(1 << 2)
@@ -444,6 +448,8 @@ void tulip_init(void)
 
 int tulip_up(void)
 {
+	unsigned mark;
+
 	assert(!net_is_up());
 
 	if(!nic_avail)
@@ -462,6 +468,14 @@ int tulip_up(void)
 		CSR(13) = CSR13_SDM | CSR13_SRL;
 
 		udelay(10 * 1000);
+
+		/* wait for link */
+
+		for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < 3 * CP0_COUNT_RATE;)
+			if((CSR(12) & (CSR12_ANS_MASK | CSR12_21041_LKF)) == CSR12_ANS_COMPLETE) {
+				DPUTS("tulip: link up");
+				break;
+			}
 	}
 
 	rx_ring_init();
