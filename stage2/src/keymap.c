@@ -132,7 +132,7 @@ int cmnd_keyshow(int opsz)
 {
 	static char buf[MAX_BIND_CHARS];
 	unsigned long mark;
-	unsigned indx;
+	unsigned indx, key;
 
 	if(argc > 1)
 		return E_ARGS_OVER;
@@ -141,17 +141,20 @@ int cmnd_keyshow(int opsz)
 
 	do {
 
-		if(indx == sizeof(buf)) {
-			puts("key sequence too long");
-			return E_UNSPEC;
-		}
-
-		buf[indx++] = getch();
+		key = getch();
+		if(indx < sizeof(buf)) 
+			buf[indx] = key;
+		++indx;
 
 		for(mark = MFC0(CP0_COUNT); !kbhit() && MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE;)
 			;
 
 	} while(kbhit());
+
+	if(indx > sizeof(buf)) {
+		puts("key sequence too long");
+		return E_UNSPEC;
+	}
 
 	putchar('"');
 	putstring_safe(buf, indx);
