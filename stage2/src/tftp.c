@@ -271,6 +271,9 @@ int cmnd_tftp(int opsz)
 		return E_UNSPEC;
 	}
 
+	if(!net_is_up())
+		return E_NET_DOWN;
+
 	heap_reset();
 
 	if(argc > 3) {

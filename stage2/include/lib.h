@@ -131,10 +131,10 @@ enum {
 	E_BAD_EXPR,
 	E_BAD_VALUE,
 	E_NO_SUCH_VAR,
+	E_NET_DOWN,
 };
 
 extern void __attribute__((noreturn)) shell(void);
-extern int argv_add(const char *);
 extern void script_exec(const char *);
 
 extern size_t argsz[];

@@ -478,6 +478,7 @@ void shell(void)
 		[E_BAD_EXPR]		= "bad expression",
 		[E_BAD_VALUE]		= "invalid value",
 		[E_NO_SUCH_VAR]	= "no such variable",
+		[E_NET_DOWN]		= "no interface",
 	};
 	static char line[256], hist[256];
 	int error, skip, escp;

@@ -226,10 +226,8 @@ int cmnd_net(int opsz)
 	ip_mask = mask;
 	ip_gway = gway;
 
-	if(!net_up()) {
-		puts("no interface");
-		return E_UNSPEC;
-	}
+	if(!net_up())
+		return E_NET_DOWN;
 
 	return E_NONE;
 }

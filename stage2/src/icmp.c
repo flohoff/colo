@@ -107,6 +107,9 @@ int cmnd_ping(int opsz)
 		return E_UNSPEC;
 	}
 
+	if(!net_is_up())
+		return E_NET_DOWN;
+
 	ticks = TICKS_PER_SEC;
 	since = 0;
 	seqnr = 0;
