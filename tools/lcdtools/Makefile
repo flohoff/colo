@@ -6,7 +6,7 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-SUBDIRS= lcdlib putlcd paneld
+SUBDIRS= liblcd putlcd paneld e2fsck-lcd
 
 all:
 	set -e; for x in $(SUBDIRS); do $(MAKE) -C $$x; done

@@ -6,7 +6,7 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-TARG= libpanel.a
+TARG= liblcd.a
 OBJS= panel.o
 
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing

@@ -10,8 +10,8 @@ TARG= paneld
 OBJS= paneld.o
 
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
-CPPFLAGS= -I../lcdlib
-LOADLIBES= -L../lcdlib -lpanel
+CPPFLAGS= -I../liblcd
+LOADLIBES= -L../liblcd -llcd
 
 $(TARG): $(OBJS)
 
