@@ -83,12 +83,15 @@ static void flush_ring(void)
 
 void serial_enable(int enable)
 {
+	static char buf[16];
 	unsigned div;
 
 	if(!enable) {
 
-		if(state == ST_ENABLED)
+		if(state == ST_ENABLED) {
 			state = ST_DISABLED;
+			env_remove_tag(VAR_SERIAL);
+		}
 
 		return;
 	}
@@ -109,15 +112,9 @@ void serial_enable(int enable)
 	state = ST_ENABLED;
 
 	flush_ring();
-}
-
-const char *serial_baud(void)
-{
-	static char buf[16];
 
 	sprintf(buf, "%u", baud);
-
-	return buf;
+	env_put("console-speed", buf, VAR_SERIAL);
 }
 
 void drain(void)

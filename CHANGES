@@ -3,8 +3,11 @@
 CoLo 1.14 (xxxx-xx-xx)
 ----------------------
 
+*	The 'console-speed' variable is now only available when the serial port is
+	enabled.
+
 *	Fixed up support for booting 64-bit kernels (32-bit support was reorganised
- 	too).
+	too).
 
 *	Ensure we read from Galileo PCI RETRY/TIMEOUT register before writing to
 	it. A comment in the kernel source indicates this might be necessary to
@@ -13,7 +16,7 @@ CoLo 1.14 (xxxx-xx-xx)
 *	Added a '-n' command line option to 'putlcd' which allows the user to write
 	to a single line of the LCD without affecting the other line.
 
-*	Added big fat warning to 'flash-tool'.
+*	Added big fat warning to 'flash-tool' (just in case).
 
 CoLo 1.13 (2004-08-30)
 ----------------------

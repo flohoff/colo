@@ -49,8 +49,6 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	heap_reset();
 
-	env_put("console-speed", serial_baud(), VAR_OTHER);
-
 	if(!nv_store.boot || (switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
 
 		noshell = boot(0);

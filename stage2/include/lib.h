@@ -127,7 +127,6 @@ extern void putchar(int);
 extern void putstring(const char *);
 extern void puts(const char *str);
 extern void drain(void);
-extern const char *serial_baud(void);
 
 #define BREAK()							({ char c; kbhit() && ((c = getch()) == ' ' || c == '\003'); })
 
@@ -289,6 +288,7 @@ extern int lcd_menu(const char **, unsigned, unsigned);
 #define VAR_NET								1
 #define VAR_DHCP								2
 #define VAR_INITRD							3
+#define VAR_SERIAL							4
 
 extern int env_put(const char *, const char *, unsigned);
 extern const char *env_get(const char *);
