@@ -1,6 +1,6 @@
 # $Id$
 
-CoLo 1.14 (xxxx-xx-xx)
+CoLo 1.14 (2004-10-26)
 ----------------------
 
 *	Cleaned up build system and added cross compile support.
