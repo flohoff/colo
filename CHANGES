@@ -3,6 +3,9 @@
 CoLo 1.6 (xxxx-xx-xx)
 ---------------------
 
+*	Added support for RAID partitions.
+	[Christian Mock]
+
 *	The layout of the source tree has been tidied up.
 
 *	Stage 2 is now loaded at the top of RAM rather than the bottom. We can now

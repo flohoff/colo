@@ -58,6 +58,9 @@
 #define FLAG_LBA_48					(1 << 3)
 #define FLAG_ATAPI					(1 << 4)
 
+#define PART_TYPE_EXT2				0x82
+#define PART_TYPE_RAID				0xfd
+
 static struct ide_device
 {
 	const char		*name;
@@ -953,30 +956,40 @@ void *ide_open(const char *name)
 
 	if(part > 0) {
 	
-		if(table.p[--part].type != 0x83) {
-			puts("not an EXT2 partition");
-			return NULL;
+		switch(table.p[--part].type) {
+
+			case PART_TYPE_EXT2:
+			case PART_TYPE_RAID:
+				break;
+
+			default:
+				puts("not an EXT2/EXT3/RAID partition");
+				return NULL;
 		}
 
 	} else {
 
-		/* find bootable ext2 partition, failing that find first ext2 partition */
+		/* find bootable partition, failing that find first partition we recognise */
 
 		for(indx = 0; indx < elements(table.p); ++indx)
 
-			if(table.p[indx].type == 0x83) {
+			switch(table.p[indx].type) {
 
-				if(table.p[indx].boot & 0x80) {
-					part = indx;
-					break;
-				}
+				case PART_TYPE_EXT2:
+				case PART_TYPE_RAID:
 
-				if(part < 0)
-					part = indx;
+					if(table.p[indx].boot & 0x80) {
+						part = indx;
+						indx = elements(table.p);
+						break;
+					}
+
+					if(part < 0)
+						part = indx;
 			}
 
 		if(part < 0) {
-			puts("no EXT2 partitions");
+			puts("no EXT2/EXT3/RAID partitions");
 			return NULL;
 		}
 
