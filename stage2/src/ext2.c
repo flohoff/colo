@@ -412,76 +412,96 @@ int ext2_readlink(struct volume *v, char *link, size_t size, struct ext2_inode *
 
 /*
  * follow path from inode returning target inode
- *
- * FIXME replace with non-recursive algorithm
  */
 unsigned ext2_lookup(struct volume *v, unsigned inum, const char *path)
 {
-	static unsigned used, depth;
-
-	struct ext2_inode inode;
+	unsigned size, curr, which, other, link, prev;
+	struct ext2_inode inode[2];
 	struct find_item find;
-	size_t size;
 	int stat;
 
-	if(*path == '/')
+	size = strlen(path) + 1;
+	if(size > sizeof(scratch)) {
+		DPUTS("ext2: path too long");
+		return 0;
+	}
+
+	curr = sizeof(scratch) - size;
+	strcpy(&scratch[curr], path);
+
+	if(scratch[curr] == '/')
 		inum = EXT2_ROOT_INO;
 
-	if(!ext2_inode_fetch(v, &inode, inum))
+	link = 0;
+	which = 0;
+
+	if(!ext2_inode_fetch(v, &inode[which], inum))
 		return 0;
 
 	for(;;) {
 
-		for(; *path == '/'; ++path)
+		for(; scratch[curr] == '/'; ++curr)
 			;
 
-		if(!*path)
+		if(!scratch[curr])
 			break;
 
-		if(!S_ISDIR(inode.i_mode)) {
+		if(!S_ISDIR(inode[which].i_mode)) {
 			DPUTS("ext2: not a directory");
 			return 0;
 		}
 
-		for(size = 0; path[size] && path[size] != '/'; ++size)
+		for(size = curr; scratch[size] && scratch[size] != '/'; ++size)
 			;
+		size -= curr;
 
-		for(stat = ext2_find_first(v, &find, &inode, NULL); stat > 0; stat = ext2_find_next(v, &find))
-			if(!memcmp(path, find.name, size) && !find.name[size]) {
-				path += size;
+		for(stat = ext2_find_first(v, &find, &inode[which], NULL); stat > 0; stat = ext2_find_next(v, &find))
+			if(!memcmp(&scratch[curr], find.name, size) && !find.name[size]) {
+				curr += size;
 				break;
 			}
 
-		if(stat < 1 || !ext2_inode_fetch(v, &inode, find.inode))
+		other = 1 - which;
+
+		if(stat < 1 || !ext2_inode_fetch(v, &inode[other], find.inode))
 			return 0;
 
-		if(S_ISLNK(inode.i_mode)) {
+		if(S_ISLNK(inode[other].i_mode)) {
 
-			size = inode.i_size + 1;
-
-			if(depth >= SYMLINK_DEPTH_MAX || sizeof(scratch) - used < size) {
+			if(++link == SYMLINK_PATH_MAX) {
 				DPUTS("ext2: too many symlinks");
 				return 0;
 			}
 
-			if(!ext2_readlink(v, scratch + used, size, &inode))
+			prev = curr;
+
+			if(curr < inode[other].i_size || (v->large_file_mask & inode[other].i_size_high)) {
+				DPUTS("ext2: symlinks too long");
+				return 0;
+			}
+			curr -= inode[other].i_size;
+
+			if(!ext2_readlink(v, &scratch[curr], inode[other].i_size + 1, &inode[other]))
 				return 0;
 
-			++depth;
-			used += size;
-			inum = ext2_lookup(v, inum, scratch + used - size);
-			used -= size;
-			--depth;
+			if(prev < sizeof(scratch) - 1)
+				scratch[prev] = '/';
 
-			if(!inum)
-				return 0;
+			DPRINTF("{%s%s} --> {%s}\n", find.name, &scratch[prev], &scratch[curr]);
 
-			if(!ext2_inode_fetch(v, &inode, inum))
-				return 0;
+			if(scratch[curr] == '/') {
 
-		} else
+				inum = EXT2_ROOT_INO;
+
+				if(!ext2_inode_fetch(v, &inode[which], inum))
+					return 0;
+			}
+
+		} else {
 
 			inum = find.inode;
+			which = other;
+		}
 	}
 
 	return inum;
