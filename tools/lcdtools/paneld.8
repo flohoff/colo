@@ -1,0 +1,38 @@
+.\" $Id$
+.\"
+.\" Copyright (C) 2004  Martin Michlmayr <tbm@cyrius.com>
+.\" This manual is freely distributable under the terms of the GPL.
+.\" It was originally written for Debian GNU/Linux (but may be used
+.\" by others).
+.\"
+
+.TH PANELD 8 "July 2004"
+
+.SH NAME
+paneld \- Cobalt admin menu for the LCD panel
+
+.SH SYNOPSIS
+.B paneld
+[\fISTRINGs\fR]
+
+.SH DESCRIPTION
+.PP
+.B paneld
+is an admin tool for the LCD panel of Cobalt machines.  By default, it will
+display the current time and optionally a message.  When you hold the
+.B enter
+or
+.B select
+button for a couple of seconds you will get an admin menu.  The menu will
+allow you to either halt or reboot your Cobalt machine.
+
+It is possible to pass a set of strings to paneld.  In this case,
+.B paneld
+will loop through each argument and display the string for a few seconds
+in the second line below the time.  It will proceed with the next argument
+and loop around when the last argument is reached.
+
+.SH AUTHOR
+.PP
+Peter Horton <pdh@colonel-panic.org>
+

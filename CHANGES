@@ -1,5 +1,11 @@
 # $Id$
 
+CoLo 1.12 (xxxx-xx-xx)
+----------------------
+
+*	Added man pages for 'paneld' and 'e2fsck-lcd'.
+	[Martin Michlmayr]
+
 CoLo 1.11 (2004-07-28)
 ----------------------
 
@@ -16,9 +22,9 @@ CoLo 1.11 (2004-07-28)
 
 *	Make shell refuse to load chain loader.
 
-*  Added simple front panel daemon 'paneld'.
+*	Added simple front panel daemon 'paneld'.
 
-*  Added 'restrict' command to shell.
+*	Added 'restrict' command to shell.
 
 CoLo 1.10 (2004-05-23)
 ----------------------

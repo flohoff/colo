@@ -1,0 +1,40 @@
+.\" $Id$
+.\"
+.\" Copyright (C) 2004  Martin Michlmayr <tbm@cyrius.com>
+.\" This manual is freely distributable under the terms of the GPL.
+.\" It was originally written for Debian GNU/Linux (but may be used
+.\" by others).
+.\"
+
+.TH E2FSCK-LCD 8 "July 2004"
+
+.SH NAME
+e2fsck-lcd \- output file system check progress information on the Cobalt LCD
+
+.SH SYNOPSIS
+.B e2fsck-lcd
+
+.SH DESCRIPTION
+.PP
+.B e2fsck-lcd
+is a program which outputs file system check progress information on the
+Cobalt LCD.  It will call the real
+.B fsck.ext2
+and
+.B fsck.ext3
+programs to perform the file checking functions and output progress
+information on the Cobalt LCD.
+
+If called as
+.B e2fsck-lcd
+the program will pass command line arguments to
+.B fsck.ext2
+to perform the file system check. If called by any other name it will
+use the called name with
+.B \.distrib
+appended as the name of the file system check program.
+
+.SH AUTHOR
+.PP
+Peter Horton <pdh@colonel-panic.org>
+
