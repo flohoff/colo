@@ -47,6 +47,25 @@ probably land up with a unit that doesn't boot!
 
 	flash 0
 
+FROM THE BOOT LOADER SHELL - OVER NETWORK
+-----------------------------------------
+
+Read README.shell
+
+The procedure is basically the same as loading from disk except you pull the
+file over the network using TFTP or NFS. Check out the 'net', 'tftp' and 'nfs'
+commands.
+
+Once the image is loaded you can verify the MD5 hash (if you have the MD5 hash
+for cobalt-original-boot.bin).
+
+	md5sum
+
+Program it into the Flash. Don't interrupt the programming process or you will
+probably land up with a unit that doesn't boot!
+
+	flash 0
+
 FROM THE BOOT LOADER SHELL - OVER SERIAL
 ----------------------------------------
 

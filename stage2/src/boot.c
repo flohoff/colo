@@ -15,8 +15,8 @@ static const char *option[] =
 /*  |-------------| */
 
 	"Disk    (hda)",
+	"Network (NFS)",
 	"Network (TFTP)",
-/*	"Network (NFS)", */
 	"Boot shell",
 };
 
@@ -30,6 +30,15 @@ static const char *script[] =
 	"-load /boot/default.colo\n"
 	"-script\n"
 	"load /boot/vmlinux.gz\n"
+	"execute",
+
+	/* Network (NFS) */
+
+	"lcd 'Booting ...'\n"
+	"net\n"
+	"lcd 'Booting ...' {ip-address}\n"
+	"nfs {dhcp-next-server} {dhcp-root-path} {dhcp-boot-file}\n"
+	"-script\n"
 	"execute",
 
 	/* Network (TFTP) */

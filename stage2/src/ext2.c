@@ -635,11 +635,11 @@ static int list_inode(unsigned inum, const char *name, int descend)
 	putstring_safe(name, -1);
 
 	if(S_ISLNK(inode.i_mode)) {
-		putchar('@');
 		if(ext2_readlink(&vol, scratch, sizeof(scratch), &inode)) {
 			putstring(" --> ");
 			putstring_safe(scratch, -1);
-		}
+		} else
+			putchar('@');
 	} else if(S_ISDIR(inode.i_mode))
 		putchar('/');
 	else if(S_ISFIFO(inode.i_mode))

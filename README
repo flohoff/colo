@@ -18,7 +18,7 @@ FEATURES
 
 * Support for booting from EXT2 formatted CDROMs.
 
-* Support for network booting via DHCP/TFTP.
+* Support for network booting via TFTP or NFS with DHCP.
 
 * Provides an LCD boot menu (hold the "ENTER" and "SELECT" buttons whilst
   booting the unit).
@@ -31,10 +31,9 @@ LIMITATIONS
 
 * Will not currently boot from logical (extended) partitions.
 
-* Network booting over NFS is currently not supported. To use the factory
-  restore CD to restore your unit you will have to restore the original boot
-  loader first.  There is obviously a risk involved in doing this as it
-  requires reprogramming the Flash.  
+* Network booting over NFS has not been checked to see whether it works with
+  the original restore CD (I don't have a suitable network card). To test this
+  CoLo would have to be resident in Flash, so it's not for the faint hearted.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

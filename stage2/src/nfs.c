@@ -15,6 +15,7 @@
 #define SYMLINK_PATH_MAX				10
 
 #define RPC_PORTMAP_PORT				111
+
 #define RPC_PORTMAP_PROG				100000
 #define RPC_PORTMAP_VERS				2
 #define RPC_PORTMAP_GETPORT			3
@@ -25,6 +26,7 @@
 #define RPC_NFS_LOOKUP					4
 #define RPC_NFS_READLINK				5
 #define RPC_NFS_READ						6
+#define RPC_NFS_READDIR					16
 
 #define RPC_MOUNT_PROG					100005
 #define RPC_MOUNT_VERS					1
@@ -112,7 +114,12 @@ struct nfs_object
 
 } __attribute__((packed));
 
-static uint32_t query[1024 / 4];
+static union
+{
+	uint8_t	b[1024];
+	uint32_t	w[1];
+
+} scratch;
 
 /*
  * issue SUN RPC call and wait for reply
@@ -254,14 +261,14 @@ static unsigned rpc_portmap(int sock, uint32_t host, unsigned prog, unsigned ver
 	unsigned port;
 	void *data;
 
-	NET_WRITE_LONG(&query[0], prog);
-	NET_WRITE_LONG(&query[1], vers);
-	NET_WRITE_LONG(&query[2], IPPROTO_UDP);
-	NET_WRITE_LONG(&query[3], 0);
+	NET_WRITE_LONG(&scratch.w[0], prog);
+	NET_WRITE_LONG(&scratch.w[1], vers);
+	NET_WRITE_LONG(&scratch.w[2], IPPROTO_UDP);
+	NET_WRITE_LONG(&scratch.w[3], 0);
 
 	udp_connect(sock, host, RPC_PORTMAP_PORT);
 
-	frame = rpc_make_call(sock, RPC_PORTMAP_PROG, RPC_PORTMAP_VERS, RPC_PORTMAP_GETPORT, query, 4 * 4);
+	frame = rpc_make_call(sock, RPC_PORTMAP_PROG, RPC_PORTMAP_VERS, RPC_PORTMAP_GETPORT, scratch.w, 4 * 4);
 
 	port = 0;
 	if(frame) {
@@ -286,16 +293,16 @@ static int nfs_mount(int sock, const char *path, struct nfs_object *obj)
 	void *data;
 
 	size = strlen(path);
-	if(4 + size > sizeof(query)) {
+	if(4 + size > sizeof(scratch)) {
 		puts("path too long");
 		return 0;
 	}
 
-	NET_WRITE_LONG(&query[0], size);
-	query[1 + size / 4] = 0;
-	memcpy(&query[1], path, size);
+	NET_WRITE_LONG(&scratch.w[0], size);
+	scratch.w[1 + size / 4] = 0;
+	memcpy(&scratch.w[1], path, size);
 
-	frame = rpc_make_call(sock, RPC_MOUNT_PROG, RPC_MOUNT_VERS, RPC_MOUNT_MNT, query, (4 + size + 3) & ~3);
+	frame = rpc_make_call(sock, RPC_MOUNT_PROG, RPC_MOUNT_VERS, RPC_MOUNT_MNT, scratch.w, (4 + size + 3) & ~3);
 	if(!frame)
 		return 0;
 
@@ -370,25 +377,23 @@ static int nfs_get_attr(int sock, struct nfs_object *obj)
 /*
  * look up a pathname component
  */
-static int nfs_lookup(int sock, struct nfs_object *dir, const char *path, unsigned size, struct nfs_object *obj)
+static int nfs_lookup(int sock, const struct nfs_object *dir, const char *path, unsigned size, struct nfs_object *obj)
 {
 	struct frame *frame;
 	unsigned stat;
 	void *data;
 
-	if(NFS_FHSIZE + 4 + size > sizeof(query)) {
+	if(NFS_FHSIZE + 4 + size > sizeof(scratch)) {
 		puts("path too long");
 		return 0;
 	}
 
-	DPRINTF("nfs: lookup \"%.*s\"\n", (int) size, path);
+	memcpy(scratch.b, &dir->handle, NFS_FHSIZE);
+	NET_WRITE_LONG(&scratch.w[NFS_FHSIZE / 4], size);
+	scratch.w[NFS_FHSIZE / 4 + 1 + size / 4] = 0;
+	memcpy(&scratch.w[NFS_FHSIZE / 4 + 1], path, size);
 
-	memcpy(query, &dir->handle, NFS_FHSIZE);
-	NET_WRITE_LONG(&query[NFS_FHSIZE / 4], size);
-	query[NFS_FHSIZE / 4 + 1 + size / 4] = 0;
-	memcpy(&query[NFS_FHSIZE / 4 + 1], path, size);
-
-	frame = rpc_make_call(sock, RPC_NFS_PROG, RPC_NFS_VERS, RPC_NFS_LOOKUP, query, (NFS_FHSIZE + 4 + size + 3) & ~3);
+	frame = rpc_make_call(sock, RPC_NFS_PROG, RPC_NFS_VERS, RPC_NFS_LOOKUP, scratch.b, (NFS_FHSIZE + 4 + size + 3) & ~3);
 	if(!frame)
 		return 0;
 
@@ -431,13 +436,13 @@ static int nfs_read_file(int sock, const struct nfs_object *obj, void *buffer, u
 		if(copy > NFS_READ_BLOCK)
 			copy = NFS_READ_BLOCK;
 
-		memcpy(query, &obj->handle, NFS_FHSIZE);
+		memcpy(scratch.b, &obj->handle, NFS_FHSIZE);
 
-		NET_WRITE_LONG(&query[NFS_FHSIZE / 4], offset);
-		NET_WRITE_LONG(&query[NFS_FHSIZE / 4 + 1], copy);
-		NET_WRITE_LONG(&query[NFS_FHSIZE / 4 + 2], 0);
+		NET_WRITE_LONG(&scratch.w[NFS_FHSIZE / 4], offset);
+		NET_WRITE_LONG(&scratch.w[NFS_FHSIZE / 4 + 1], copy);
+		NET_WRITE_LONG(&scratch.w[NFS_FHSIZE / 4 + 2], 0);
 
-		frame = rpc_make_call(sock, RPC_NFS_PROG, RPC_NFS_VERS, RPC_NFS_READ, query, NFS_FHSIZE + 3 * 4);
+		frame = rpc_make_call(sock, RPC_NFS_PROG, RPC_NFS_VERS, RPC_NFS_READ, scratch.b, NFS_FHSIZE + 3 * 4);
 		if(!frame)
 			return 0;
 
@@ -534,26 +539,117 @@ static int nfs_readlink(int sock, char *buffer, struct nfs_object *obj)
 }
 
 /*
+ * read directory contents from server
+ */
+static int nfs_read_dir(int sock, const struct nfs_object *dir,
+	int (*func)(void *, const char *, struct nfs_object *), void *arg)
+{
+	unsigned cookie, size, nmsz, obsz, stat;
+	struct nfs_object obj;
+	struct frame *frame;
+	void *data;
+	int code;
+
+	cookie = 0;
+
+	for(;;) {
+
+		memcpy(scratch.b, &dir->handle, NFS_FHSIZE);
+
+		NET_WRITE_LONG(&scratch.w[NFS_FHSIZE / 4], cookie);
+		NET_WRITE_LONG(&scratch.w[NFS_FHSIZE / 4 + 1], NFS_READ_BLOCK);
+
+		frame = rpc_make_call(sock, RPC_NFS_PROG, RPC_NFS_VERS, RPC_NFS_READDIR, scratch.b, NFS_FHSIZE + 2 * 4);
+		if(!frame)
+			return -1;
+
+		data = FRAME_PAYLOAD(frame);
+		size = FRAME_SIZE(frame);
+
+		if(size < 4) {
+invalid:
+			puts("read directory invalid reply");
+			frame_free(frame);
+			return -1;
+		}
+
+		stat = NET_READ_LONG(data);
+		if(stat != NFS_OK) {
+			printf("read directory failed (%s)\n", nfs_error(stat));
+			frame_free(frame);
+			return -1;
+		}
+
+		for(obsz = 4;;) {
+
+			data += obsz;
+			size -= obsz;
+
+			if(size < 2 * 4)
+				goto invalid;
+
+			if(NET_READ_LONG(data)) {
+				
+				if(size < 4 * 4)
+					goto invalid;
+
+				nmsz = NET_READ_LONG(data + 8);
+				obsz = (3 * 4 + nmsz + 4 + 3) & ~3;
+
+				if(size < obsz)
+					goto invalid;
+
+				if(nmsz < sizeof(scratch) && nfs_lookup(sock, dir, data + 3 * 4, nmsz, &obj)) {
+
+					memcpy(scratch.b, data + 3 * 4, nmsz);
+					scratch.b[nmsz] = '\0';
+
+					code = func(arg, scratch.b, &obj);
+					if(code)
+						return code;
+				}
+
+				cookie = NET_READ_LONG(data + obsz - 4);
+
+			} else if(NET_READ_LONG(data + 4)) {
+
+				frame_free(frame);
+				return 0;
+
+			} else {
+
+				if(!cookie)
+					goto invalid;
+
+				break;
+			}
+		}
+
+		frame_free(frame);
+	}
+}
+
+/*
  * look up a full path, following symbolic links
  */
 static int nfs_path_lookup(int sock, const struct nfs_object *root, struct nfs_object *obj, const char *path)
 {
-	static char scratch[4096];
+	static char buffer[4096];
 
 	unsigned curr, size, next, mode, link;
 	struct nfs_object node[2];
 	int which, other;
 
 	size = strlen(path) + 1;
-	if(size > sizeof(scratch)) {
+	if(size > sizeof(buffer)) {
 		puts("path too long");
 		return 0;
 	}
 
-	curr = sizeof(scratch) - size;
-	strcpy(&scratch[curr], path);
+	curr = sizeof(buffer) - size;
+	strcpy(&buffer[curr], path);
 
-	node[0] = *(scratch[curr] == '/' ? root : obj);
+	node[0] = *(buffer[curr] == '/' ? root : obj);
 
 	which = 1;
 	other = 0;
@@ -563,10 +659,10 @@ static int nfs_path_lookup(int sock, const struct nfs_object *root, struct nfs_o
 
 		other = 1 - which;
 
-		for(; scratch[curr] == '/'; ++curr)
+		for(; buffer[curr] == '/'; ++curr)
 			;
 
-		if(!scratch[curr])
+		if(!buffer[curr])
 			break;
 
 		mode = NET_READ_LONG(&node[other].mode);
@@ -575,10 +671,12 @@ static int nfs_path_lookup(int sock, const struct nfs_object *root, struct nfs_o
 			return 0;
 		}
 
-		for(next = curr; scratch[next] && scratch[next] != '/'; ++next)
+		for(next = curr; buffer[next] && buffer[next] != '/'; ++next)
 			;
 
-		if(!nfs_lookup(sock, &node[other], &scratch[curr], next - curr, &node[which]))
+		DPRINTF("nfs: lookup \"%.*s\"\n", (int)(next - curr), &buffer[curr]);
+
+		if(!nfs_lookup(sock, &node[other], &buffer[curr], next - curr, &node[which]))
 			return 0;
 		curr = next;
 
@@ -597,12 +695,12 @@ static int nfs_path_lookup(int sock, const struct nfs_object *root, struct nfs_o
 			}
 
 			curr -= size;
-			if(!nfs_readlink(sock, &scratch[curr], &node[which]))
+			if(!nfs_readlink(sock, &buffer[curr], &node[which]))
 				return 0;
 
-			DPRINTF("nfs: symlink \"%.*s\"\n", (int) size, &scratch[curr]);
+			DPRINTF("nfs: symlink \"%.*s\"\n", (int) size, &buffer[curr]);
 
-			if(scratch[curr] == '/')
+			if(buffer[curr] == '/')
 				node[other] = *root;
 
 		} else
@@ -618,6 +716,44 @@ static int nfs_path_lookup(int sock, const struct nfs_object *root, struct nfs_o
 	return 1;
 }
 
+static int dump_node(void *arg, const char *name, struct nfs_object *obj)
+{
+	static char node[16];
+
+	unsigned mode, size, rdev;
+
+	mode = NET_READ_LONG(&obj->mode);
+	size = NET_READ_LONG(&obj->size);
+
+	if(S_ISCHR(mode) || S_ISBLK(mode)) {
+		rdev = NET_READ_LONG(&obj->rdev);
+		sprintf(node, "%u,%4u", (rdev >> 8) & 0xff, rdev & 0xff);
+		printf("%10s  ", node);
+	} else
+		printf("%10u  ", size);
+
+	putstring_safe(name, -1);
+
+	if(S_ISLNK(mode)) {
+		if(size <= sizeof(scratch) && nfs_readlink((int) arg, scratch.b, obj)) {
+			putstring(" --> ");
+			putstring_safe(scratch.b, size);
+		} else
+			putchar('@');
+	} else if(S_ISDIR(mode))
+		putchar('/');
+	else if(S_ISFIFO(mode))
+		putchar('|');
+	else if(S_ISSOCK(mode))
+		putchar('=');
+	else if(mode & 0111)
+		putchar('*');
+
+	putchar('\n');
+
+	return 0;
+}
+
 int cmnd_nfs(int opsz)
 {
 	unsigned port_mnt, port_nfs, mode, size;
@@ -626,7 +762,7 @@ int cmnd_nfs(int opsz)
 	int sock, error;
 	void *base;
 
-	if(argc < 4)
+	if(argc < 3)
 		return E_ARGS_UNDER;
 	if(argc > 5)
 		return E_ARGS_OVER;
@@ -675,6 +811,14 @@ int cmnd_nfs(int opsz)
 	if(!nfs_get_attr(sock, &mount))
 		goto umount;
 
+	if(argc < 4) {
+
+		if(!nfs_read_dir(sock, &mount, dump_node, (void *) sock))
+			error = E_NONE;
+
+		goto umount;
+	}
+
 	heap_reset();
 
 	if(argc > 4) {
@@ -707,12 +851,24 @@ int cmnd_nfs(int opsz)
 
 	file = mount;
 
-	if(!nfs_path_lookup(sock, &mount, &file, argv[3]))
+	if(!nfs_path_lookup(sock, &mount, &file, argv[3])) {
+		heap_reset();
 		goto umount;
+	}
 
 	mode = NET_READ_LONG(&file.mode);
+
+	if(argc < 5 && S_ISDIR(mode)) {
+
+		if(!nfs_read_dir(sock, &file, dump_node, (void *) sock))
+			error = E_NONE;
+
+		goto umount;
+	}
+
 	if(!S_ISREG(mode)) {
 		puts("not a file");
+		heap_reset();
 		goto umount;
 	}
 
@@ -721,16 +877,17 @@ int cmnd_nfs(int opsz)
 	base = heap_reserve_hi(size);
 	if(!base) {
 		puts("file too big");
+		heap_reset();
 		goto umount;
 	}
 
-	if(!nfs_read_file(sock, &file, base, size))
+	if(!nfs_read_file(sock, &file, base, size)) {
+		heap_reset();
 		goto umount;
+	}
 
 	heap_alloc();
-
 	heap_initrd_vars();
-
 	heap_info();
 
 	error = E_NONE;
@@ -742,9 +899,6 @@ umount:
 		DPRINTF("nfs: unmounted \"%s\"\n", argv[2]);
 
 	udp_close(sock);
-
-	if(error != E_NONE)
-		heap_reset();
 
 	return error;
 }

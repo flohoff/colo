@@ -90,7 +90,7 @@ unsigned pci_init(size_t bank0, size_t bank1)
 
 	pcicfg_write_byte(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x0c, DCACHE_LINE_SIZE / 4);
 
-	pcicfg_write_byte(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x0d, 32);
+	pcicfg_write_byte(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x0d, 64);
 
 	/* read unit type */
 

@@ -2,6 +2,8 @@
 
 In no particular order ...
 
+* Remove excess debugging messages.
+
 * Add support for different console baud rates.
 
 * Add support for booting from LVM setups.
@@ -13,10 +15,6 @@ In no particular order ...
 * Set $sp when chain loading kernel.
 
 * Make chain loader use LCD for error messages rather than serial.
-
-* Add support for network booting via NFS.
-
-* Add automatic boot via DHCP/NFS.
 
 * Add boot menu using LCD. [partially done]
 

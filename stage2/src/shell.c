@@ -36,6 +36,7 @@ extern int cmnd_pci(int);
 extern int cmnd_lcd(int);
 extern int cmnd_environ(int);
 extern int cmnd_boot(int);
+extern int cmnd_nfs(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
@@ -87,6 +88,7 @@ static struct
 	{ "lcd",				cmnd_lcd,			0,					"[text [text]]",											},
 	{ "variable",		cmnd_environ,		0,					"[name [value]]",											},
 	{ "boot",			cmnd_boot,			0,					"[list | default] [option]",							},
+	{ "nfs",				cmnd_nfs,			0,					"host root [path [path]]",								},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",										},

@@ -356,7 +356,7 @@ static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 
 	pcicfg_write_byte(dev, fnc, 0x0c, DCACHE_LINE_SIZE / 4);
 
-	pcicfg_write_byte(dev, fnc, 0x0d, 32);
+	pcicfg_write_byte(dev, fnc, 0x0d, 64);
 
 	return 1;
 }

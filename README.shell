@@ -16,7 +16,7 @@ The shell can also be entered from the LCD boot menu (hold "ENTER" and
 	changed using the 'boot' command detailed below.
 
 If the boot process is not intercepted the unit will boot using the default
-boot script. If this has not been changed below) the "Disk (hda)" option will
+boot script. If this has not been changed below the "Disk (hda)" option will
 be used which executes the internal script :-
 
 	mount
@@ -29,7 +29,7 @@ An example /boot/default.colo might look like this (just an example) :-
 	# load default kernel from hda2 root volume
 	mount hda2
 	load /boot/vmlinux.gz
-	lcd "Unzipping kernel"
+	lcd "Unzipping kernel" /dev/{mounted-volume}
 	execute root=/dev/{mounted-volume} console=ttyS0,{console-speed}
 
 GENERAL
@@ -293,6 +293,19 @@ Set or delete a variable. If no value is specified the named variable is
 deleted.
 
 If called with no arguments all variables are listed with their values.
+
+nfs host root [path [path]]
+---------------------------
+
+Mounts the volume 'root' on the NFS server 'host' and then loads the specified
+file into memory. An optional second file can be specified that will also be
+loaded and used as an 'initrd' image.
+
+If a single path is given and it refers to a directory rather than a file then
+the contents of the directory will be listed.
+
+If no paths are given then the contents of the volume's root directory are
+listed.
 
 -- Peter Horton, pdh@colonel-panic.org --
 
