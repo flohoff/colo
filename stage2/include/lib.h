@@ -157,8 +157,8 @@ enum {
 };
 
 extern void __attribute__((noreturn)) shell(void);
+extern int execute_line(const char *);
 extern const char *error_text(int);
-extern int execute_line(char *);
 
 extern size_t argsz[];
 extern unsigned argc;
@@ -295,7 +295,7 @@ extern int lcd_menu(const char **, unsigned, unsigned);
 #define VAR_INITRD							3
 
 extern int env_put(const char *, const char *, unsigned);
-extern const char *env_get(const char *);
+extern const char *env_get(const char *, int);
 extern void env_remove_tag(unsigned);
 
 /* boot.c */

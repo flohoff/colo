@@ -41,6 +41,7 @@ extern int cmnd_serial(int);
 extern int cmnd_restrict(int);
 extern int cmnd_menu(int);
 extern int cmnd_script(int);
+extern int cmnd_goto(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
@@ -93,6 +94,7 @@ static struct
 	{ "nfs",				cmnd_nfs,			0,					"host root [path [path]]",								},
 	{ "serial",			cmnd_serial,		0,					"[rate | default | on | off ]",						},
 	{ "restrict",		cmnd_restrict,		0,					"[megabytes]",												},
+	{ "goto",			cmnd_goto,			0,					"offset",													},
 	{ "menu",			cmnd_menu,			0,					"title timeout {text value} ...",					},
 
 #ifdef _DEBUG
@@ -268,14 +270,13 @@ static int cmnd_eval(int opsz)
 /*
  * split command line into argv[] array
  */
-static int split_line(char *line)
+static int split_line(const char *line)
 {
 	static char pool[384];
 
 	unsigned indx, nout, size;
-	const char *value;
+	const char *value, *name;
 	char delim, chr;
-	char *name;
 	int escp;
 
 	nout = 0;
@@ -306,9 +307,7 @@ static int split_line(char *line)
 
 				if(chr == '}') {
 
-					line[-1] = '\0';
-
-					value = env_get(name);
+					value = env_get(name, line - name - 1);
 					if(!value)
 						return E_NO_SUCH_VAR;
 
@@ -468,7 +467,7 @@ static int execute(void)
 /*
  * split line and execute
  */
-int execute_line(char *line)
+int execute_line(const char *line)
 {
 	int error;
 

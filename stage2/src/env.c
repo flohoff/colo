@@ -20,11 +20,9 @@ static union {
 
 static unsigned nitems;
 
-static int env_find(const char *name)
+static int env_find(const char *name, int size)
 {
-	unsigned indx, size;
-
-	size = strlen(name);
+	unsigned indx;
 
 	for(indx = 0; indx < nitems; ++indx)
 		if(!strncasecmp(environ.p[indx].item, name, size) && environ.p[indx].item[size] == '=')
@@ -33,13 +31,16 @@ static int env_find(const char *name)
 	return -1;
 }
 
-const char *env_get(const char *name)
+const char *env_get(const char *name, int size)
 {
 	int indx;
 
-	indx = env_find(name);
+	if(size < 0)
+		size = strlen(name);
+
+	indx = env_find(name, size);
 	if(indx >= 0)
-		return environ.p[indx].item + strlen(name) + 1;
+		return environ.p[indx].item + size + 1;
 
 	return NULL;
 }
@@ -79,7 +80,7 @@ int env_put(const char *name, const char *value, unsigned tag)
 	void *ptr;
 	int indx;
 
-	indx = env_find(name);
+	indx = env_find(name, strlen(name));
 	if(indx >= 0)
 		env_remove_index(indx);
 

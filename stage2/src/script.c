@@ -15,18 +15,73 @@ struct context
 	struct context	*link;
 	unsigned			depth;
 	unsigned			etext;
+	unsigned			mfree;
+	unsigned			mcurr;
+	unsigned			mjump;
 };
 
 static char scripts[16384];
+static char *marks[128];
 
-static struct context root =
-{
-	.link		= NULL,
-	.depth	= 0,
-	.etext	= 0,
-};
-
+static struct context root;
 static struct context *current = &root;
+
+/*
+ * jump to mark in script
+ */
+int script_goto(const char *text)
+{
+	char *end;
+	int ofs;
+
+	ofs = strtoul(argv[1], &end, 10);
+
+	if(end == argv[1] || *end) {
+		puts(error_text(E_BAD_VALUE));
+		return 0;
+	}
+
+	if(ofs) {
+
+		if(ofs < 0) {
+
+			ofs = -(ofs + 1);
+
+			if(ofs >= current->mcurr - current->link->mfree) {
+				puts("backward jump out of range");
+				return 0;
+			}
+
+			current->mjump = current->mcurr - ofs;
+
+		} else
+
+			current->mjump = current->mcurr + ofs;
+	}
+
+	return 1;
+}
+
+/*
+ * shell command - goto
+ */
+int cmnd_goto(int opsz)
+{
+	if(argc < 2)
+		return E_ARGS_UNDER;
+	if(argc > 2)
+		return E_ARGS_OVER;
+
+	if(!current->depth) {
+		puts("script only command");
+		return E_UNSPEC;
+	}
+
+	if(!script_goto(argv[1]))
+		return E_UNSPEC;
+
+	return E_NONE;
+}
 
 /*
  * execute script
@@ -34,9 +89,9 @@ static struct context *current = &root;
 int script_exec(const char *buf, int size)
 {
 	static char line[256];
+	unsigned indx, disp;
 	int err, skip, escp;
 	struct context ctx;
-	unsigned indx;
 	char *scrp;
 
 	if(current->depth >= MAX_SCRIPT_DEPTH) {
@@ -60,10 +115,15 @@ int script_exec(const char *buf, int size)
 	ctx.link = current;
 	ctx.depth = current->depth + 1;
 	ctx.etext = current->etext + size;
+	ctx.mfree = current->mfree;
+	ctx.mcurr = ctx.mfree;
+	ctx.mjump = 0;
 
 	current = &ctx;
 
 	for(err = E_NONE; *scrp;) {
+
+		marks[ctx.mfree] = scrp;
 
 		skip = 0;
 		escp = 0;
@@ -100,23 +160,34 @@ int script_exec(const char *buf, int size)
 
 			if(line[0] == '@') {
 
+				if(ctx.mfree == ctx.link->mfree || marks[ctx.mfree] > marks[ctx.mfree - 1])
+					if(++ctx.mfree >= elements(marks)) {
+						puts("script mark table full");
+						err = E_UNSPEC;
+						break;
+					}
+
+				++ctx.mcurr;
+
 				while(isspace(line[++indx]))
 					;
 			}
 
-			if(line[indx]) {
+			/* skip execution if we're performing a forward jump */
 
-				/* show what we're about to do */
+			if(line[indx] && ctx.mcurr >= ctx.mjump) {
 
 				printf("%d> ", ctx.depth);
-				while(line[indx])
-					putchar(line[indx++]);
+				for(disp = indx; line[disp]; ++disp)
+					putchar(line[disp]);
 				putchar('\n');
 
-				/* recursion can occur here. it will trash the  *
-				 * current line and argc/argv etc but who cares */
+				ctx.mjump = 0;
 
-				err = execute_line(line);
+				/* recursion can occur here. it will trash the current line *
+				 * and argc/argv etc. hopefully our caller is aware of this */
+
+				err = execute_line(line + indx);
 
 				if(err != E_NONE) {
 					if(err != E_UNSPEC)
@@ -124,11 +195,23 @@ int script_exec(const char *buf, int size)
 					printf("script aborted <%d>\n", ctx.depth);
 					break;
 				}
+
+				/* perform backwards jump */
+
+				if(ctx.mjump && ctx.mjump <= ctx.mfree) {
+					ctx.mcurr = ctx.mjump - 1;
+					scrp = marks[ctx.mcurr];
+				}
 			}
 		}
 	}
 
 	current = ctx.link;
+
+	if(ctx.mcurr < ctx.mjump) {
+		puts("forward jump out of range");
+		return E_UNSPEC;
+	}
 
 	return err;
 }
