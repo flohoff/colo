@@ -11,9 +11,7 @@
 #include "pci.h"
 #include "cobalt.h"
 #include "galileo.h"
-
-#define VER_MAJOR					1
-#define VER_MINOR					10
+#include "version.h"
 
 size_t ram_size;
 

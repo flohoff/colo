@@ -11,9 +11,7 @@
 #include "galileo.h"
 #include "cobalt.h"
 #include "rfx.h"
-
-#define VER_MAJOR				0
-#define VER_MINOR				9
+#include "version.h"
 
 /*
  * fatal error, hang

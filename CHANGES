@@ -5,6 +5,8 @@ CoLo 1.10 (xxxx-xx-xx)
 
 *	Fixed loading of files with sparse blocks.
 
+*	Added signature to Flash, and 'colo-perm' to test for it.
+
 CoLo 1.9 (2004-05-02)
 ---------------------
 

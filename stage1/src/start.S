@@ -7,6 +7,10 @@
  */
 
 #include <regdefs.h>
+#include <version.h>
+
+#define __STR(x)	#x
+#define _STR(x)		__STR(x)
 
 			.text
 
@@ -14,7 +18,16 @@
 
 			.set	noreorder
 
-			la	sp, __stack - 16
+			b	1f
+
+			.ascii	"CoLo"
+
+			.ascii	" v", _STR(VER_MAJOR), ".", _STR(VER_MINOR)
+			.asciiz	" (C) P.Horton 2004"
+
+			.balign	4
+
+1:			la	sp, __stack - 16
 			lui	gp, %hi(_gp)
 			jal	cpu_init
 			 addiu	gp, %lo(_gp)
