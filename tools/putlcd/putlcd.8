@@ -1,0 +1,74 @@
+.\" $Id$
+.\"
+.\" Copyright (C) 2004  Martin Michlmayr <tbm@cyrius.com>
+.\" This manual is freely distributable under the terms of the GPL.
+.\" It was originally written for Debian GNU/Linux (but may be used
+.\" by others).
+.\"
+
+.TH PUTLCD 8 "April 2004"
+
+.SH NAME
+putlcd \- display text on Cobalt's LCD display
+
+.SH SYNOPSIS
+.B putlcd
+[\fISTRING\fR] [\fISTRING\fR]
+
+.SH DESCRIPTION
+.PP
+.B putlcd
+is a tool to display text on the LCD display of Cobalt machines.  Since
+the LCD display features two lines of 16 characters,
+.B putlcd
+accepts two strings as its argument, representing the first and the second
+line.  If any of the two arguments are omitted, the empty string is
+assumed and that line of the LCD will be cleared.  If you want to display
+text containing white space, you have to properly quote the text, otherwise
+.B putlcd
+will interpret the text as separate arguments.
+
+.SH EXAMPLES
+
+Put "Hello" on the first line and "world" on the second:
+.RS
+.ft CW
+putlcd Hello world
+.ft R
+.RE
+.PP
+
+Put "Hello world" on the first line and clear the second:
+.RS
+.ft CW
+putlcd "Hello world"
+.ft R
+.RE
+.PP
+
+Put "Hello world" on the second line and clear the first:
+.RS
+.ft CW
+putlcd "" "Hello world"
+.ft R
+.RE
+.PP
+
+Clear the whole display:
+.RS
+.ft CW
+putlcd "" ""
+.ft R
+.RE
+or simply:
+.RS
+.ft CW
+putlcd
+.ft R
+.RE
+.PP
+
+.SH AUTHOR
+.PP
+Peter Horton <pdh@colonel-panic.org>
+

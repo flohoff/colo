@@ -1,0 +1,4 @@
+# load default Debian kernel from hda2
+mount hda2
+load /vmlinux
+execute root=/dev/hda2 console=ttyS0,115200

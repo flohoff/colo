@@ -54,21 +54,21 @@ static void dhcp_build(struct frame *frame, int type)
 	NET_WRITE_BYTE(data + opts++, 1);
 	NET_WRITE_BYTE(data + opts++, type);
 
+	NET_WRITE_BYTE(data + opts++, 55);
+	NET_WRITE_BYTE(data + opts++, 2);
+	NET_WRITE_BYTE(data + opts++, 1);		// netmask (RFC 2132)
+	NET_WRITE_BYTE(data + opts++, 3);		// router
+
 	switch(type) {
 
 		case DHCP_DISCOVER:
 			DPUTS("dhcp: DISCOVER");
-
-			NET_WRITE_BYTE(data + opts++, 55);
-			NET_WRITE_BYTE(data + opts++, 2);
-			NET_WRITE_BYTE(data + opts++, 1);		// netmask (RFC 2132)
-			NET_WRITE_BYTE(data + opts++, 3);		// router
 			break;
 
 		case DHCP_REQUEST:
 			DPUTS("dhcp: REQUEST");
 
-			NET_WRITE_BYTE(data + opts++, 50);
+			NET_WRITE_BYTE(data + opts++, 50);		// requested IP
 			NET_WRITE_BYTE(data + opts++, 4);
 			NET_WRITE_LONG(data + opts, addr);
 			opts += 4;

@@ -1,5 +1,11 @@
 # $Id$
 
+CoLo 1.7 (xxxx-xx-xx)
+---------------------
+
+*	Added man pages for 'flash-tool' and 'putlcd'.
+	[Martin Michlmayr]
+
 CoLo 1.6 (2004-04-18)
 ---------------------
 

@@ -201,13 +201,9 @@ void tulip_poll(void)
 
 			rx_ring_fill();
 
-			/* we can recurse here */
-
 			net_in(frame);
 
 		} else {
-
-			/* reuse current buffer */
 
 			rx_desc[curr].status = RX_DESC_STATUS_OWN;
 			CSR(2) = 0;

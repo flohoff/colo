@@ -1,0 +1,87 @@
+.\" $Id$
+.\"
+.\" Copyright (C) 2004  Martin Michlmayr <tbm@cyrius.com>
+.\" This manual is freely distributable under the terms of the GPL.
+.\" It was originally written for Debian GNU/Linux (but may be used
+.\" by others).
+.\"
+
+.TH FLASH-TOOL 8 "April 2004"
+
+.SH NAME
+flash-tool \- read or write Cobalt's flash
+
+.SH SYNOPSIS
+.B flash-tool
+[\fI-w\fR] [\fI-o offset\fR] [\fI-f\fR] \fIfile\fR
+
+.SH DESCRIPTION
+.PP
+.B flash-tool
+can be used to read the current content of Cobalt's flash and write it to a
+file, or to reprogram the flash with an image supplied by the user.
+.B flash-tool
+can therefore be used to first create a backup of Cobalt's original boot
+loader and then reprogram the flash with a tested image of colo,
+a replacement boot loader for Cobalt which offers more features than the
+original boot loader.
+
+.SH OPTIONS
+.TP
+\fB\-w\fR
+Reprogram the flash with the specified image rather than read the current
+flash to the specified image (which is the default).
+
+.TP
+\fB\-o offset\fR
+Specify a specific location of the image as the start.
+
+.SH EXAMPLES
+
+Take a copy of the original boot loader (or whatever your flash currently
+contains):
+.RS
+.ft CW
+flash-tool cobalt-original-boot.bin
+.ft R
+.RE
+.PP
+
+Reprogram your flash with another image (see the warning below):
+.RS
+.ft CW
+flash-tool -w rom-image.bin
+.ft R
+.RE
+.PP
+
+.SH WARNING
+.PP
+
+Writing a new image to the flash of your Cobalt machine involves
+reprogramming the flash.  Do not interrupt the programming process or you
+will probably land up with a unit that doesn't boot!  Furthermore, make
+sure that the image you write to your flash actually works.  If the
+reprogramming fails, you will have to remove and reprogram the flash chip
+with an external programmer.  This might mean desoldering the chip as well
+as finding a suitable programmer.  Only use the reprogramming functionality
+of
+.B flash-tool
+with caution and if you know what you are doing.
+
+.SH SEE ALSO
+.PP
+
+A detailed description explaining the procedure to make a backup of your
+current flash and reprogram it with colo can be found at
+.IR /usr/share/doc/colo/INSTALL .
+
+.SH FILES
+.PP
+.IR /usr/lib/colo/rom-image.bin
+- flashable ROM image of colo
+
+.SH AUTHOR
+.PP
+Peter Horton <pdh@colonel-panic.org>
+

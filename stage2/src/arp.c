@@ -22,16 +22,22 @@ uint32_t ip_gway;
 
 static struct
 {
-	uint32_t ip;
-	uint16_t hw[3];
 	enum {
 		ARP_UNUSED = 0,
 		ARP_UNRESOLVED,
 		ARP_RESOLVED,
 	} state;
 
+	struct frame	*head;
+	struct frame	*tail;
+	uint32_t			ip;
+	uint16_t			hw[3];
+
 } arp_table[8];
 
+/*
+ * add MAC header and transmit frame
+ */
 void arp_out(struct frame *frame, const void *dest, unsigned prot)
 {
 	const uint16_t bcast[] = { 0xffff, 0xffff, 0xffff };
@@ -49,6 +55,36 @@ void arp_out(struct frame *frame, const void *dest, unsigned prot)
 	NET_WRITE_SHORT(data + 12, prot);
 
 	tulip_out(frame);
+}
+
+/*
+ * discard frames queued on an ARP query
+ */
+static void arp_discard(unsigned indx)
+{
+	struct frame *frame;
+
+	assert(arp_table[indx].state != ARP_UNUSED);
+
+	while((frame = arp_table[indx].head)) {
+		arp_table[indx].head = frame->link;
+		frame_free(frame);
+	}
+}
+
+/*
+ * transmit frames queued on an ARP query
+ */
+static void arp_spool(unsigned indx)
+{
+	struct frame *frame;
+
+	assert(arp_table[indx].state == ARP_RESOLVED);
+
+	while((frame = arp_table[indx].head)) {
+		arp_table[indx].head = frame->link;
+		arp_out(frame, arp_table[indx].hw, HARDWARE_PROTO_IP);
+	}
 }
 
 void arp_in(struct frame *frame)
@@ -75,11 +111,14 @@ void arp_in(struct frame *frame)
 	for(indx = 0; indx < elements(arp_table); ++indx)
 		if(arp_table[indx].state != ARP_UNUSED && arp_table[indx].ip == ip) {
 
+			COPY_HW_ADDR(arp_table[indx].hw, data + 8);
+
 			if(arp_table[indx].state == ARP_UNRESOLVED)
 				DPRINTF("arp: resolved %s\n", inet_ntoa(ip));
 
-			COPY_HW_ADDR(arp_table[indx].hw, data + 8);
 			arp_table[indx].state = ARP_RESOLVED;
+
+			arp_spool(indx);
 
 			goto matched;
 		}
@@ -94,6 +133,7 @@ void arp_in(struct frame *frame)
 				arp_table[indx].ip = ip;
 				COPY_HW_ADDR(arp_table[indx].hw, data + 8);
 				arp_table[indx].state = ARP_RESOLVED;
+				assert(!arp_table[indx].head);
 
 				break;
 			}
@@ -129,27 +169,10 @@ matched:
 	}
 }
 
-static int arp_out_resolved(struct frame *frame, uint32_t ip)
-{
-	unsigned indx;
-
-	for(indx = 0; indx < elements(arp_table); ++indx)
-		if(arp_table[indx].state == ARP_RESOLVED && arp_table[indx].ip == ip) {
-			arp_out(frame, arp_table[indx].hw, HARDWARE_PROTO_IP);
-			return 1;
-		}
-	
-	return 0;
-}
-
-// XXX ARP lookup should be done in the background
-
 void arp_ip_out(struct frame *frame, uint32_t ip)
 {
-	static struct frame *head, *tail;
-
-	unsigned indx, mark, count;
-	struct frame *next;
+	unsigned indx, unused;
+	struct frame *arpreq;
 	void *request;
 
 	if(!ip ||
@@ -164,93 +187,67 @@ void arp_ip_out(struct frame *frame, uint32_t ip)
 	if(ip_gway && ((ip ^ ip_addr) & ip_mask))
 		ip = ip_gway;
 
-	if(arp_out_resolved(frame, ip))
-		return;
+	unused = elements(arp_table);
 
-	frame->ip_dst = ip;
-
-	frame->link = NULL;
-
-	if(head) {
-		tail->link = frame;
-		tail = frame;
-		return;
-	}
-
-	/* not recursive here */
-
-	tail = frame;
-
-	DPRINTF("arp: resolving %s\n", inet_ntoa(ip));
-
-	for(head = frame; head; head = next) {
-
-		ip = head->ip_dst;
-
-		next = head->link;
-		if(arp_out_resolved(head, ip))
-			continue;
-
-		for(indx = 0;; ++indx) {
-
-			if(indx == elements(arp_table)) {
-				indx = (MFC0(CP0_COUNT) / 16) % elements(arp_table);
-				break;
+	for(indx = 0; indx < elements(arp_table); ++indx)
+		if(arp_table[indx].state == ARP_UNUSED)
+			unused = indx;
+		else if(arp_table[indx].ip == ip) {
+			if(arp_table[indx].state == ARP_RESOLVED) {
+				arp_out(frame, arp_table[indx].hw, HARDWARE_PROTO_IP);
+				return;
 			}
-
-			if(arp_table[indx].state == ARP_UNUSED)
-				break;
+			break;
 		}
+
+	if(indx == elements(arp_table)) {
+
+		indx = unused;
+		if(indx == elements(arp_table))
+			indx = (MFC0(CP0_COUNT) / 16) % elements(arp_table);
 
 		arp_table[indx].ip = ip;
 		arp_table[indx].state = ARP_UNRESOLVED;
-
-		for(count = 0; arp_table[indx].state != ARP_RESOLVED && count < 10; ++count) {
-
-			frame = frame_alloc();
-
-			if(frame) {
-
-				FRAME_INIT(frame, HARDWARE_HDRSZ, ARP_PAYLOAD_SIZE);
-
-				request = FRAME_PAYLOAD(frame);
-
-				NET_WRITE_SHORT(request + 0, HARDWARE_ADDR_ETHER);
-				NET_WRITE_SHORT(request + 2, HARDWARE_PROTO_IP);
-				NET_WRITE_BYTE(request + 4, HARDWARE_ADDR_SIZE);
-				NET_WRITE_BYTE(request + 5, IP_ADDR_SIZE);
-				NET_WRITE_SHORT(request + 6, ARP_OP_REQUEST);
-
-				COPY_HW_ADDR(request + 8, hw_addr);
-				NET_WRITE_LONG(request + 14, ip_addr);
-
-				memset(request + 18, 0, HARDWARE_ADDR_SIZE);
-				NET_WRITE_LONG(request + 24, ip);
-
-				DPRINTF("arp: sent request for %s\n", inet_ntoa(ip));
-
-				arp_out(frame, NULL, HARDWARE_PROTO_ARP);
-			}
-
-			for(mark = MFC0(CP0_COUNT); arp_table[indx].state != ARP_RESOLVED && MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE;)
-				yield();
-		}
-
-		next = head->link;
-
-		if(arp_table[indx].state == ARP_RESOLVED)
-
-			arp_out(head, arp_table[indx].hw, HARDWARE_PROTO_IP);
-
-		else {
-
-			arp_table[indx].state = ARP_UNUSED;
-
-			frame_free(head);
-
-			DPRINTF("arp: failed resolving %s\n", inet_ntoa(ip));
-		}
+		assert(!arp_table[indx].head);
 	}
+
+	arpreq = frame_alloc();
+	if(arpreq) {
+
+		/* XXX only queue a single frame for now */
+
+		arp_discard(indx);
+
+		frame->link = NULL;
+		if(arp_table[indx].head)
+			arp_table[indx].tail->link = frame;
+		else
+			arp_table[indx].head = frame;
+		arp_table[indx].tail = frame;
+
+	} else
+
+		arpreq = frame;
+
+	FRAME_INIT(arpreq, HARDWARE_HDRSZ, ARP_PAYLOAD_SIZE);
+
+	request = FRAME_PAYLOAD(arpreq);
+
+	NET_WRITE_SHORT(request + 0, HARDWARE_ADDR_ETHER);
+	NET_WRITE_SHORT(request + 2, HARDWARE_PROTO_IP);
+	NET_WRITE_BYTE(request + 4, HARDWARE_ADDR_SIZE);
+	NET_WRITE_BYTE(request + 5, IP_ADDR_SIZE);
+	NET_WRITE_SHORT(request + 6, ARP_OP_REQUEST);
+
+	COPY_HW_ADDR(request + 8, hw_addr);
+	NET_WRITE_LONG(request + 14, ip_addr);
+
+	memset(request + 18, 0, HARDWARE_ADDR_SIZE);
+	NET_WRITE_LONG(request + 24, ip);
+
+	DPRINTF("arp: sent request for %s\n", inet_ntoa(ip));
+
+	arp_out(arpreq, NULL, HARDWARE_PROTO_ARP);
 }
 
 void arp_flush_all(void)
@@ -258,7 +255,10 @@ void arp_flush_all(void)
 	unsigned indx;
 
 	for(indx = 0; indx < elements(arp_table); ++indx)
-		arp_table[indx].state = ARP_UNUSED;
+		if(arp_table[indx].state != ARP_UNUSED) {
+			arp_discard(indx);
+			arp_table[indx].state = ARP_UNUSED;
+		}
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */
