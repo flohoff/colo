@@ -1,7 +1,7 @@
 /*
  * (C) P.Horton 2004
  *
- * $Header: /export1/cvs/cobalt-boot/boot-loader/stage2/src/ide.c,v 1.3 2004/02/15 12:45:18 pdh Exp $
+ * $Id$
  *
  * This code is covered by the GNU General Public License. For details see the file "COPYING".
  */

@@ -1,7 +1,7 @@
 #
 # (C) P.Horton 2004
 #
-# $Header: /export1/cvs/cobalt-boot/boot-loader/Makefile,v 1.1 2004/01/30 22:39:48 pdh Exp $
+# $Id$
 #
 
 BACKUP= 192.168.1.189
