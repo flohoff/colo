@@ -859,6 +859,9 @@ int cmnd_load(int opsz)
 		return E_UNSPEC;
 
 	heap_alloc();
+
+	heap_initrd_vars();
+
 	heap_info();
 
 	return E_NONE;

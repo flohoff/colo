@@ -16,29 +16,41 @@ static const char *option[] =
 
 	"Disk    (hda)",
 	"Network (TFTP)",
-	"Network (NFS)",
+/*	"Network (NFS)", */
 	"Boot shell",
 };
 
 static const char *script[] =
 {
-	"mount\n-script /boot/default.colo\nload /boot/vmlinux.gz\nexecute",
-	"net\ntftp {dhcp-next-server} {dhcp-boot-file}\nexecute",
-	NULL,
-	NULL,
+	"mount\n-load /boot/default.colo\n-script\nload /boot/vmlinux.gz\nexecute",
+	"net\ntftp {dhcp-next-server} {dhcp-boot-file}\n-script\nexecute",
 };
 
 void boot(int which)
 {
-	if(which < 0) {
+	if(which < 0)
+		which = nv_store.boot;
+
+	if(--which < 0) {
+
 		DPUTS("boot: running boot menu");
-		which = lcd_menu(option, elements(option), 0, MENU_TIMEOUT);
-		if(which < 0)
-			which = -which;
+
+		which = nv_store.boot - 1;
+		if((unsigned) which >= elements(option))
+			which = 0;
+
+		which = lcd_menu(option, elements(option), which, 1, MENU_TIMEOUT);
+		if(which < 0) {
+			which = nv_store.boot - 1;
+			if(which < 0)
+				which = 0;
+		}
 	}
 
-	if((unsigned) which < elements(script))
+	if(which < elements(script))
 		script_exec(script[which]);
+	else
+		DPRINTF("boot: no script #%d\n", which);
 }
 
 int cmnd_boot(int opsz)
@@ -47,41 +59,46 @@ int cmnd_boot(int opsz)
 	int which, list;
 	char *ptr;
 
-	if(argc == 1)
-		boot(0);
+	which = nv_store.boot;
 
-	if(argc > 3)
-		return E_ARGS_OVER;
+	if(argc > 1) {
 
-	size = strlen(argv[1]);
+		if(argc > 3)
+			return E_ARGS_OVER;
 
-	list = !strncasecmp(argv[1], "list", size);
+		size = strlen(argv[1]);
 
-	if(argc == 2) {
+		list = !strncasecmp(argv[1], "list", size);
+
+		if(argc == 2 && list) {
+
+			for(indx = 1; indx <= elements(option); ++indx)
+				printf("%x: %c %s\n", indx, (indx == nv_store.boot ? '*' : '.'), option[indx - 1]);
+
+			return E_NONE;
+		}
+
+		which = evaluate(argv[argc - 1], &ptr);
+		if(*ptr || which < 0 || which > elements(option))
+			return E_BAD_VALUE;
+
+		if(argc == 3 && !strncasecmp(argv[1], "default", size)) {
+			nv_store.boot = which;
+			nv_put();
+			return E_NONE;
+		}
 
 		if(list) {
-			for(indx = 0; indx < elements(option); ++indx)
-				printf("%x: %s\n", indx, option[indx]);
-			return E_NONE;
-		}
 
-		if(!strncasecmp(argv[1], "menu", size)) {
-			boot(-1);
-			return E_NONE;
-		}
-	}
+			if(!which)
+				return E_BAD_VALUE;
 
-	which = evaluate(argv[argc - 1], &ptr);
-	if(*ptr || which < 0 || which >= elements(script))
-		return E_BAD_VALUE;
-
-	if(list) {
-		if(which < elements(option)) {
-			puts(option[which]);
+			puts(option[--which]);
 			printf("%.*s\n", (int) strlen(option[which]), "--------------");
+			puts(script[which]);
+
+			return E_NONE;
 		}
-		puts(script[which]);
-		return E_NONE;
 	}
 
 	boot(which);

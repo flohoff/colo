@@ -296,6 +296,9 @@ int cmnd_tftp(int opsz)
 	memmove(heap_reserve_hi(size), base, size);
 
 	heap_alloc();
+
+	heap_initrd_vars();
+
 	heap_info();
 
 	return E_NONE;

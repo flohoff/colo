@@ -46,15 +46,15 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	env_put("console-speed", _STR(BAUD_RATE), VAR_OTHER);
 
-	if(!(nv_store.flags & NVFLAG_DISABLE_BOOT_MENU) || (switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
+	if(!nv_store.boot || (switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
 
-		boot(-1);
+		boot(0);
 
 	else
 
 		for(mark = MFC0(CP0_COUNT); !BREAK();)
 			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE * 3 / 2) {
-				boot(0);
+				boot(-1);
 				break;
 			}
 

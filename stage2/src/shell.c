@@ -58,38 +58,38 @@ static struct
 
 } cmndtab[] = {
 
-	{ "read",			cmnd_read,			FLAG_SIZED,		"[address]",										},
-	{ "write",			cmnd_write,			FLAG_SIZED,		"[address] data",									},
-	{ "dump",			cmnd_dump,			FLAG_SIZED,		"[address [count]]",								},
-	{ "history",		cmnd_history,		0,					NULL,													},
-	{ "evaluate",		cmnd_eval,			0,					"expression ...",									},
-	{ "md5sum",			cmnd_md5sum,		0,					"[address size]",									},
-	{ "keymap",			cmnd_keymap,		0,					"[keymap]",											},
-	{ "?",				cmnd_help,			FLAG_NO_HELP,	NULL,													},
-	{ "help",			cmnd_help,			0,					NULL,													},
-	{ "download",		cmnd_srec,			0,					"[base-address]",									},
-	{ "flash",			cmnd_flash,			0,					"[address size] target",						},
-	{ "reboot",			cmnd_reboot,		0,					NULL,													},
-	{ "image",			cmnd_heap,			0,					NULL,													},
-	{ "showkey",		cmnd_keyshow,		0,					NULL,													},
-	{ "unzip",			cmnd_unzip,			0,					NULL,													},
-	{ "nvflags",		cmnd_nvflags,		0,					"[number ...]",									},
-	{ "execute",		cmnd_execute,		0,					"[arguments ...]",								},
-	{ "mount",			cmnd_mount,			0,					"[partition]",										},
-	{ "ls",				cmnd_ls,				0,					"[path ...]",										},
-	{ "cd",				cmnd_cd,				0,					"[path]",											},
-	{ "load",			cmnd_load,			0,					"path [path]",										},
-	{ "script",			cmnd_script,		0,					"path",												},
-	{ "net",				cmnd_net,			0,					"[{address netmask [gateway]} | down]",	},
-	{ "tftp",			cmnd_tftp,			0,					"host path [path]",								},
-	{ "ping",			cmnd_ping,			0,					"host",												},
-	{ "pci",				cmnd_pci,			FLAG_SIZED,		"[device[.function] register [value]]",	},
-	{ "lcd",				cmnd_lcd,			0,					"[text [text]]",									},
-	{ "variable",		cmnd_environ,		0,					"[name [value]]",									},
-	{ "boot",			cmnd_boot,			0,					"[{[list] option]} | menu",					},
+	{ "read",			cmnd_read,			FLAG_SIZED,		"[address]",												},
+	{ "write",			cmnd_write,			FLAG_SIZED,		"[address] data",											},
+	{ "dump",			cmnd_dump,			FLAG_SIZED,		"[address [count]]",										},
+	{ "history",		cmnd_history,		0,					NULL,															},
+	{ "evaluate",		cmnd_eval,			0,					"expression ...",											},
+	{ "md5sum",			cmnd_md5sum,		0,					"[address size]",											},
+	{ "keymap",			cmnd_keymap,		0,					"[keymap]",													},
+	{ "?",				cmnd_help,			FLAG_NO_HELP,	NULL,															},
+	{ "help",			cmnd_help,			0,					NULL,															},
+	{ "download",		cmnd_srec,			0,					"[base-address]",											},
+	{ "flash",			cmnd_flash,			0,					"[address size] target",								},
+	{ "reboot",			cmnd_reboot,		0,					NULL,															},
+	{ "image",			cmnd_heap,			0,					NULL,															},
+	{ "showkey",		cmnd_keyshow,		0,					NULL,															},
+	{ "unzip",			cmnd_unzip,			0,					NULL,															},
+	{ "nvflags",		cmnd_nvflags,		0,					"[number ...]",											},
+	{ "execute",		cmnd_execute,		0,					"[arguments ...]",										},
+	{ "mount",			cmnd_mount,			0,					"[partition]",												},
+	{ "ls",				cmnd_ls,				0,					"[path ...]",												},
+	{ "cd",				cmnd_cd,				0,					"[path]",													},
+	{ "load",			cmnd_load,			0,					"path [path]",												},
+	{ "script",			cmnd_script,		0,					NULL,															},
+	{ "net",				cmnd_net,			0,					"[{address netmask [gateway]} | down]",			},
+	{ "tftp",			cmnd_tftp,			0,					"host path [path]",										},
+	{ "ping",			cmnd_ping,			0,					"host",														},
+	{ "pci",				cmnd_pci,			FLAG_SIZED,		"[device[.function] register [value]]",			},
+	{ "lcd",				cmnd_lcd,			0,					"[text [text]]",											},
+	{ "variable",		cmnd_environ,		0,					"[name [value]]",											},
+	{ "boot",			cmnd_boot,			0,					"[list | default] [option]",							},
 
 #ifdef _DEBUG
-	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",								},
+	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",										},
 #endif
 };
 
@@ -124,7 +124,6 @@ static int cmnd_nvflags(int opsz)
 		"IDE LBA48 disabled",
 		"IDE timing disabled",
 		"IDE slave enabled",
-		"Disable boot menu",
 	};
 	unsigned indx, mask;
 	unsigned long bit;
@@ -571,28 +570,35 @@ void shell(void)
  */
 static int cmnd_script(int opsz)
 {
-	static char buf[1024];
-	unsigned long size;
-	void *hdl;
+#	define SCRIPT_SIGN			"#:CoLo:#"
+#	define SCRIPT_SIGN_SZ		(sizeof(SCRIPT_SIGN) - 1)
 
-	if(argc < 2)
-		return E_ARGS_UNDER;
+	static char buf[2048];
+	size_t size;
+	void *ptr;
 
-	if(argc > 2)
+	if(argc > 1)
 		return E_ARGS_OVER;
 
-	hdl = file_open(argv[1], &size);
-	if(!hdl)
-		return E_UNSPEC;
+	ptr = heap_image(&size);
 
-	if(size > sizeof(buf) - 1) {
-		puts("script file too large");
+	if(!size) {
+		puts("no script loaded");
 		return E_UNSPEC;
 	}
 
-	if(!file_load(hdl, buf, size))
+	if(size < SCRIPT_SIGN_SZ || strncasecmp(ptr, SCRIPT_SIGN, SCRIPT_SIGN_SZ)) {
+		puts("missing script header");
 		return E_UNSPEC;
+	}
 
+	if(size >= sizeof(buf)) {
+		puts("script too large");
+		return E_UNSPEC;
+	}
+
+	memcpy(buf, ptr, size);
+	
 	buf[size] = '\0';
 
 	script_exec(buf);

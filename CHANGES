@@ -3,6 +3,13 @@
 CoLo 1.9 (xxxx-xx-xx)
 ---------------------
 
+*	The 'script' command has been changed to execute a script already loaded
+ 	into memory via the 'load', 'tftp' or 'download' commands. To be executed a
+	script must begin with the text "#:CoLo:#".
+
+*	Automatic insertion of the kernel 'initrd=' command line argument has been
+ 	removed. All initrd parameters are now available in variables.
+
 *	Made use of non-volatile storage on RTC.
 
 *	Renamed 'dflags' command to 'nvflags' and made the flags non-volatile.

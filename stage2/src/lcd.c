@@ -90,7 +90,7 @@ static void lcd_prog_chars(void)
 /*
  * run menu on front panel
  */
-int lcd_menu(const char **options, unsigned count, unsigned which, unsigned timeout)
+int lcd_menu(const char **options, unsigned count, unsigned which, int flag, unsigned timeout)
 {
 	unsigned mark, done, row, top, btn, prv;
 
@@ -119,7 +119,7 @@ int lcd_menu(const char **options, unsigned count, unsigned which, unsigned time
 		for(done = 0;; done += BUTTON_DEBOUNCE) {
 
 			if(timeout && done > timeout)
-				return -(top + row);
+				return flag ? top + row : -1;
 
 			for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < ((CP0_COUNT_RATE + 500) / 1000) * BUTTON_DEBOUNCE;)
 				yield();

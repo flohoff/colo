@@ -206,6 +206,7 @@ extern void heap_info(void);
 extern void *heap_image(size_t *);
 extern void heap_mark(void);
 extern void *heap_mark_image(size_t *);
+extern void heap_initrd_vars(void);
 
 /* ext2.c */
 
@@ -230,7 +231,7 @@ static inline void yield(void)
 
 /* lcd.c */
 
-extern int lcd_menu(const char **, unsigned, unsigned, unsigned);
+extern int lcd_menu(const char **, unsigned, unsigned, int, unsigned);
 
 /* env.c */
 
@@ -252,7 +253,6 @@ extern void boot(int);
 #define NVFLAG_IDE_DISABLE_LBA48			(1 << 1)
 #define NVFLAG_IDE_DISABLE_TIMING		(1 << 2)
 #define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
-#define NVFLAG_DISABLE_BOOT_MENU			(1 << 4)
 
 #define NV_STORE_VERSION					1
 
@@ -263,6 +263,7 @@ struct nv_store
 	uint8_t	size;
 
 	uint8_t	flags;
+	uint8_t	boot;
 
 } __attribute__((packed));
 

@@ -13,10 +13,11 @@ The shell can also be entered from the LCD boot menu (hold "ENTER" and
 *note*
 
 	By default the boot menu will appear on every boot. This behaviour can be
-	changed using the 'nvflags' command detailed below.
+	changed using the 'boot' command detailed below.
 
 If the boot process is not intercepted the unit will boot using the default
-"Disk (hda)" option which will execute the internal script :-
+boot script. If this has not been changed below) the "Disk (hda)" option will
+be used which executes the internal script :-
 
 	mount
 	-script /boot/default.colo
@@ -66,6 +67,9 @@ mounted-volume			Set to the name of the currently mounted volume (eg hda2).
 dhcp-next-server		'next server' returned by DHCP server.
 dhcp-boot-file			'boot file' returned by DHCP server.
 dhcp-root-path			'root path' returned by DHCP server.
+initrd-start			Start address of initrd image (in hex).
+initrd-end				First address after initrd image (in hex).
+initrd-size				Size of initrd image (in hex).
 
 See the 'variable' command for more information.
 
@@ -98,19 +102,23 @@ load path [path]
 Load the specified file into memory. An optional second file can be specified
 that will also be loaded and used as an 'initrd' image.
 
-script path
------------
+script
+------
 
-Runs the commands within the specified file. Execution of a script will be
-aborted if a command fails, unless the failing command is preceded by a '-'.
+Runs the image that is loaded into memory as a boot shell script. A script
+will only be run if it begins with the text "#:CoLo:#".
+
+Execution of a script will be aborted if a command fails, unless the failing
+command is preceded by a '-'.
 
 execute [arguments ...]
 -----------------------
 
 Starts executing the ELF image that is in memory. If the image is compressed
-with 'gzip' it will be uncompressed automatically. If an 'initrd' image has
-been loaded with 'load' the command line argument 'initrd=<size>@<address>' is
-added to the effective command line arguments.
+with 'gzip' it will be uncompressed automatically.
+
+To enable the kernel to load an initrd image you should pass a command line of
+the form 'initrd={initrd-size}@{initrd-start}'.
 
 Any arguments given will be passed to the executed program (the kernel needs
 to be patched for this to work). The passed 'argc' value is the argument count
@@ -212,8 +220,6 @@ The flags currently defined are
 	3 - enable IDE slave detection. Normally the boot loader does not bother
 	    checking for the prescence of an IDE slave device. This flag must be
 		 set before the first 'mount' command for slave detection to work.
-	4 - disable boot menu. If this flag is not set the boot menu will be shown
-		 every boot.
 
 net [{address netmask [gateway]} | down]
 ----------------------------------------
@@ -255,17 +261,19 @@ register address must be correctly aligned for the size of the operation.
 If no arguments are passed the PCI bus is scanned and the PCI ID of each
 device found is displayed.
 
-boot [{[list] option} | menu]
------------------------------
+boot [list | default] [option]
+------------------------------
 
 Boots the system using the specified script. If no option number is given the
-default boot script is used.
+default boot script is used. If the option number 0 is used the boot menu is
+run.
 
 If the first argument is the word "list" the command lists all available boot
 scripts or the actual script that will be executed for the given option
 number.
 
-If called with a single argument of "menu" the LCD boot menu is shown.
+If the first argument is the word "default" then the specified option is set
+as the default boot script.
 
 variable [name [value]]
 -----------------------

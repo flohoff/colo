@@ -274,7 +274,6 @@ int cmnd_execute(int opsz)
 	extern unsigned launch(void *, void *, int, char **, char **, int *);
 	extern char __text;
 
-	static char irdstr[32];
 	void *image, *targ, *func, *initrd;
 	size_t imagesz, elfsz, initrdsz;
 	unsigned code;
@@ -290,13 +289,6 @@ int cmnd_execute(int opsz)
 		return E_UNSPEC;
 
 	initrd = heap_mark_image(&initrdsz);
-	if(initrdsz) {
-		sprintf(irdstr, "initrd=%x@%lx", initrdsz, (unsigned long) initrd);
-		if(!argv_add(irdstr)) {
-			puts("command line too long");
-			return E_UNSPEC;
-		}
-	}
 
 	image = heap_image(&imagesz);
 
