@@ -1,5 +1,7 @@
 # $Id$
 
+* Make chain loader use LCD for error messages rather than serial.
+
 * Add support for network booting (TFTP and NFS) [WORK IN PROGRESS].
 
 * Add boot menu using LCD.

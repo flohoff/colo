@@ -3,8 +3,12 @@
 CoLo 1.6 (xxxx-xx-xx)
 ---------------------
 
+*	Build output files are now 'colo-rom-image.bin' and 'colo-chain.elf'.
+
 *	Boot loader now sources the script '/boot/default.colo' by default, rather
 	than '/boot/default.boot'.
+
+*	Fixed stupid error in linking of chain loader.
 
 CoLo 1.5 (2004-04-11)
 ---------------------
