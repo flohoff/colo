@@ -183,9 +183,9 @@ void chain(unsigned arg)
 	memory_info(ram);
 
 	putstring("chain: bank 0 ");
-	out_decimal(ram[0]);
+	out_decimal(ram[0] >> 20);
 	putstring("MB\nchain: bank 1 ");
-	out_decimal(ram[1]);
+	out_decimal(ram[1] >> 20);
 	putchar('\n');
 
 	if(KSEG0(ram[0] + ram[1]) != (void *) arg) {

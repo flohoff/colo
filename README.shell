@@ -15,6 +15,13 @@ using the default script :-
 	load /boot/vmlinux.gz
 	execute
 
+An example /boot/default.boot might look like this (just an example) :-
+
+	# load default kernel from hda2
+	mount hda2
+	load /boot/vmlinux.gz
+	execute root=/dev/hda2 console=ttyS0,115200
+
 GENERAL
 -------
 
