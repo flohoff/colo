@@ -63,6 +63,9 @@ int boot(int which)
 {
 	static char buf[16];
 
+	env_put("boot-option", NULL, 0);
+	env_put("menu-option", NULL, 0);
+
 	if(which < 0)
 		which = nv_store.boot;
 
@@ -76,7 +79,7 @@ int boot(int which)
 
 			case LCD_MENU_TIMEOUT:
 			case LCD_MENU_CANCEL:
-				which = nv_store.boot;
+				which = 0;
 				break;
 
 			case LCD_MENU_ABORT:
@@ -86,6 +89,12 @@ int boot(int which)
 			default:
 				++which;
 		}
+
+		sprintf(buf, "%d", which);
+		env_put("menu-option", buf, VAR_OTHER);
+
+		if(!which)
+			which = nv_store.boot;
 	}
 
 	if(which)
@@ -96,16 +105,19 @@ int boot(int which)
 		return E_UNSPEC;
 	}
 
-	if((int) script[which] == SCRIPT_BOOT_SHELL)
-		return E_NONE;
-
 	sprintf(buf, "%d", which);
 	env_put("boot-option", buf, VAR_OTHER);
 
-	if(script_exec(script[which], -1) != E_NONE)
-		return E_UNSPEC;
+	if((int) script[which] == SCRIPT_BOOT_SHELL)
+		return E_NONE;
 
-	return E_NONE;
+	script_exec(script[which], -1);
+
+	puts("boot failed");
+
+	lcd_line(0, "! BOOT FAILED !");
+
+	return E_UNSPEC;
 }
 
 /*

@@ -111,10 +111,10 @@ void serial_enable(int enable)
 
 	state = ST_ENABLED;
 
-	flush_ring();
-
 	sprintf(buf, "%u", baud);
 	env_put("console-speed", buf, VAR_OTHER);
+
+	flush_ring();
 }
 
 void drain(void)

@@ -154,10 +154,12 @@ enum {
 	E_BAD_VALUE,
 	E_NO_SUCH_VAR,
 	E_NET_DOWN,
+	E_NO_SCRIPT,
+	E_EXIT_SCRIPT,
 };
 
 extern void __attribute__((noreturn)) shell(void);
-extern int execute_line(const char *);
+extern int execute_line(const char *, int *);
 extern const char *error_text(int);
 
 extern size_t argsz[];

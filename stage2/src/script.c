@@ -9,6 +9,9 @@
 #include "lib.h"
 
 #define MAX_SCRIPT_DEPTH					10
+#define MAX_SCRIPT_LINE						256
+#define MAX_SCRIPT_MARKS					128
+#define MAX_SCRIPT_TOTAL					16384
 
 struct context
 {
@@ -20,27 +23,15 @@ struct context
 	unsigned			mjump;
 };
 
-static char scripts[16384];
-static char *marks[128];
-
 static struct context root;
 static struct context *current = &root;
+static int cmdfail;
 
 /*
- * jump to mark in script
+ * relative goto for scripts
  */
-int script_goto(const char *text)
+static int script_goto(int ofs)
 {
-	char *end;
-	int ofs;
-
-	ofs = strtoul(argv[1], &end, 10);
-
-	if(end == argv[1] || *end) {
-		puts(error_text(E_BAD_VALUE));
-		return 0;
-	}
-
 	if(ofs) {
 
 		if(ofs < 0) {
@@ -63,34 +54,16 @@ int script_goto(const char *text)
 }
 
 /*
- * shell command - goto
- */
-int cmnd_goto(int opsz)
-{
-	if(argc < 2)
-		return E_ARGS_UNDER;
-	if(argc > 2)
-		return E_ARGS_OVER;
-
-	if(!current->depth) {
-		puts("script only command");
-		return E_UNSPEC;
-	}
-
-	if(!script_goto(argv[1]))
-		return E_UNSPEC;
-
-	return E_NONE;
-}
-
-/*
  * execute script
  */
 int script_exec(const char *buf, int size)
 {
-	static char line[256];
+	static char scripts[MAX_SCRIPT_TOTAL];
+	static char *marks[MAX_SCRIPT_MARKS];
+	static char line[MAX_SCRIPT_LINE];
+
+	int err, xerr, skip, escp;
 	unsigned indx, disp;
-	int err, skip, escp;
 	struct context ctx;
 	char *scrp;
 
@@ -98,6 +71,8 @@ int script_exec(const char *buf, int size)
 		puts("script depth exceeded");
 		return E_UNSPEC;
 	}
+
+	/* copy script to buffer */
 
 	if(size < 0)
 		size = strlen(buf);
@@ -112,6 +87,8 @@ int script_exec(const char *buf, int size)
 	memcpy(scrp, buf, size);
 	scrp[size++] = '\0';
 
+	/* create new context */
+
 	ctx.link = current;
 	ctx.depth = current->depth + 1;
 	ctx.etext = current->etext + size;
@@ -121,9 +98,13 @@ int script_exec(const char *buf, int size)
 
 	current = &ctx;
 
+	cmdfail = 0;
+
 	for(err = E_NONE; *scrp;) {
 
 		marks[ctx.mfree] = scrp;
+
+		/* copy line from script */
 
 		skip = 0;
 		escp = 0;
@@ -158,6 +139,8 @@ int script_exec(const char *buf, int size)
 
 			indx = 0;
 
+			/* mark script position */
+
 			if(line[0] == '@') {
 
 				if(ctx.mfree == ctx.link->mfree || marks[ctx.mfree] > marks[ctx.mfree - 1])
@@ -187,14 +170,19 @@ int script_exec(const char *buf, int size)
 				/* recursion can occur here. it will trash the current line *
 				 * and argc/argv etc. hopefully our caller is aware of this */
 
-				err = execute_line(line + indx);
+				err = execute_line(line + indx, &xerr);
 
 				if(err != E_NONE) {
-					if(err != E_UNSPEC)
+					if(err == E_EXIT_SCRIPT)
+						err = E_NONE;
+					else if(err != E_UNSPEC)
 						puts(error_text(err));
-					printf("script aborted <%d>\n", ctx.depth);
 					break;
 				}
+
+				/* save command status */
+
+				cmdfail = (xerr != E_NONE);
 
 				/* perform backwards jump */
 
@@ -208,12 +196,49 @@ int script_exec(const char *buf, int size)
 
 	current = ctx.link;
 
+	/* still waiting for a jump target ? */
+
 	if(ctx.mcurr < ctx.mjump) {
 		puts("forward jump out of range");
-		return E_UNSPEC;
+		err = E_UNSPEC;
 	}
 
+	printf(err == E_NONE ? "script exited <%d>\n" : "script aborted <%d>\n", ctx.depth);
+
+	/* top level clean up */
+
+	if(!current->depth)
+		env_put("command-failed", NULL, 0);
+
 	return err;
+}
+
+/*
+ * shell command - exit
+ */
+int cmnd_exit(int opsz)
+{
+	if(argc > 1)
+		return E_ARGS_OVER;
+
+	if(!current->depth)
+		return E_NO_SCRIPT;
+
+	return E_EXIT_SCRIPT;
+}
+
+/*
+ * shell command - abort
+ */
+int cmnd_abort(int opsz)
+{
+	if(argc > 1)
+		return E_ARGS_OVER;
+
+	if(!current->depth)
+		return E_NO_SCRIPT;
+
+	return E_UNSPEC;
 }
 
 /*
@@ -264,5 +289,79 @@ int cmnd_script(int opsz)
 
 	return E_NONE;
 }
+
+/*
+ * perform goto
+ */
+static int script_goto_text(const char *text)
+{
+	char *end;
+	int ofs;
+
+	if(!current->depth)
+		return E_NO_SCRIPT;
+
+	ofs = strtoul(text, &end, 10);
+
+	if(end == text || (end[0] && end[1]))
+		return E_BAD_VALUE;
+
+	switch(end[0]) {
+
+		case 'b':
+		case 'B':
+			if(ofs < 0)
+				return E_BAD_VALUE;
+			ofs = -ofs;
+			break;
+
+		case 'f':
+		case 'F':
+			if(ofs < 0)
+				return E_BAD_VALUE;
+			break;
+
+		case '\0':
+			break;
+
+		default:
+			return E_BAD_VALUE;
+	}
+
+	if(!script_goto(ofs))
+		return E_UNSPEC;
+
+	return E_NONE;
+}
+
+/*
+ * shell command - goto
+ */
+int cmnd_goto(int opsz)
+{
+	if(argc < 2)
+		return E_ARGS_UNDER;
+	if(argc > 2)
+		return E_ARGS_OVER;
+
+	return script_goto_text(argv[1]);
+}
+
+/*
+ * shell command - onerror
+ */
+int cmnd_onerror(int opsz)
+{
+	if(argc < 2)
+		return E_ARGS_UNDER;
+	if(argc > 2)
+		return E_ARGS_OVER;
+
+	if(cmdfail)
+		return script_goto_text(argv[1]);
+
+	return E_NONE;
+}
+
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

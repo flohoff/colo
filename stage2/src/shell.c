@@ -42,12 +42,16 @@ extern int cmnd_restrict(int);
 extern int cmnd_menu(int);
 extern int cmnd_script(int);
 extern int cmnd_goto(int);
+extern int cmnd_onerror(int);
+extern int cmnd_exit(int);
+extern int cmnd_abort(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
 static int cmnd_eval(int);
 static int cmnd_reboot(int);
 static int cmnd_nvflags(int);
+static int cmnd_noop(int);
 
 size_t argsz[32];
 char *argv[32];
@@ -95,7 +99,11 @@ static struct
 	{ "serial",			cmnd_serial,		0,					"[rate | default | on | off ]",						},
 	{ "restrict",		cmnd_restrict,		0,					"[megabytes]",												},
 	{ "goto",			cmnd_goto,			0,					"offset",													},
-	{ "menu",			cmnd_menu,			0,					"title timeout {text value} ...",					},
+	{ "onfail",			cmnd_onerror,		0,					"offset",													},
+	{ "abort",			cmnd_abort,			0,					NULL,															},
+	{ "exit",			cmnd_exit,			0,					NULL,															},
+	{ "chooser",		cmnd_menu,			0,					"title timeout option ...",							},
+	{ "noop",			cmnd_noop,			0,					"[arguments ...]",										},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",										},
@@ -124,7 +132,15 @@ static int cmnd_arguments(int opsz)
 #endif
 
 /*
- * toggle NV flags
+ * shell command - noop
+ */
+static int cmnd_noop(int opsz)
+{
+	return E_NONE;
+}
+
+/*
+ * shell command - toggle NV flags
  */
 static int cmnd_nvflags(int opsz)
 {
@@ -425,7 +441,7 @@ static int split_line(const char *line)
  */
 static int execute(void)
 {
-	int opsz, ignore, error;
+	int opsz, error;
 	unsigned indx;
 
 	if(!argc)
@@ -451,30 +467,45 @@ static int execute(void)
 
 	/* find and call command */
 
-	ignore = (argsz[0] && argv[0][0] == '-');
+	error = E_INVALID_CMND;
 
 	for(indx = 0; indx < elements(cmndtab); ++indx)
-		if(!strncasecmp(argv[0] + ignore, cmndtab[indx].name, argsz[0] - ignore) &&
+		if(!strncasecmp(argv[0], cmndtab[indx].name, argsz[0]) &&
 			(!opsz || (cmndtab[indx].flags & FLAG_SIZED))) {
 
 			error = cmndtab[indx].func(opsz);
-			return ignore ? E_NONE : error;
+			break;
 		}
 
-	return E_INVALID_CMND;
+	return error;
 }
 
 /*
  * split line and execute
  */
-int execute_line(const char *line)
+int execute_line(const char *line, int *errptr)
 {
-	int error;
+	int quiet, error;
+
+	while(isspace(*line))
+		++line;
+
+	quiet = (line[0] == '-');
+	if(quiet)
+		++line;
 
 	error = split_line(line);
 
-	if(error == E_NONE && argc)
+	if(error == E_NONE)
 		error = execute();
+
+	if(errptr)
+		*errptr = error;
+
+	if(quiet) {
+		printf("(%s)\n", error_text(error));
+		return E_NONE;
+	}
 
 	return error;
 }
@@ -493,6 +524,7 @@ const char *error_text(int error)
 		[E_BAD_VALUE]		= "invalid value",
 		[E_NO_SUCH_VAR]	= "no such variable",
 		[E_NET_DOWN]		= "no interface",
+		[E_NO_SCRIPT]		= "script only command",
 	};
 	static char buf[48];
 
@@ -510,8 +542,8 @@ const char *error_text(int error)
 void shell(void)
 {
 	static char line[256], hist[256];
-	int error /*, skip, escp*/;
 	unsigned indx;
+	int error;
 
 	assert(elements(argv) == elements(argsz));
 
@@ -532,7 +564,7 @@ void shell(void)
 		if(!history_fetch(hist, sizeof(hist), 0) || strcmp(line, hist))
 			history_add(line);
 
-		error = execute_line(line);
+		error = execute_line(line, NULL);
 		if(error != E_NONE && error != E_UNSPEC)
 			puts(error_text(error));
 	}

@@ -178,35 +178,26 @@ int cmnd_lcd(int opsz)
 	return E_NONE;
 }
 
-static int run_menu(unsigned timeout)
-{
-	const char *opts[argc / 2];
-	unsigned indx;
-
-	opts[0] = argv[1];
-	for(indx = 3; indx < argc; indx += 2)
-		opts[indx / 2] = argv[indx];
-
-	return lcd_menu(opts, argc / 2, timeout);
-}
-
 /*
  * 'menu' shell command
  */
 int cmnd_menu(int opsz)
 {
-	unsigned long timeout;
+	static char buf[16];
+	unsigned timeout;
 	int which;
 	char *ptr;
 
-	if(argc < 5 || !(argc & 1))
+	if(argc < 4)
 		return E_ARGS_UNDER;
 
 	timeout = strtoul(argv[2], &ptr, 10);
 	if(*ptr || ptr == argv[2])
 		return E_BAD_VALUE;
 
-	switch(which = run_menu(timeout * 100))
+	argv[2] = argv[1];
+
+	switch(which = lcd_menu((const char **) &argv[2], argc - 2, timeout * 100))
 	{
 		case LCD_MENU_ABORT:
 			env_put("menu-option", NULL, 0);
@@ -215,9 +206,14 @@ int cmnd_menu(int opsz)
 		case LCD_MENU_TIMEOUT:
 		case LCD_MENU_CANCEL:
 			which = 0;
+			break;
+
+		default:
+			++which;
 	}
 
-	env_put("menu-option", argv[which * 2 + 4], VAR_OTHER);
+	sprintf(buf, "%d", which);
+	env_put("menu-option", buf, VAR_OTHER);
 
 	return E_NONE;
 }

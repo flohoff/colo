@@ -8,6 +8,8 @@
 
 #include "lib.h"
 
+#define MAX_ENVIRONMENT_SIZE			2048
+
 struct item {
 	char		*item;
 	unsigned	tag;
@@ -15,7 +17,7 @@ struct item {
 
 static union {
 	struct item	p[1];
-	char			t[1024];
+	char			t[MAX_ENVIRONMENT_SIZE];
 } environ;
 
 static unsigned nitems;
