@@ -18,6 +18,11 @@
 
 static unsigned unit;
 
+static inline int bad_device(unsigned dev)
+{
+	return dev == 6 || dev == 31;
+}
+
 void pcicfg_write_word(unsigned dev, unsigned func, unsigned addr, unsigned data)
 {
 	assert(!(addr & 3));
@@ -116,16 +121,17 @@ static void pci_scan(void)
 {
 	unsigned dev, fnc, id, ss;
 
-	for(dev = 0; dev < 0x1f; ++dev)
-		for(fnc = 0; fnc < 8; ++fnc) {
-			id = pcicfg_read_word(dev, fnc, 0);
-			if(id != 0xffffffff) {
-				ss = pcicfg_read_word(dev, fnc, 0x2c);
-				printf("%02x.%u %04x_%04x (%04x_%04x)\n", dev, fnc, id & 0xffff, id >> 16, ss & 0xffff, ss >> 16);
-				if(!fnc && !(pcicfg_read_byte(dev, fnc, 0x0e) & 0x80))
-					break;
+	for(dev = 0; dev < 0x20; ++dev)
+		if(!bad_device(dev))
+			for(fnc = 0; fnc < 8; ++fnc) {
+				id = pcicfg_read_word(dev, fnc, 0);
+				if(id != 0xffffffff) {
+					ss = pcicfg_read_word(dev, fnc, 0x2c);
+					printf("%02x.%u %04x_%04x (%04x_%04x)\n", dev, fnc, id & 0xffff, id >> 16, ss & 0xffff, ss >> 16);
+					if(!fnc && !(pcicfg_read_byte(dev, fnc, 0x0e) & 0x80))
+						break;
+				}
 			}
-		}
 }
 
 int cmnd_pci(int opsz)
@@ -147,11 +153,15 @@ int cmnd_pci(int opsz)
 	dev = evaluate(argv[1], &ptr);
 	if(*ptr == '.')
 		fnc = evaluate(ptr + 1, &ptr);
-	if(*ptr || dev > 0x1e || fnc > 7) {
+	if(*ptr || dev > 0x1f || fnc > 7) {
 		puts("invalid device/function");
 		return E_UNSPEC;
 	}
 
+	if(bad_device(dev)) {
+		puts("bad device to play with");
+		return E_UNSPEC;
+	}
 	
 	if(!opsz)
 		opsz = 4;
