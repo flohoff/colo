@@ -7,6 +7,7 @@
 #
 
 TARG= chain
+STAGE2= ../stage2/stage2.strip
 OBJS=	chain.o\
 		serial.o\
 		start.o\
@@ -22,8 +23,8 @@ all:
 
 binary: $(TARG).strip
 
-$(TARG).stage2: ../stage2/stage2.strip
-	echo -e '\t.section .stage2\n\t.incbin "../stage2/stage2.strip"' | $(AS) -o $@
+$(TARG).stage2: $(STAGE2)
+	echo -e '\t.section .stage2\n\t.incbin "$(STAGE2)"' | $(AS) -o $@
 
 $(TARG).strip: $(TARG)
 	strip -o $@ $^

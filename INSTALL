@@ -1,5 +1,23 @@
 # $Id$
 
+THE EASY ALTERNATIVE
+====================
+
+Rather than blowing the replacement boot loader into Flash, it is also
+possible to use the original Cobalt boot loader to load the replacement boot
+loader - chain mode. This does away with the risk of trashing your unit,
+though it extends the time required to boot.
+
+Just copy 'chain.bin' to your boot directory, rename into 'vmlinux' and gzip
+it to 'vmlinux.gz'
+
+	cp -f /boot/vmlinux.gz /boot/backup.gz
+	cp chain.bin /boot/vmlinux
+	gzip -9 /boot/vmlinux
+	reboot
+
+If booting fails you'll need to boot using the backup kernel.
+
 INSTALLING THE REPLACEMENT BOOT LOADER
 ======================================
 
@@ -12,7 +30,7 @@ INSTALLING THE REPLACEMENT BOOT LOADER
 *  REPLACING THE ORIGINAL BOOT LOADER ON YOUR QUBE/RAQ    *
 *  MEANS ERASING AND REPROGRAMMING THE FLASH MEMORY CHIP  *
 *  THAT BOOTS YOUR UNIT. IF THE REPROGRAMMING FAILS OR    *
-*  OR THE NEW BOOT LOADER DOESN'T WORK ON YOUR UNIT YOU   *
+*  THE NEW BOOT LOADER DOESN'T WORK ON YOUR UNIT YOU      *
 *  WILL HAVE TO REMOVE AND REPROGRAM THE FLASH CHIP WITH  *
 *  AN EXTERNAL PROGRAMMER. THIS MIGHT MEAN DESOLDERING    *
 *  THE CHIP AS WELL AS FINDING A SUITABLE PROGRAMMER !!   *
@@ -21,6 +39,12 @@ INSTALLING THE REPLACEMENT BOOT LOADER
 
 Step 1 - safety check
 ---------------------
+
+You must be running a recent 2.4.x kernel for the Flash programming tool to
+work (2.4.18 or newer).
+
+Check that the boot loader works in chain mode (see "The Easy Alternative"
+above).
 
 Check that the Flash chip on your unit is socketed. Don't proceed unless this
 is the case (unless you're a skilled solderer).
