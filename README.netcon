@@ -21,7 +21,9 @@ ASCII text.
 
 In the 'tools/ncon' directory of the CoLo source there is a very simple client
 application. The client application should be started on the server, passing
-the hostname or IP address of the target unit.
+the hostname or IP address of the target unit. The client can be run as
+ordinary user (unless you override the default port assignments and used
+privileged ports).
 
 CoLo's net console is roughly compatible with the kernel net console. See the
 'netcon' entry in README.shell for an example of how to propagate the network
