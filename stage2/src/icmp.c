@@ -8,15 +8,29 @@
 
 #include "lib.h"
 #include "net.h"
+#include "cpu.h"
 
 #define ICMP_TYPE_ECHO_REQUEST					8
-# define ICMP_CODE_ECHO_REQUEST					0
+#define ICMP_CODE_ECHO_REQUEST_REPLY			0
 #define ICMP_TYPE_ECHO_REPLY						0
-# define ICMP_CODE_ECHO_REPLY						0
 
+static struct
+{
+	uint32_t src;
+	unsigned seqnr;
+	unsigned ticks;
+
+} reply_queue[8];
+
+static unsigned reply_in;
+static unsigned reply_out;
+
+/*
+ * process received ICMP packet
+ */
 void icmp_in(struct frame *frame)
 {
-	unsigned size, cksum;
+	unsigned size, cksum, indx;
 	void *data, *reply;
 	uint32_t targ;
 
@@ -24,8 +38,7 @@ void icmp_in(struct frame *frame)
 	data = FRAME_PAYLOAD(frame);
 
 	if(size < ICMP_HDRSZ ||
-		NET_READ_BYTE(data + 0) != ICMP_TYPE_ECHO_REQUEST ||
-		NET_READ_BYTE(data + 1) != ICMP_CODE_ECHO_REQUEST ||
+		NET_READ_BYTE(data + 1) != ICMP_CODE_ECHO_REQUEST_REPLY ||
 		ip_checksum(0, data, size) != 0xffff) {
 
 		return;
@@ -33,27 +46,120 @@ void icmp_in(struct frame *frame)
 
 	targ = frame->ip_src;
 
-	// XXX we can probably fix up checksum and drop the copy
+	switch(NET_READ_BYTE(data + 0)) {
 
-	frame = frame_alloc();
-	if(!frame)
-		return;
+		case ICMP_TYPE_ECHO_REPLY:
 
-	FRAME_INIT(frame, HARDWARE_HDRSZ + IP_HDRSZ, size);
+			if(size >= 4 + 4 + 4 && reply_in - reply_out < elements(reply_queue)) {
 
-	reply = FRAME_PAYLOAD(frame);
+				indx = reply_in++ % elements(reply_queue);
 
-	NET_WRITE_BYTE(reply + 0, ICMP_TYPE_ECHO_REPLY);
-	NET_WRITE_BYTE(reply + 1, ICMP_CODE_ECHO_REPLY);
-	NET_WRITE_SHORT(reply + 2, 0);
+				reply_queue[indx].src = targ;
+				reply_queue[indx].seqnr = *(uint32_t *)(data + 4);
+				reply_queue[indx].ticks = *(uint32_t *)(data + 8);
+			}
+			
+			break;
 
-	memcpy(reply + 4, data + 4, size - 4);
+		case ICMP_TYPE_ECHO_REQUEST:
 
-	cksum = ip_checksum(0, reply, size);
+			// XXX we can probably fix up checksum and drop the copy (alignment?)
 
-	NET_WRITE_SHORT(reply + 2, ~cksum);
+			frame = frame_alloc();
+			if(!frame)
+				return;
 
-	ip_out(frame, targ, IPPROTO_ICMP);
+			FRAME_INIT(frame, HARDWARE_HDRSZ + IP_HDRSZ, size);
+
+			reply = FRAME_PAYLOAD(frame);
+
+			NET_WRITE_BYTE(reply + 0, ICMP_TYPE_ECHO_REPLY);
+			NET_WRITE_BYTE(reply + 1, ICMP_CODE_ECHO_REQUEST_REPLY);
+			NET_WRITE_SHORT(reply + 2, 0);
+
+			memcpy(reply + 4, data + 4, size - 4);
+
+			cksum = ip_checksum(0, reply, size);
+
+			NET_WRITE_SHORT(reply + 2, ~cksum);
+
+			ip_out(frame, targ, IPPROTO_ICMP);
+	}
+}
+
+
+int cmnd_ping(int opsz)
+{
+#	define TICKS_PER_SEC			10000
+#	define COUNTS_PER_TICK		((CP0_COUNT_RATE + TICKS_PER_SEC / 2) / TICKS_PER_SEC)
+
+	unsigned mark, ticks, diff, indx, since, seqnr, cksum;
+	struct frame *frame;
+	uint32_t host;
+	void *data;
+
+	if(argc < 2)
+		return E_ARGS_UNDER;
+	if(argc > 2)
+		return E_ARGS_OVER;
+
+	if(!inet_aton(argv[1], &host)) {
+		puts("invalid address");
+		return E_UNSPEC;
+	}
+
+	ticks = TICKS_PER_SEC;
+	since = 0;
+	seqnr = 0;
+
+	reply_out = 0;
+	reply_in = 0;
+
+	for(mark = MFC0(CP0_COUNT); !kbhit() || getch() != ' ';) {
+
+		diff = (MFC0(CP0_COUNT) - mark) / COUNTS_PER_TICK;
+		mark += diff * COUNTS_PER_TICK;
+		ticks += diff;
+		
+		if(ticks - since >= TICKS_PER_SEC) {
+			since += TICKS_PER_SEC;
+
+			frame = frame_alloc();
+			if(frame) {
+
+				FRAME_INIT(frame, HARDWARE_HDRSZ + IP_HDRSZ, 4 + 4 + 4);
+
+				data = FRAME_PAYLOAD(frame);
+
+				NET_WRITE_BYTE(data + 0, ICMP_TYPE_ECHO_REQUEST);
+				NET_WRITE_BYTE(data + 1, ICMP_CODE_ECHO_REQUEST_REPLY);
+				NET_WRITE_SHORT(data + 2, 0);
+
+				*(uint32_t *)(data + 4) = seqnr++;
+				*(uint32_t *)(data + 8) = ticks;
+
+				cksum = ip_checksum(0, data, 4 + 4 + 4);
+
+				NET_WRITE_SHORT(data + 2, ~cksum);
+
+				ip_out(frame, host, IPPROTO_ICMP);
+
+			} else
+
+				puts("out of frames");
+
+		} else if(reply_in != reply_out) {
+
+			indx = reply_out++ % elements(reply_queue);
+
+			diff = ticks - reply_queue[indx].ticks;
+
+			printf("%s: seq=%u time=%u.%u ms\n",
+				inet_ntoa(reply_queue[indx].src), reply_queue[indx].seqnr, diff / 10, diff % 10);
+		}
+	}
+
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

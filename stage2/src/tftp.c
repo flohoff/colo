@@ -12,21 +12,27 @@
 
 #define TFTP_SEND_PACKETS_MAX		10
 
-#define TRANSFER_MODE				"octet"
-
 #define TFTP_PORT_SERVER			69
+#define TFTP_BLOCK_SIZE				512
+#define TFTP_RRQ_SIZE_MAX			512
 
 #define OPCODE_RRQ					1
 #define OPCODE_DATA					3
 #define OPCODE_ACK					4
 #define OPCODE_ERROR					5
+#define OPCODE_OACK					6
 
+/*
+ * display error message from TFTP ERROR frame
+ */
 static void tftp_error(const void *data, unsigned size)
 {
 	putstring("server reported error");
 	if(size >= 4) {
 		printf(" #%u", NET_READ_SHORT(data + 2));
 		if(size > 4) {
+			if(!((char *) data)[size - 1])
+				--size;
 			putstring(" \"");
 			putstring_safe(data + 4, size - 4);
 			putchar('"');
@@ -35,36 +41,41 @@ static void tftp_error(const void *data, unsigned size)
 	putchar('\n');
 }
 
+/*
+ * transfer data blocks using TFTP
+ */
 static size_t tftp_transfer(int sock, void *mem, size_t max, struct frame *frame)
 {
 	unsigned size, block, mark, diff;
-	void *data, *ptr;
+	size_t loaded;
+	void *data;
 
 	data = FRAME_PAYLOAD(frame);
 	size = FRAME_SIZE(frame);
 
-	ptr = mem;
+	loaded = 0;
+	block = 1;
 
-	for(block = 1;;) {
+	for(;;) {
 
 		if(size >= 4) {
 
 			data += 4;
 			size -= 4;
 
-			if(size > max) {
+			loaded += size;
+			if(loaded > max) {
 				frame_free(frame);
-				puts("too big");
+				puts("too big   ");
 				return -1;
 			}
 
-			memcpy(ptr, data, size);
-			ptr += size;
-			max -= size;
+			memcpy(mem, data, size);
+			mem += size;
 
 			/* have we done ? */
 
-			size = (size < 512);
+			size = (size < TFTP_BLOCK_SIZE);
 		}
 		
 		/* reuse received frame */
@@ -76,14 +87,19 @@ static size_t tftp_transfer(int sock, void *mem, size_t max, struct frame *frame
 
 		udp_send(sock, frame);
 
-		if(size)
-			return ptr - mem;
+		if((block & 0x3ff) == 1)
+			printf(" %uKB\r", loaded / 1024);
+
+		if(size) {
+			printf("%uKB loaded\n", (loaded + 512) / 1024);
+			return loaded;
+		}
 
 		mark = MFC0(CP0_COUNT);
 		do {
 
 			if(kbhit() && getch() == ' ') {
-				puts("aborted");
+				puts("aborted   ");
 				return -1;
 			}
 
@@ -96,13 +112,14 @@ static size_t tftp_transfer(int sock, void *mem, size_t max, struct frame *frame
 			if(!frame)
 				continue;
 
-			data = FRAME_PAYLOAD(frame);
 			size = FRAME_SIZE(frame);
 
-			if(size < 2 || size > 512 + 4) {
+			if(size < 2 || size > 4 + TFTP_BLOCK_SIZE) {
 				frame_free(frame);
 				continue;
 			}
+
+			data = FRAME_PAYLOAD(frame);
 
 			switch(NET_READ_SHORT(data + 0)) {
 
@@ -135,17 +152,27 @@ static size_t tftp_transfer(int sock, void *mem, size_t max, struct frame *frame
 
 /*
  * retrieve file via TFTP
+ *
+ * (issues RRQ then calls tftp_transfer() to receive the data)
  */
 size_t tftp_get(uint32_t server, const char *path, void *mem, size_t max)
 {
+	static char rrq[TFTP_RRQ_SIZE_MAX + 64];
+
 	unsigned rrqsz, mark, size, retry;
 	struct frame *frame;
 	size_t stat;
 	void *data;
 	int sock;
 
-	rrqsz = 2 + (strlen(path) + 1) + sizeof(TRANSFER_MODE);
-	if(rrqsz > 512) {
+	rrqsz = strlen(path);
+	if(rrqsz <= TFTP_RRQ_SIZE_MAX) {
+		NET_WRITE_SHORT(rrq, OPCODE_RRQ);
+		data = stpcpy(rrq + 2, path) + 1;
+		data = stpcpy(data, "octet") + 1;
+		rrqsz = (char *) data - rrq;
+	}
+	if(rrqsz > TFTP_RRQ_SIZE_MAX) {
 		puts("path too long");
 		return -1;
 	}
@@ -162,14 +189,8 @@ size_t tftp_get(uint32_t server, const char *path, void *mem, size_t max)
 
 		frame = frame_alloc();
 		if(frame) {
-
 			FRAME_INIT(frame, HARDWARE_HDRSZ + IP_HDRSZ + UDP_HDRSZ, rrqsz);
-			data = FRAME_PAYLOAD(frame);
-
-			NET_WRITE_SHORT(data + 0, OPCODE_RRQ);
-			strcpy(data + 2, path);
-			strcpy(data + rrqsz - sizeof(TRANSFER_MODE), TRANSFER_MODE);
-
+			memcpy(FRAME_PAYLOAD(frame), rrq, rrqsz);
 			udp_sendto(sock, frame, server, TFTP_PORT_SERVER);
 		}
 
@@ -189,7 +210,7 @@ size_t tftp_get(uint32_t server, const char *path, void *mem, size_t max)
 					data = FRAME_PAYLOAD(frame);
 					size = FRAME_SIZE(frame);
 
-					if(size >= 2)
+					if(size >= 2 && size <= 4 + TFTP_BLOCK_SIZE)
 						switch(NET_READ_SHORT(data + 0)) {
 
 							case OPCODE_ERROR:
@@ -199,7 +220,7 @@ size_t tftp_get(uint32_t server, const char *path, void *mem, size_t max)
 								return -1;
 
 							case OPCODE_DATA:
-								if(size >= 4 && size <= 4 + 512 && NET_READ_SHORT(data + 2) == 1) {
+								if(size >= 4 && NET_READ_SHORT(data + 2) == 1) {
 									udp_connect(sock, server, frame->udp_src);
 									stat = tftp_transfer(sock, mem, max, frame);
 									udp_close(sock);
@@ -221,9 +242,9 @@ size_t tftp_get(uint32_t server, const char *path, void *mem, size_t max)
 
 int cmnd_tftp(int opsz)
 {
-	void *base, *copy;
 	uint32_t server;
 	size_t size;
+	void *base;
 
 	if(argc < 3)
 		return E_ARGS_UNDER;
@@ -246,26 +267,20 @@ int cmnd_tftp(int opsz)
 		if((long) size < 0)
 			return E_UNSPEC;
 
-		/* move to top of heap */
-
-		copy = heap_reserve_hi(size);
-
-		if(copy <= base + size) {
-			puts("too big to move");
-			return E_UNSPEC;
-		}
-
-		memcpy(copy, base, size);
+		memmove(heap_reserve_hi(size), base, size);
 
 		heap_alloc();
 		heap_mark();
 	}
 
-	size = tftp_get(server, argv[2], heap_reserve_lo(2), heap_space());
+	base = heap_reserve_lo(0);
+
+	size = tftp_get(server, argv[2], base, heap_space());
 	if((long) size < 0)
 		return E_UNSPEC;
 
-	heap_reserve_lo(size);
+	memmove(heap_reserve_hi(size), base, size);
+
 	heap_alloc();
 	heap_info();
 

@@ -58,15 +58,6 @@ unsigned long strtoul(const char *str, char **end, int base)
 	return sign == '-' ? -value : value;
 }
 
-void *memmove(void *dst, const void *src, size_t size)
-{
-	assert(dst <= src || dst >= src + size);
-
-	// FIXME
-
-	return memcpy(dst, src, size);
-}
-
 char *strcpy(char *dst, const char *src)
 {
 	char *ptr;
@@ -75,6 +66,14 @@ char *strcpy(char *dst, const char *src)
 		;
 
 	return dst;
+}
+
+char *stpcpy(char *dst, const char *src)
+{
+	while((*dst++ = *src++))
+		;
+
+	return dst - 1;
 }
 
 int strncmp(const char *str1, const char *str2, size_t size)

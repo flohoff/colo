@@ -72,11 +72,11 @@ typedef unsigned				UWORD32;
 extern size_t strlen(const char *);
 extern char *strchr(const char *, int);
 extern char *strcpy(char *, const char *);
+extern char *stpcpy(char *, const char *);
 extern int strncasecmp(const char *, const char *, size_t);
 extern int strcasecmp(const char *, const char *);
 extern int strncmp(const char *, const char *, size_t);
 extern int strcmp(const char *, const char *);
-extern void *memmove(void *, const void *, size_t);
 extern int sprintf(char *, const char *, ...);
 extern int printf(const char *, ...);
 extern unsigned long strtoul(const char *, char **, int);
@@ -90,6 +90,7 @@ extern int inet_aton(const char *, unsigned *);
 extern void *memcpy(void *, const void *, size_t);
 extern void *memset(void *, int, size_t);
 extern int memcmp(const void *, const void *, size_t);
+extern void *memmove(void *, const void *, size_t);
 
 /* vsprintf.c */
 

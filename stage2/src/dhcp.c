@@ -89,6 +89,22 @@ static void dhcp_build(struct frame *frame)
 }
 
 /*
+ * guess netmask from address
+ */
+static uint32_t mask_default(uint32_t ip)
+{
+	ip >>= 24;
+
+	if(ip < 128)
+		return 0xff000000;
+
+	if(ip < 192)
+		return 0xffff0000;
+
+	return 0xffffff00;
+}
+
+/*
  * process received DHCP reply (OFFER/ACK)
  */
 static int dhcp_receive(int sock, struct frame *frame)
@@ -96,8 +112,6 @@ static int dhcp_receive(int sock, struct frame *frame)
 	uint32_t gway, mask, addr, peer;
 	unsigned opt, siz, msg;
 	void *data, *top;
-
-	DPRINTF("dhcp: receive %s\n", inet_ntoa(frame->ip_src));
 
 	data = FRAME_PAYLOAD(frame);
 	top = data + FRAME_SIZE(frame);
@@ -119,7 +133,7 @@ static int dhcp_receive(int sock, struct frame *frame)
 	opt = OPT_PAD;
 	msg = 0;
 	gway = 0;
-	mask = 0xffffff00;			/* XXX */
+	mask = mask_default(addr);
 
 	for(data += MESSAGE_SIZE_BASE + 4; data < top;) {
 
@@ -152,7 +166,7 @@ static int dhcp_receive(int sock, struct frame *frame)
 					msg = NET_READ_BYTE(data);
 		}
 
-#ifdef _DEBUG
+#if 0
 		{
 			unsigned idx;
 

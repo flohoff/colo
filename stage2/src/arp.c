@@ -250,6 +250,9 @@ void arp_ip_out(struct frame *frame, uint32_t ip)
 	arp_out(arpreq, NULL, HARDWARE_PROTO_ARP);
 }
 
+/*
+ * clear out all ARP table entries
+ */
 void arp_flush_all(void)
 {
 	unsigned indx;

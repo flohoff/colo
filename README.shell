@@ -42,6 +42,9 @@ include comments in script files.
 If a command begins with a '-' an executing script will not be aborted even if
 the command fails.
 
+Some commands that can take a long time to execute can be aborted by hitting
+the SPACE key.
+
 SHELL COMMANDS
 --------------
 
@@ -208,6 +211,12 @@ tftp host path [path]
 Load the file from the specified host into memory using TFTP. An optional
 second file can be specified that will also be loaded and used as an 'initrd'
 image.
+
+ping host
+---------
+
+Sends ICMP echo request packets to the specified host and displays information
+from received replies. Pressing the SPACE key terminates the command.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

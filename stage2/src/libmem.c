@@ -37,6 +37,39 @@ void *memcpy(void *dst, const void *src, size_t size)
 	return dst;
 }
 
+void *memmove(void *dst, const void *src, size_t size)
+{
+	const void *esrc;
+	void *edst;
+
+	if(src != dst) {
+
+		esrc = src + size;
+		edst = dst + size;
+
+		if(src >= edst || esrc <= dst)
+			return memcpy(dst, src, size);
+
+		while(edst > dst && ((unsigned long) edst & 3)) {
+			--edst, --esrc;
+			*(uint8_t *) edst = *(uint8_t *) esrc;
+		}
+
+		if(!((unsigned long) esrc & 3))
+			while(edst > dst + 3) {
+				edst -= 4, esrc -= 4;
+				*(uint32_t *) edst = *(uint32_t *) esrc;
+			}
+
+		while(edst > dst) {
+			--edst, --esrc;
+			*(uint8_t *) edst = *(uint8_t *) esrc;
+		}
+	}
+
+	return dst;
+}
+
 void *memset(void *dst, int val, size_t size)
 {
 	void *ptr, *end;

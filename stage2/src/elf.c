@@ -307,13 +307,18 @@ int cmnd_execute(int opsz)
 		return E_UNSPEC;
 	}
 
-	/* XXX check for overlap of initrd */
+	if(targ < KSEG0(0) || targ + elfsz > (void *) &__text) {
+		puts("ELF loads outside available memory");
+		return E_UNSPEC;
+	}
 
-	if(targ < KSEG0(0) ||
-		targ + elfsz > (void *) &__text ||
-		(targ + elfsz > image && targ < image + imagesz)) {
+	if(targ < image + imagesz && targ + elfsz > image) {
+		puts("ELF loads over ELF image");
+		return E_UNSPEC;
+	}
 
-		puts("ELF image won't fit");
+	if(initrdsz && targ < initrd + initrdsz && targ + elfsz > initrd) {
+		puts("ELF loads over initrd image");
 		return E_UNSPEC;
 	}
 

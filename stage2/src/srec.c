@@ -155,6 +155,7 @@ int cmnd_srec(int opsz)
 {
 	unsigned long addr, mark;
 	size_t size;
+	void *base;
 	char *ptr;
 
 	if(argc > 2)
@@ -171,10 +172,13 @@ int cmnd_srec(int opsz)
 
 	heap_reset();
 
-	size = load_srec(heap_reserve_lo(0), heap_space(), addr);
+	base = heap_reserve_lo(0);
 
+	size = load_srec(base, heap_space(), addr);
 	if((long) size >= 0) {
-		heap_reserve_lo(size);
+
+		memmove(heap_reserve_hi(size), base, size);
+
 		heap_alloc();
 		heap_info();
 	}

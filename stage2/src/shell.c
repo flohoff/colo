@@ -31,6 +31,7 @@ extern int cmnd_heap(int);
 extern int cmnd_unzip(int);
 extern int cmnd_net(int);
 extern int cmnd_tftp(int);
+extern int cmnd_ping(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
@@ -77,6 +78,7 @@ static struct
 	{ "script",			cmnd_script,		0,					"path",												},
 	{ "net",				cmnd_net,			0,					"[{address netmask [gateway]} | down]",	},
 	{ "tftp",			cmnd_tftp,			0,					"host path [path]",								},
+	{ "ping",			cmnd_ping,			0,					"host",												},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",								},
