@@ -23,6 +23,11 @@ CoLo 1.9 (2004-05-02)
 
 *	Added boot menu and 'boot' command.
 
+	*note*
+
+		If you do not want the boot menu to appear every boot use the command
+		'boot default 1' (see README.shell).
+
 *	Added 'variable' command.
 
 *	Implemented variable substition in shell command lines.
