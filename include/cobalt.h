@@ -6,14 +6,13 @@
  * This code is covered by the GNU General Public License. For details see the file "COPYING".
  */
 
-#ifndef _CLIB_H_
-#define _CLIB_H_
+#ifndef _COBALT_H_
+#define _COBALT_H_
 
-typedef unsigned char		uint8_t;
-typedef unsigned short		uint16_t;
-typedef unsigned				uint32_t;
-
-typedef unsigned				size_t;
+#define LED_QUBE_LEFT				(1 << 0)
+#define LED_QUBE_RIGHT				(1 << 1)
+#define LED_RAQ_WEB					(1 << 2)
+#define LED_RAQ_POWER_OFF			(1 << 3)
 
 #endif
 

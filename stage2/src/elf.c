@@ -10,11 +10,7 @@
 #include "cpu.h"
 #include "galileo.h"
 #include "linux/elf.h"
-
-#define LED_QUBE_LEFT				(1 << 0)
-#define LED_QUBE_RIGHT				(1 << 1)
-#define LED_RAQ_WEB					(1 << 2)
-#define LED_RAQ_POWER_OFF			(1 << 3)
+#include "cobalt.h"
 
 /*
  * Check for valid ELF image and return base address and size, 32 bit version
