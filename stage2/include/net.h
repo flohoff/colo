@@ -107,7 +107,7 @@ extern int udp_socket(void);
 extern void udp_close(int);
 extern unsigned udp_bind(int, unsigned);
 extern unsigned udp_connect(int, uint32_t, unsigned);
-extern struct frame *udp_read(int);
+extern struct frame *udp_recv(int);
 extern void udp_sendto(int, struct frame *, uint32_t, unsigned);
 extern void udp_send(int, struct frame *);
 extern void udp_close_all(void);

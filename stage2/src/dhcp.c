@@ -10,6 +10,8 @@
 #include "net.h"
 #include "cpu.h"
 
+#define DHCP_SEND_PACKETS_MAX				10
+
 #define DHCP_PORT_SERVER					67
 #define DHCP_PORT_CLIENT					68
 
@@ -25,11 +27,23 @@
 #define DHCP_REQUEST							3
 #define DHCP_ACK								5
 
-static unsigned xid;
-static uint32_t addr;
-static int done;
+#define OPT_PAD								0
+#define OPT_NETMASK							1
+#define OPT_ROUTERS							3
+#define OPT_REQUESTED_IP					50
+#define OPT_MESSAGE_TYPE					53
+#define OPT_REQ_PARAM_LIST					55
+#define OPT_END								255
 
-static void dhcp_build(struct frame *frame, int type)
+static uint32_t dhcp_mask;
+static uint32_t dhcp_gway;
+static uint32_t dhcp_addr;
+static unsigned dhcp_xid;
+
+/*
+ * build DHCP request frame (DISCOVER/REQUEST)
+ */
+static void dhcp_build(struct frame *frame)
 {
 	unsigned opts;
 	void *data;
@@ -42,47 +56,48 @@ static void dhcp_build(struct frame *frame, int type)
 	NET_WRITE_BYTE(data + 0x01, HARDWARE_ADDR_ETHER);
 	NET_WRITE_BYTE(data + 0x02, HARDWARE_ADDR_SIZE);
 
-	NET_WRITE_LONG(data + 0x04, xid);
+	NET_WRITE_LONG(data + 0x04, dhcp_xid);
 
 	COPY_HW_ADDR(data + 0x1c, hw_addr);
 
-	NET_WRITE_LONG(data + MESSAGE_SIZE_BASE, OPTION_SIG);
+	opts = MESSAGE_SIZE_BASE;
 
-	opts = MESSAGE_SIZE_BASE + 4;
+	NET_WRITE_LONG(data + opts, OPTION_SIG);
+	opts += 4;
 
-	NET_WRITE_BYTE(data + opts++, 53);
+	NET_WRITE_BYTE(data + opts++, OPT_MESSAGE_TYPE);
 	NET_WRITE_BYTE(data + opts++, 1);
-	NET_WRITE_BYTE(data + opts++, type);
+	NET_WRITE_BYTE(data + opts++, dhcp_addr ? DHCP_REQUEST : DHCP_DISCOVER);
 
-	NET_WRITE_BYTE(data + opts++, 55);
+	NET_WRITE_BYTE(data + opts++, OPT_REQ_PARAM_LIST);
 	NET_WRITE_BYTE(data + opts++, 2);
-	NET_WRITE_BYTE(data + opts++, 1);		// netmask (RFC 2132)
-	NET_WRITE_BYTE(data + opts++, 3);		// router
+	NET_WRITE_BYTE(data + opts++, OPT_NETMASK);
+	NET_WRITE_BYTE(data + opts++, OPT_ROUTERS);
 
-	switch(type) {
-
-		case DHCP_DISCOVER:
-			DPUTS("dhcp: DISCOVER");
-			break;
-
-		case DHCP_REQUEST:
-			DPUTS("dhcp: REQUEST");
-
-			NET_WRITE_BYTE(data + opts++, 50);		// requested IP
-			NET_WRITE_BYTE(data + opts++, 4);
-			NET_WRITE_LONG(data + opts, addr);
-			opts += 4;
+	if(dhcp_addr) {
+		NET_WRITE_BYTE(data + opts++, OPT_REQUESTED_IP);
+		NET_WRITE_BYTE(data + opts++, 4);
+		NET_WRITE_LONG(data + opts, dhcp_addr);
+		opts += 4;
 	}
 
-	NET_WRITE_BYTE(data + opts, 255);
+	NET_WRITE_BYTE(data + opts, OPT_END);
 
 	FRAME_CLIP(frame, opts);
+
+	DPUTS(dhcp_addr ? "dhcp: REQUEST" : "dhcp: DISCOVER");
 }
 
-static void dhcp_receive(struct frame *frame)
+/*
+ * process received DHCP reply (OFFER/ACK)
+ */
+static int dhcp_receive(int sock, struct frame *frame)
 {
+	uint32_t gway, mask, addr, peer;
 	unsigned opt, siz, msg;
 	void *data, *top;
+
+	DPRINTF("dhcp: receive %s\n", inet_ntoa(frame->ip_src));
 
 	data = FRAME_PAYLOAD(frame);
 	top = data + FRAME_SIZE(frame);
@@ -91,26 +106,27 @@ static void dhcp_receive(struct frame *frame)
 		NET_READ_BYTE(data + 0x00) != BOOTP_BOOTREPLY ||
 		NET_READ_BYTE(data + 0x01) != HARDWARE_ADDR_ETHER ||
 		NET_READ_BYTE(data + 0x02) != HARDWARE_ADDR_SIZE ||
-		NET_READ_LONG(data + 0x04) != xid ||
-		NET_READ_LONG(data + MESSAGE_SIZE_BASE) != OPTION_SIG ||
-		(addr && NET_READ_LONG(data + 0x10) != addr)) {
+		NET_READ_LONG(data + 0x04) != dhcp_xid ||
+		NET_READ_LONG(data + MESSAGE_SIZE_BASE) != OPTION_SIG) {
 
 		frame_free(frame);
-
-		DPUTS("dhcp: invalid response");
-
-		return;
+		return -1;
 	}
 
-	opt = 0;
+	peer = frame->ip_src;
+	addr = NET_READ_LONG(data + 0x10);
+
+	opt = OPT_PAD;
 	msg = 0;
+	gway = 0;
+	mask = 0xffffff00;			/* XXX */
 
 	for(data += MESSAGE_SIZE_BASE + 4; data < top;) {
 
 		opt = NET_READ_BYTE(data++);
-		if(opt == 0)
+		if(opt == OPT_PAD)
 			continue;
-		if(opt == 255)
+		if(opt == OPT_END)
 			break;
 
 		if(data >= top)
@@ -119,55 +135,99 @@ static void dhcp_receive(struct frame *frame)
 		if(data + siz > top)
 			break;
 
+		switch(opt) {
+
+			case OPT_NETMASK:
+				if(siz == 4)
+					mask = NET_READ_LONG(data);
+				break;
+
+			case OPT_ROUTERS:
+				if(siz >= 4 && !(siz % 4))
+					gway = NET_READ_LONG(data);
+				break;
+
+			case OPT_MESSAGE_TYPE:
+				if(siz == 1)
+					msg = NET_READ_BYTE(data);
+		}
+
+#ifdef _DEBUG
 		{
 			unsigned idx;
 
-			DPRINTF("dhcp: option %02x %u -->", opt, siz);
+			DPRINTF("dhcp: option %02x)", opt);
 
 			for(idx = 0; idx < siz; ++idx)
 				DPRINTF(" %02x", NET_READ_BYTE(data + idx));
 			
 			DPUTCHAR('\n');
 		}
-
-		if(opt == 53 && siz == 1)
-			msg = NET_READ_BYTE(data);
+#endif
 
 		data += siz;
 	}
 
+	frame_free(frame);
+	
+	if(!addr || opt != OPT_END)
+		return -1;
 
-	if(opt == 255) {
+	switch(msg) {
 
-		switch(msg) {
+		case DHCP_OFFER:
+			if(dhcp_addr)
+				return -1;
+			dhcp_addr = addr;
 
-			case DHCP_OFFER:
-				data = FRAME_PAYLOAD(frame);
-				addr = NET_READ_LONG(data + 0x10);
+			udp_connect(sock, peer, DHCP_PORT_SERVER);
+			
+			DPRINTF("dhcp: OFFER %s <-- ", inet_ntoa(dhcp_addr));
+			DPUTS(inet_ntoa(peer));
+			return 0;
 
-				DPRINTF("dhcp: OFFER %s\n", inet_ntoa(addr));
-
-				break;
-
-			case DHCP_ACK:
+		case DHCP_ACK:
+			if(dhcp_addr == addr) {
+				dhcp_mask = mask;
+				dhcp_gway = gway;
 
 				DPUTS("dhcp: ACK");
+				return 1;
+			}
+	}
 
-				done = 1;
-		}
-
-	} else
-
-		DPUTS("dhcp: invalid options");
-
-	frame_free(frame);
+	return -1;
 }
 
+/*
+ * apply configuration from DHCP
+ */
+static int dhcp_config(void)
+{
+	ip_addr = dhcp_addr;
+	ip_mask = dhcp_mask;
+	ip_gway = dhcp_gway;
+
+	if(!net_up()) {
+		puts("no interface");
+		return 0;
+	}
+
+	DPRINTF("dhcp: address %s\n", inet_ntoa(ip_addr));
+	DPRINTF("      netmask %s\n", inet_ntoa(ip_mask));
+	DPRINTF("      gateway %s\n", inet_ntoa(ip_gway));
+
+	return 1;
+}
+
+/*
+ * get network configuration from DHCP server
+ */
 int dhcp(void)
 {
+	unsigned mark, retries;
 	struct frame *frame;
-	unsigned mark;
-	int sock;
+	int sock, stat;
 
 	net_down();
 
@@ -188,55 +248,71 @@ int dhcp(void)
 
 	udp_bind(sock, DHCP_PORT_CLIENT);
 
-	xid = MFC0(CP0_COUNT);
-	addr = 0;
-	done = 0;
+	dhcp_xid = MFC0(CP0_COUNT);
+	dhcp_addr = 0;
+	retries = 0;
 
-	for(mark = MFC0(CP0_COUNT); !kbhit() && !done;) {
+	for(;;) {
 
-		frame = udp_read(sock);
-		if(frame)
-			dhcp_receive(frame);
-
-		if(MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE * 2)
-			continue;
-		mark += CP0_COUNT_RATE * 2;
-		
 		frame = frame_alloc();
-		if(!frame)
-			continue;
-
-		FRAME_INIT(frame, HARDWARE_HDRSZ + IP_HDRSZ + UDP_HDRSZ, 576);
-
-		dhcp_build(frame, addr ? DHCP_REQUEST : DHCP_DISCOVER);
-
-		udp_sendto(sock, frame, INADDR_BROADCAST, DHCP_PORT_SERVER);
-	}
-
-	udp_close(sock);
-
-	if(done) {
-
-		net_down();
-
-		ip_addr = addr;
-		ip_mask = 0xffffff00;
-		ip_gway = 0xc0a80101;
-
-		DPRINTF("net: address %s\n", inet_ntoa(ip_addr));
-		DPRINTF("     netmask %s\n", inet_ntoa(ip_mask));
-		DPRINTF("     gateway %s\n", inet_ntoa(ip_gway));
-
-		if(!net_up()) {
-			puts("no interface");
-			return 0;
+		if(frame) {
+			FRAME_INIT(frame, HARDWARE_HDRSZ + IP_HDRSZ + UDP_HDRSZ, 1024);
+			dhcp_build(frame);
+			if(dhcp_addr)
+				udp_send(sock, frame);
+			else
+				udp_sendto(sock, frame, INADDR_BROADCAST, DHCP_PORT_SERVER);
 		}
 
-	} else
+		for(mark = MFC0(CP0_COUNT);;) {
 
-		getch();
+			if(kbhit()) {
 
-	return 1;
+				udp_close(sock);
+				net_down();
+
+				getch();
+				puts("aborted");
+				return 0;
+			}
+
+			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE * 3) {
+
+				if(++retries == DHCP_SEND_PACKETS_MAX) {
+
+					udp_close(sock);
+					net_down();
+
+					puts("no response");
+					return 0;
+				}
+
+				/* back to DISCOVER state */
+
+				dhcp_addr = 0;
+				udp_connect(sock, 0, 0);
+
+				break;
+			}
+
+			frame = udp_recv(sock);
+			if(frame) {
+				
+				stat = dhcp_receive(sock, frame);
+				if(stat >= 0) {
+					if(stat > 0) {
+
+						udp_close(sock);
+						net_down();
+
+						return dhcp_config();
+					}
+
+					break;
+				}
+			}
+		}
+	}
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

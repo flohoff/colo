@@ -144,7 +144,7 @@ unsigned udp_connect(int s, uint32_t ip, unsigned port)
 	return socks[s].port;
 }
 
-struct frame *udp_read(int s)
+struct frame *udp_recv(int s)
 {
 	struct frame *frame;
 
@@ -200,6 +200,8 @@ void udp_sendto(int s, struct frame *frame, uint32_t ip, unsigned port)
 
 void udp_send(int s, struct frame *frame)
 {
+	assert(socks[s].peer_port);
+
 	udp_sendto(s, frame, socks[s].peer_ip, socks[s].peer_port);
 }
 
