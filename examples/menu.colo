@@ -1,0 +1,37 @@
+#:CoLo:# $Id$
+#
+# extend boot menu with kernel selection
+#
+
+var _image vmlinux-2.4.27-r5k-cobalt
+
+# pass kernel console argument only if console's enabled
+var _console ''
+-var _console console=ttyS0,{console-speed}
+
+# if boot menu wasn't used go load default kernel
+-noop {menu-option}
+onfail 1f
+
+# show user list of kernels
+select 'BOOT KERNEL' 100 2.4.x 2.6.x-32 2.6.x-64
+goto {menu-option}
+
+# default option (timeout or cancel)
+
+# first option
+@lcd 'Loading ...' {_image}
+mount
+cd /boot
+load {_image}
+execute root=/dev/hda2 {_console}
+abort
+
+# second option
+@var _image vmlinux-2.6.8.1-32
+goto 2b
+
+# third option
+@var _image vmlinux-2.6.8.1-64
+goto 3b
+

@@ -3,13 +3,34 @@
 CoLo 1.14 (xxxx-xx-xx)
 ----------------------
 
+*	Added new example boot script 'menu.colo' showing new features.
+
+*	Variable expansion in the shell is now carried out before argument
+	splitting.  This means variables can now span arguments e.g.
+
+		var message "'first' 'second'"
+		lcd {message}
+
+*	Reworked the LCD menu command. The 'menu' command has been removed and
+	replaced with a new command, 'select'. The new command justs sets a
+	variable to the index of the selected item which can then be used with
+	'goto'.
+
+*	Added 'noop' command, which does nothing. When combined with the 'onfail'
+	command it can be used for checking the existence of variables.
+
+*	Added script commands 'goto', 'onfail', 'exit' and 'abort'.
+
+*	Added positional marks in scripts using the '@' character.
+
 *	Scripts can now be nested.
 
 *	The 'console-speed' variable is now only available when the serial port is
 	enabled.
 
 *	Fixed up support for booting 64-bit kernels (32-bit support was reorganised
-	too). Kernel must be linked for CKSEG0, CKSEG1 or XKPHYS.
+	too). 32-bit kernels must be linked for KSEG0 or KSEG1, 64-bit kernels for
+	CKSEG0, CKSEG1 or XKPHYS.
 
 *	Ensure we read from Galileo PCI RETRY/TIMEOUT register before writing to
 	it. A comment in the kernel source indicates this might be necessary to

@@ -102,7 +102,7 @@ static struct
 	{ "onfail",			cmnd_onerror,		0,					"offset",													},
 	{ "abort",			cmnd_abort,			0,					NULL,															},
 	{ "exit",			cmnd_exit,			0,					NULL,															},
-	{ "chooser",		cmnd_menu,			0,					"title timeout option ...",							},
+	{ "select",			cmnd_menu,			0,					"title timeout option ...",							},
 	{ "noop",			cmnd_noop,			0,					"[arguments ...]",										},
 
 #ifdef _DEBUG
@@ -286,15 +286,17 @@ static int cmnd_eval(int opsz)
 /*
  * split command line into argv[] array
  */
-static int split_line(const char *line)
+static int split_line(const char *iptr)
 {
 	static char pool[384];
 
-	unsigned indx, nout, size;
-	const char *value, *name;
+	const char *varx, *name, *line;
+	unsigned indx, nout;
 	char delim, chr;
 	int escp;
 
+	line = iptr;
+	varx = NULL;
 	nout = 0;
 	argc = 0;
 
@@ -303,8 +305,17 @@ static int split_line(const char *line)
 		for(; isspace(*line); ++line)
 			;
 
-		if(!*line)
-			break;
+		if(!*line) {
+
+			if(!varx)
+				break;
+
+			line = iptr;
+			varx = NULL;
+
+			for(; isspace(*line); ++line)
+				;
+		}
 
 		if(argc == elements(argv) - 1 || nout >= sizeof(pool))
 			return E_ARGS_OVER;
@@ -323,17 +334,12 @@ static int split_line(const char *line)
 
 				if(chr == '}') {
 
-					value = env_get(name, line - name - 1);
-					if(!value)
+					varx = env_get(name, line - name - 1);
+					if(!varx)
 						return E_NO_SUCH_VAR;
 
-					size = strlen(value);
-					if(nout + size >= sizeof(pool))
-						return E_ARGS_OVER;
-
-					memcpy(pool + nout, value, size);
-					nout += size;
-
+					iptr = line;
+					line = varx;
 					name = NULL;
 
 					continue;
@@ -349,11 +355,27 @@ static int split_line(const char *line)
 			}
 
 			if(!chr) {
+
+				if(varx) {
+
+					line = iptr;
+					varx = NULL;
+
+					/* if argument is empty skip extra spaces */
+
+					if(argv[argc] == pool + nout)
+						for(; isspace(*line); ++line)
+							;
+
+					continue;
+				}
+
 				if(escp) {
 					pool[nout++] = '\\';
 					if(nout >= sizeof(pool))
 						return E_ARGS_OVER;
 				}
+
 				break;
 			}
 
@@ -411,7 +433,7 @@ static int split_line(const char *line)
 						continue;
 					}
 
-					if(chr == '{')
+					if(chr == '{' && !varx)
 						name = line;
 				}
 			}
@@ -502,7 +524,7 @@ int execute_line(const char *line, int *errptr)
 	if(errptr)
 		*errptr = error;
 
-	if(quiet) {
+	if(error != E_NONE && quiet) {
 		printf("(%s)\n", error_text(error));
 		return E_NONE;
 	}

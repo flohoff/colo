@@ -79,12 +79,15 @@ static void lcd_prog_chars(void)
 		0x01, 0x03, 0x07, 0x0f, 0x07, 0x03, 0x01, 0x00,		/* right arrow */
 		0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10, 0x00,		/* left arrow  */
 	};
-	unsigned indx;
+	static unsigned indx;
 
-	LCD_WRITE(0, LCD_CGRAM_ADDR | 8);
+	if(!indx) {
 
-	for(indx = 0; indx < sizeof(data); ++indx)
-		LCD_WRITE(1, data[indx]);
+		LCD_WRITE(0, LCD_CGRAM_ADDR | 8);
+
+		for(indx = 0; indx < sizeof(data); ++indx)
+			LCD_WRITE(1, data[indx]);
+	}
 }
 
 /*
@@ -92,14 +95,15 @@ static void lcd_prog_chars(void)
  */
 int lcd_menu(const char **options, unsigned count, unsigned timeout)
 {
-	unsigned mark, done, row, top, btn, prv;
+	unsigned mark, done, row, top, btn;
+	int prv;
 
 	if(count < 2)
 		return -1;
 
 	lcd_prog_chars();
 
-	prv = BUTTONS();
+	prv = -1;
 
 	row = 1;
 	top = 0;
@@ -125,11 +129,17 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 				if(BREAK())
 					return LCD_MENU_ABORT;
 
-			btn = BUTTONS();
+			btn = ~BUTTONS() & BUTTON_MASK;
+
+			if(prv < 0) {
+				if(btn)
+					continue;
+				prv = btn;
+			}
 
 			btn ^= prv;
 			prv ^= btn;
-			btn &= ~prv;
+			btn &= prv;
 
 			if(btn & (BUTTON_RIGHT | BUTTON_ENTER | BUTTON_SELECT))
 				return top + row - 1;

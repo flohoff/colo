@@ -15,11 +15,24 @@
 
 size_t ram_size, ram_restrict;
 
+static int do_boot(unsigned switches)
+{
+	unsigned long mark;
+
+	if(!(switches & (BUTTON_ENTER | BUTTON_SELECT)))
+		return boot(BOOT_MENU);
+
+	if(!(nv_store.flags & NVFLAG_CONSOLE_DISABLE))
+		for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE * 2 / 3;)
+			if(BREAK())
+				return E_NONE;
+
+	return boot(BOOT_DEFAULT);
+}
+
 void loader(size_t bank0, size_t bank1, unsigned switches)
 {
 	extern char __text;
-
-	unsigned long mark;
 
 	ram_size = bank0 + bank1;
 	ram_restrict = ram_size;
@@ -48,24 +61,18 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	heap_reset();
 
-	if(!nv_store.boot || (switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
+	env_put("unit-type", pci_unit_name(), VAR_OTHER);
 
-		boot(BOOT_MENU);
+	if(do_boot(switches) == E_NONE) {
 
-	else if(nv_store.flags & NVFLAG_CONSOLE_DISABLE)
+		lcd_line(0, "running");
+		lcd_line(1, "boot shell");
 
-		boot(BOOT_DEFAULT);
+	} else {
 
-	else
-
-		for(mark = MFC0(CP0_COUNT); !BREAK();)
-			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE * 3 / 2) {
-				boot(BOOT_DEFAULT);
-				break;
-			}
-
-	lcd_line(0, "Running");
-	lcd_line(1, "boot shell");
+		lcd_line(0, "!  UNIT BOOT   !");
+		lcd_line(1, "!   FAILED     !");
+	}
 
 	serial_enable(1);
 

@@ -285,6 +285,7 @@ static inline void yield(void)
 #define LCD_MENU_TIMEOUT					(-1)
 #define LCD_MENU_CANCEL						(-2)
 #define LCD_MENU_ABORT						(-3)
+#define LCD_MENU_BAD_ARGS					(-4)
 
 extern void lcd_line(int, const char *);
 extern int lcd_menu(const char **, unsigned, unsigned);

@@ -24,6 +24,13 @@
 #define BUTTON_ENTER					(1 << 6)
 #define BUTTON_SELECT				(1 << 7)
 
+#define BUTTON_MASK					(BUTTON_CLEAR | \
+											BUTTON_LEFT | \
+											BUTTON_UP | \
+											BUTTON_DOWN | \
+											BUTTON_RIGHT | \
+											BUTTON_ENTER | \
+											BUTTON_SELECT)
 #endif
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

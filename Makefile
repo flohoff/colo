@@ -16,7 +16,7 @@ BINDIR= binaries
 
 all: binary tooldirs
 
-binary: subdirs $(TARGET1) $(TARGET2)
+binary: subdirs $(BINDIR)/$(TARGET1) $(BINDIR)/$(TARGET2)
 
 ci:
 	rm -f $(BINDIR)/$(TARGET1) $(BINDIR)/$(TARGET2)
@@ -24,11 +24,15 @@ ci:
 
 $(TARGET1): $(STAGE1)
 	cp -f $^ $@
-	cp -f $^ $(BINDIR)
 
 $(TARGET2): $(CHAIN)
 	cp -f $^ $@
-	cp -f $^ $(BINDIR)
+
+$(BINDIR)/$(TARGET1): $(TARGET1)
+	cp -f $^ $@
+
+$(BINDIR)/$(TARGET2): $(TARGET2)
+	cp -f $^ $@
 
 subdirs:
 	set -e; for x in $(SUBDIRS); do $(MAKE) -C $$x binary; done

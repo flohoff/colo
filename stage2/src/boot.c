@@ -111,13 +111,7 @@ int boot(int which)
 	if((int) script[which] == SCRIPT_BOOT_SHELL)
 		return E_NONE;
 
-	script_exec(script[which], -1);
-
-	puts("boot failed");
-
-	lcd_line(0, "! BOOT FAILED !");
-
-	return E_UNSPEC;
+	return script_exec(script[which], -1);
 }
 
 /*
