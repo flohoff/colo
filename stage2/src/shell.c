@@ -258,21 +258,6 @@ static int cmnd_eval(int opsz)
 }
 
 /*
- * add argument to command line
- */
-int argv_add(const char *str)
-{
-	if(argc == elements(argv) - 1)
-		return 0;
-
-	argv[argc] = (char *) str;
-	argsz[argc++] = strlen(str);
-	argv[argc] = NULL;
-
-	return 1;
-}
-
-/*
  * split command line into argv[] array
  */
 static int split_line(char *line)
