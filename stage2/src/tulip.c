@@ -331,7 +331,7 @@ static void read_hw_addr(void)
 }
 
 /*
- * set up PCI I/O mapping
+ * set up PCI I/O mapping etc
  */
 static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 {
@@ -340,8 +340,10 @@ static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 
 	pcicfg_write_word(dev, fnc, 0x10, iob);
 
-	pcicfg_write_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
-		pcicfg_read_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) | (1 << 0));
+	pcicfg_write_half(dev, fnc, 0x04,
+		pcicfg_read_half(dev, fnc, 0x04) | (1 << 0));
+
+	pcicfg_write_byte(dev, fnc, 0x0d, 32);
 
 	return 1;
 }
@@ -387,8 +389,8 @@ int tulip_up(void)
 	rx_ring_init();
 	tx_ring_init();
 
-	pcicfg_write_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
-		pcicfg_read_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) | (1 << 2));
+	pcicfg_write_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
+		pcicfg_read_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) | (1 << 2));
 	udelay(1000);
 
 	CSR(6) = CSR6_MBO | CSR6_HBD | CSR6_PS | CSR6_ST | CSR6_SR;
@@ -405,8 +407,8 @@ void tulip_down(void)
 
 	tulip_reset();
 
-	pcicfg_write_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
-		pcicfg_read_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) & ~(1 << 2));
+	pcicfg_write_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
+		pcicfg_read_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) & ~(1 << 2));
 	udelay(1000);
 }
 

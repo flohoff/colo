@@ -87,6 +87,8 @@ unsigned pci_init(size_t bank0, size_t bank1)
 	pcicfg_write_half(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x04, 0x0006 |
 		pcicfg_read_half(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x04));
 
+	pcicfg_write_byte(PCI_DEV_GALILEO, PCI_FNC_GALILEO, 0x0d, 32);
+
 	/* read unit type */
 
 	unit = pcicfg_read_byte(PCI_DEV_VIA, PCI_FNC_VIA_ISA, 0x94) >> 4;
