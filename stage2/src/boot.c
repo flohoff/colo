@@ -59,7 +59,7 @@ static const char *script[] =
 	(void *) SCRIPT_BOOT_SHELL,
 };
 
-void boot(int which)
+int boot(int which)
 {
 	static char buf[16];
 
@@ -81,7 +81,7 @@ void boot(int which)
 
 			case LCD_MENU_ABORT:
 				puts("aborted");
-				return;
+				return 0;
 
 			default:
 				++which;
@@ -96,7 +96,7 @@ void boot(int which)
 
 	if(which >= elements(script)) {
 		DPRINTF("boot: no script #%d\n", which);
-		return;
+		return 0;
 	}
 
 	switch((int) script[which]) {
@@ -104,10 +104,12 @@ void boot(int which)
 		case SCRIPT_BOOT_SHELL:
 			lcd_line(0, "Running");
 			lcd_line(1, "boot shell");
-			return;
+			return 0;
 	}
 	
 	script_exec(script[which]);
+
+	return 1;
 }
 
 int cmnd_boot(int opsz)
@@ -129,14 +131,14 @@ int cmnd_boot(int opsz)
 
 		if(argc == 2 && list) {
 
-			for(indx = 1; indx <= elements(option); ++indx)
-				printf("%x: %c %s\n", indx, (indx == nv_store.boot ? '*' : '.'), option[indx - 1]);
+			for(indx = 1; indx < elements(option); ++indx)
+				printf("%x: %c %s\n", indx, (indx == nv_store.boot ? '*' : '.'), option[indx]);
 
 			return E_NONE;
 		}
 
 		which = evaluate(argv[argc - 1], &ptr);
-		if(*ptr || which < 0 || which > elements(option))
+		if(*ptr || which < 0 || which >= elements(option))
 			return E_BAD_VALUE;
 
 		if(argc == 3 && !strncasecmp(argv[1], "default", size)) {
@@ -150,9 +152,10 @@ int cmnd_boot(int opsz)
 			if(!which)
 				return E_BAD_VALUE;
 
-			puts(option[--which]);
+			puts(option[which]);
 			printf("%.*s\n", (int) strlen(option[which]), "--------------");
-			puts(script[which]);
+			if(script[which - 1] != (void *) SCRIPT_BOOT_SHELL)
+				puts(script[which - 1]);
 
 			return E_NONE;
 		}

@@ -4,11 +4,12 @@ REPLACEMENT COBALT Qube2/RaQ2 BOOT LOADER SHELL
 ===============================================
 
 The replacement boot loader implements a command shell that can be entered by
+selecting the "Boot Shell" item from the boot menu. The boot menu is activated
+by holding down the "ENTER" and "SELECT" buttons whilst the unit is booting.
+
+If the serial console is not disabled the shell can also be entered by
 pressing CTRL-C or SPACE on a serial terminal connected to the serial port on
 the unit, just before the unit starts the boot process (115200 baud).
-
-The shell can also be entered from the LCD boot menu (hold "ENTER" and
-"SELECT" whilst booting to force the boot menu to appear).
 
 *note*
 
@@ -238,6 +239,7 @@ The flags currently defined are
 	3 - enable IDE slave detection. Normally the boot loader does not bother
 	    checking for the prescence of an IDE slave device. This flag must be
 		 set before the first 'mount' command for slave detection to work.
+	4 - disable serial console boot messages.
 
 net [{address netmask [gateway]} | down]
 ----------------------------------------

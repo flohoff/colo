@@ -55,6 +55,9 @@ static const unsigned rates[] =
 	230400,
 };
 
+static unsigned queue_in, queue_out;
+static char out_queue[8192];
+static int initialised;
 static unsigned baud;
 
 static unsigned stored_baud(void)
@@ -65,9 +68,24 @@ static unsigned stored_baud(void)
 	return rates[nv_store.baud - 1];
 }
 
+static void flush_ring(void)
+{
+	if(initialised)
+
+		while(queue_in != queue_out) {
+
+			while(!(UART_LSR & UART_LSR_THRE))
+				;
+
+			UART_THR = out_queue[queue_out++ % sizeof(out_queue)];
+		}
+}
+
 void serial_init(void)
 {
 	unsigned div;
+
+	assert(!initialised);
 
 	baud = stored_baud();
 	div = (18432000 + baud * 8) / (baud * 16);
@@ -78,6 +96,10 @@ void serial_init(void)
 	UART_BRH = div >> 8;
 	UART_LCR = UART_LCR_STOP2 | UART_LCR_DATA8;
 	UART_FCR = UART_FCR_FIFO_EN;
+
+	initialised = 1;
+
+	flush_ring();
 }
 
 const char *serial_baud(void)
@@ -91,13 +113,14 @@ const char *serial_baud(void)
 
 void drain(void)
 {
-	while(~UART_LSR & (UART_LSR_THRE | UART_LSR_TEMPTY))
-		yield();
+	if(initialised)
+		while(~UART_LSR & (UART_LSR_THRE | UART_LSR_TEMPTY))
+			yield();
 }
 
 int kbhit(void)
 {
-	if(UART_LSR & UART_LSR_RDR)
+	if(initialised && (UART_LSR & UART_LSR_RDR))
 		return 1;
 
 	yield();
@@ -118,10 +141,12 @@ void putchar(int chr)
 	if(chr == '\n')
 		putchar('\r');
 
-	while(!(UART_LSR & UART_LSR_THRE))
-		;
+	if(queue_in - queue_out >= sizeof(out_queue))
+		++queue_out;
 
-	UART_THR = chr;
+	out_queue[queue_in++ % sizeof(out_queue)] = chr;
+
+	flush_ring();
 }
 
 void putstring(const char *str)

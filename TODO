@@ -18,9 +18,6 @@ In no particular order ...
 
 * Add boot menu using LCD. [partially done]
 
-* Don't output over the serial port unless the user requires the boot loader
-  shell.
-
 * Add support for booting from logical (extended) partitions.
 
 * Add support for second IDE channel (NASRaQ).

@@ -12,7 +12,9 @@
 
 #define RTC_ADDR_STORE			0x20
 
-struct nv_store nv_store;
+struct nv_store nv_store = {
+	.flags = NVFLAG_CONSOLE_DISABLE,
+};
 
 /*
  * write byte to RTC

@@ -275,7 +275,7 @@ extern void env_remove_tag(unsigned);
 
 /* boot.c */
 
-extern void boot(int);
+extern int boot(int);
 
 /* nv.c */
 
@@ -283,6 +283,7 @@ extern void boot(int);
 #define NVFLAG_IDE_DISABLE_LBA48			(1 << 1)
 #define NVFLAG_IDE_DISABLE_TIMING		(1 << 2)
 #define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
+#define NVFLAG_CONSOLE_DISABLE			(1 << 4)
 
 #define NV_STORE_VERSION					1
 

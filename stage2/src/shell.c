@@ -130,6 +130,7 @@ static int cmnd_nvflags(int opsz)
 		"IDE LBA48 disabled",
 		"IDE timing disabled",
 		"IDE slave enabled",
+		"Console disabled",
 	};
 	unsigned indx, mask;
 	unsigned long bit;

@@ -3,6 +3,14 @@
 CoLo 1.12 (xxxx-xx-xx)
 ----------------------
 
+*	Fixed a couple of off by one errors in the 'boot' command.
+
+*	Added 'console disable' to the non-volatile flags. This defers initialising
+	the serial port until the boot shell is entered and should make it possible
+	to use CoLo on units which don't have a serial port. This flag will be set
+	by default on new installs, but will be clear on units which have a recent
+	CoLo install already.
+
 *	Added man pages for 'paneld' and 'e2fsck-lcd'.
 	[Martin Michlmayr]
 
