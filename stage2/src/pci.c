@@ -16,7 +16,36 @@
 #define UNIT_ID_QUBE2			5
 #define UNIT_ID_RAQ2				6
 
+unsigned cp0_count_freq = CP0_COUNT_RATE_DEFAULT;
+
 static unsigned unit;
+
+static void fixup_count_rate(void)
+{
+	unsigned start, count;
+
+	BRDG_REG_WORD(BRDG_REG_COUNTER_CTRL) = (1 << 0);
+
+	udelay(1000);
+
+	start = BRDG_REG_WORD(BRDG_REG_COUNTER_0);
+
+	count = MFC0(CP0_COUNT);
+
+	while(start - BRDG_REG_WORD(BRDG_REG_COUNTER_0) < (BRDG_TCK + 10) / 20)
+		;
+
+	count = MFC0(CP0_COUNT) - count;
+
+	BRDG_REG_WORD(BRDG_REG_COUNTER_CTRL) = 0;
+
+	cp0_count_freq = (count + 500) / 1000 * 20 * 1000;
+}
+
+unsigned cpu_clock_khz(void)
+{
+	return (cp0_count_freq * 2 + 500) / 1000;
+}
 
 static inline int bad_device(unsigned dev)
 {
@@ -112,6 +141,8 @@ void pci_init(size_t bank0, size_t bank1)
 	/* read unit type */
 
 	unit = pcicfg_read_byte(PCI_DEV_VIA, PCI_FNC_VIA_ISA, 0x94) >> 4;
+
+	fixup_count_rate();
 }
 
 /*

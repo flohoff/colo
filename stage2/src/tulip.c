@@ -36,6 +36,11 @@
 #define CSR0_21143_RLE					(1 << 23)
 #define CSR0_21143_WIE					(1 << 24)
 
+#define CSR5_RS_MASK						(7 << 17)
+# define CSR5_RS_STOPPED				(0 << 17)
+#define CSR5_TS_MASK						(7 << 20)
+# define CSR5_TS_STOPPED				(0 << 20)
+
 #define CSR6_SR							(1 << 1)
 #define CSR6_FD							(1 << 9)
 #define CSR6_ST							(1 << 13)
@@ -111,6 +116,7 @@ static unsigned rx_curr;
 static unsigned rx_fill;
 
 static int nic_avail;
+static int phy_avail;
 static int chip_id;
 
 /*
@@ -406,18 +412,9 @@ static int tulip_setup(unsigned dev, unsigned fnc, unsigned iob)
 	return 1;
 }
 
-static void tulip_reset(void)
-{
-	CSR(0) = CSR0_SWR;
-	udelay(1000);
-
-	CSR(0) = 0;
-	udelay(1000);
-
-	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
-	udelay(1000);
-}
-
+/*
+ * initialise network controller
+ */
 void tulip_init(void)
 {
 	nic_avail = tulip_setup(PCI_DEV_ETH0, PCI_FNC_ETH0, IO_BASE_ETH0);
@@ -441,21 +438,28 @@ void tulip_init(void)
 	pcicfg_write_word(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x40, 0x00000000);
 	udelay(1000);
 
-	tulip_reset();
+	/* reset device */
+
+	CSR(0) = CSR0_SWR;
+	udelay(1000);
+
+	CSR(0) = 0;
+	udelay(1000);
+
+	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
+	udelay(1000);
 
 	read_hw_addr();
 }
 
-int tulip_up(void)
+/*
+ * initialise PHY
+ */
+static void setup_phy(void)
 {
 	unsigned mark;
 
-	assert(!net_is_up());
-
-	if(!nic_avail)
-		return 0;
-
-	tulip_reset();
+	assert(!phy_avail);
 
 	CSR(13) = 0;
 
@@ -478,12 +482,32 @@ int tulip_up(void)
 			}
 	}
 
+	phy_avail = 1;
+}
+
+/*
+ * start transmitter and receiver
+ */
+int tulip_up(void)
+{
+	assert(!net_is_up());
+
+	if(!nic_avail)
+		return 0;
+
+	if(!phy_avail)
+		setup_phy();
+
 	rx_ring_init();
 	tx_ring_init();
+
+	/* enable BM DMA */
 
 	pcicfg_write_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
 		pcicfg_read_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) | (1 << 2));
 	udelay(1000);
+
+	/* start transmitter and receiver */
 
 	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
 	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD | CSR6_ST | CSR6_SR;
@@ -493,11 +517,20 @@ int tulip_up(void)
 	return 1;
 }
 
+/*
+ * stop transmitter and receiver
+ */
 void tulip_down(void)
 {
 	assert(net_is_up());
 
-	tulip_reset();
+	/* stop transmitter and receiver */
+
+	CSR(6) = CSR6_21143_MBO | CSR6_21143_HBD | CSR6_21143_PS | CSR6_FD;
+	while((CSR(5) & (CSR5_TS_MASK | CSR5_RS_MASK)) != (CSR5_TS_STOPPED | CSR5_RS_STOPPED))
+		udelay(1000);
+
+	/* disable BM DMA */
 
 	pcicfg_write_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04,
 		pcicfg_read_half(PCI_DEV_ETH0, PCI_FNC_ETH0, 0x04) & ~(1 << 2));

@@ -189,6 +189,7 @@ extern int script_exec(const char *, int);
 
 /* pci.c */
 
+extern unsigned cpu_clock_khz(void);
 extern void pci_init(size_t, size_t);
 extern const char *pci_unit_name(void);
 

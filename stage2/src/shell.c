@@ -52,6 +52,7 @@ static int cmnd_eval(int);
 static int cmnd_reboot(int);
 static int cmnd_nvflags(int);
 static int cmnd_noop(int);
+static int cmnd_sleep(int);
 
 size_t argsz[MAX_CMND_ARGS];
 char *argv[MAX_CMND_ARGS];
@@ -104,6 +105,7 @@ static struct
 	{ "exit",			cmnd_exit,			0,					NULL,															},
 	{ "select",			cmnd_menu,			0,					"title timeout option ...",							},
 	{ "noop",			cmnd_noop,			0,					"[arguments ...]",										},
+	{ "sleep",			cmnd_sleep,			0,					"sleep period",											},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",										},
@@ -125,11 +127,43 @@ static int cmnd_arguments(int opsz)
 		putstring_safe(argv[indx], argsz[indx]);
 		puts("}");
 	}
-	
+
 	return E_NONE;
 }
 
 #endif
+
+/*
+ * shell command - sleep
+ */
+static int cmnd_sleep(int opsz)
+{
+	unsigned delay;
+	char *ptr;
+
+	if(argc < 2)
+		return E_ARGS_UNDER;
+	if(argc > 2)
+		return E_ARGS_OVER;
+
+	delay = strtoul(argv[1], &ptr, 10);
+	if(ptr == argv[1] || *ptr)
+		return E_BAD_EXPR;
+
+	for(; delay > 100; delay -= 100) {
+
+		udelay(100 * 1000);
+
+		if(BREAK()) {
+			puts("aborted");
+			return E_UNSPEC;
+		}
+	}
+
+	udelay(delay * 1000);
+
+	return E_NONE;
+}
 
 /*
  * shell command - noop

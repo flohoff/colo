@@ -9,8 +9,14 @@
 #ifndef _CPU_H_
 #define _CPU_H_
 
-#define CPU_CLOCK							(250 * 1000000)
-#define CP0_COUNT_RATE					(CPU_CLOCK / 2)
+#define CPU_CLOCK_DEFAULT				(250 * 1000 * 1000)
+#define CP0_COUNT_RATE_DEFAULT		(CPU_CLOCK_DEFAULT / 2)
+
+#ifdef CP0_COUNT_RATE_FIXED
+# define CP0_COUNT_RATE					CP0_COUNT_RATE_DEFAULT
+#else
+# define CP0_COUNT_RATE					({extern unsigned cp0_count_freq;cp0_count_freq;})
+#endif
 
 #define CP0_INDEX							0
 #define CP0_ENTRYLO0						2

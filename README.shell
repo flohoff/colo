@@ -411,6 +411,10 @@ whether a variable is defined e.g.
 	-noop {console-speed}
 	onfail ...
 
+sleep period
+------------
+
+Pauses for the specified number of milliseconds.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

@@ -33,6 +33,7 @@ static int do_boot(unsigned switches)
 void loader(size_t bank0, size_t bank1, unsigned switches)
 {
 	extern char __text;
+	unsigned clock;
 
 	ram_size = bank0 + bank1;
 	ram_restrict = ram_size;
@@ -50,6 +51,10 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 	puts("\n[ \"CoLo\" v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]");
 
 	printf("stage2: %08lx-%08lx\n", (unsigned long) &__text, (unsigned long) KSEG0(ram_size));
+
+	clock = cpu_clock_khz();
+
+	printf("cpu: clock %u.%03uMHz\n", clock / 1000, clock % 1000);
 
 	printf("pci: unit type <%s>\n", pci_unit_name());
 

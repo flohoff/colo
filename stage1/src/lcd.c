@@ -6,9 +6,11 @@
  * This code is covered by the GNU General Public License. For details see the file "COPYING".
  */
 
+#define CP0_COUNT_RATE_FIXED
+
 #include "lib.h"
-#include "cpu.h"
 #include "galileo.h"
+#include "cpu.h"
 
 #define LCD_TIMEOUT					(CP0_COUNT_RATE/50)	// 20ms
 #define LCD_COLUMNS					16

@@ -5,6 +5,10 @@ CoLo 1.15 (xxxx-xx-xx)
 
 *	Added support for 21041 network controller (early units).
 
+*	Added clock speed detection (stage2 only).
+
+*	Added new command 'sleep'.
+
 CoLo 1.14 (2004-10-26)
 ----------------------
 
