@@ -92,7 +92,7 @@ void chain(unsigned arg)
 {
 	extern char __stage2;
 
-	unsigned indx, data, type;
+	unsigned indx, data, type, switches;
 	unsigned *pfix, *relocs;
 	unsigned long loadaddr;
 	struct rfx_header *rfx;
@@ -103,6 +103,10 @@ void chain(unsigned arg)
 	serial_init();
 	puts("chain: v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " (" __DATE__ ")");
 	drain();
+
+	/* read state of buttons */
+
+	switches = *(volatile unsigned *) BRDG_NCS2_BASE >> 24;
 
 	/* get memory bank sizes */
 
@@ -182,7 +186,7 @@ void chain(unsigned arg)
 	puts("chain: starting stage2");
 	drain();
 
-	((void (*)(size_t, size_t, unsigned))(rfx->entry + loadaddr))(ram[0], ram[1], 0);
+	((void (*)(size_t, size_t, unsigned))(rfx->entry + loadaddr))(ram[0], ram[1], switches);
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

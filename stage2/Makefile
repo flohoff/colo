@@ -39,6 +39,7 @@ OBJS=	main.o\
 		udp.o\
 		dhcp.o\
 		tftp.o\
+		lcd.o\
 		start.o\
 
 LOADADDR=0x80000000

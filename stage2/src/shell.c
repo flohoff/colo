@@ -33,6 +33,7 @@ extern int cmnd_net(int);
 extern int cmnd_tftp(int);
 extern int cmnd_ping(int);
 extern int cmnd_pci(int);
+extern int cmnd_lcd(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
@@ -81,6 +82,7 @@ static struct
 	{ "tftp",			cmnd_tftp,			0,					"host path [path]",								},
 	{ "ping",			cmnd_ping,			0,					"host",												},
 	{ "pci",				cmnd_pci,			FLAG_SIZED,		"[device[.function] register [value]]",	},
+	{ "lcd",				cmnd_lcd,			0,					"[text [text]]",									},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",								},

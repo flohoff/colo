@@ -12,12 +12,15 @@
 
 #define LCD_TIMEOUT					(CP0_COUNT_RATE/50)	// 20ms
 #define LCD_COLUMNS					16
+#define LCD_ROW_OFFSET				40
 
 #define LCD_BASE						((volatile unsigned *) BRDG_NCS3_BASE)
 #define _LCD_WRITE(r,d)				do{LCD_BASE[!!(r)*4]=(unsigned)(d)<<24;}while(0)
 #define _LCD_READ(r)					(LCD_BASE[!!(r)*4]>>24)
 #define LCD_WRITE(r,d)				do{lcd_wait();_LCD_WRITE((r),(d));}while(0)
 #define LCD_READ(r)					({lcd_wait();_LCD_READ(r);})
+
+#define LCD_BUSY						(1 << 7)
 
 #define LCD_CLEAR						0x01
 #define LCD_ENTRY_MODE_SET			(0x04 | (1 << 1))
@@ -35,7 +38,7 @@ static void lcd_wait(void)
 {
 	unsigned mark;
 
-	for(mark = MFC0(CP0_COUNT); (_LCD_READ(0) & 0x80) && MFC0(CP0_COUNT) - mark < LCD_TIMEOUT;)
+	for(mark = MFC0(CP0_COUNT); (_LCD_READ(0) & LCD_BUSY) && MFC0(CP0_COUNT) - mark < LCD_TIMEOUT;)
 		udelay(2);
 
 	udelay(10);
@@ -67,7 +70,7 @@ void lcd_line(int row, const char *str)
 {
 	unsigned indx;
 
-	LCD_WRITE(0, LCD_DDRAM_ADDR | 40 * !!row);
+	LCD_WRITE(0, LCD_DDRAM_ADDR | (LCD_ROW_OFFSET * !!row));
 
 	indx = 0;
 
