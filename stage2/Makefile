@@ -9,6 +9,7 @@
 TARG= stage2
 OBJS=	main.o\
 		lib.o\
+		libmem.o\
 		vsprintf.o\
 		serial.o\
 		shell.o\

@@ -10,6 +10,7 @@ TARG= chain
 STAGE2= ../stage2/stage2.strip
 OBJS=	chain.o\
 		serial.o\
+		libmem.o\
 		start.o\
 
 CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&\
@@ -48,7 +49,7 @@ $(TARG): $(OBJS) $(TARG).stage2
 %.o: src/%.S
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c -o $@ $^
 
-# pick up serial.c from stage2 source
+# pick up libmem.c & serial.c from stage2 source
 
 %.o: ../stage2/src/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^

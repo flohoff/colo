@@ -72,14 +72,18 @@ extern char *strchr(const char *, int);
 extern int strncasecmp(const char *, const char *, size_t);
 extern int strncmp(const char *, const char *, size_t);
 extern int strcmp(const char *, const char *);
-extern void *memcpy(void *, const void *, size_t);
 extern void *memmove(void *, const void *, size_t);
-extern void *memset(void *, int, size_t);
 extern int memcmp(const void *, const void *, size_t);
 extern int sprintf(char *, const char *, ...);
 extern int printf(const char *, ...);
 extern unsigned long strtoul(const char *, char **, int);
 extern void putstring_safe(const void *, int);
+extern int glob(const char *, const char *);
+
+/* libmem.c */
+
+extern void *memcpy(void *, const void *, size_t);
+extern void *memset(void *, int, size_t);
 
 /* vsprintf.c */
 
@@ -120,6 +124,7 @@ enum {
 };
 
 extern void __attribute__((noreturn)) shell(const char *script);
+extern int argv_add(const char *);
 
 extern size_t argsz[];
 extern unsigned argc;
@@ -193,6 +198,8 @@ extern void *heap_reserve_hi(size_t);
 extern void heap_alloc(void);
 extern void heap_info(void);
 extern void *heap_image(size_t *);
+extern void heap_mark(void);
+extern void *heap_mark_image(size_t *);
 
 /* ext2.c */
 

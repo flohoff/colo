@@ -12,6 +12,8 @@
 #include "linux/elf.h"
 #include "cobalt.h"
 
+extern void *initrd_image(size_t *);
+
 /*
  * Check for valid ELF image and return base address and size, 32 bit version
  */
@@ -272,8 +274,9 @@ int cmnd_execute(int opsz)
 	extern unsigned launch(void *, void *, int, char **, char **, int *);
 	extern char __heap;
 
-	void *image, *targ, *func;
-	size_t imagesz, elfsz;
+	static char irdstr[32];
+	void *image, *targ, *func, *initrd;
+	size_t imagesz, elfsz, initrdsz;
 	unsigned code;
 
 	image = heap_image(&imagesz);
@@ -285,6 +288,15 @@ int cmnd_execute(int opsz)
 
 	if(gzip_check(image, imagesz) && !unzip(image, imagesz))
 		return E_UNSPEC;
+
+	initrd = heap_mark_image(&initrdsz);
+	if(initrdsz) {
+		sprintf(irdstr, "initrd=%x@%lx", initrdsz, (unsigned long) initrd);
+		if(!argv_add(irdstr)) {
+			puts("command line too long");
+			return E_UNSPEC;
+		}
+	}
 
 	image = heap_image(&imagesz);
 

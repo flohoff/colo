@@ -58,35 +58,6 @@ unsigned long strtoul(const char *str, char **end, int base)
 	return sign == '-' ? -value : value;
 }
 
-void *memcpy(void *dst, const void *src, size_t size)
-{
-	void *ptr, *end;
-
-	if(!size)
-		return dst;
-
-	ptr = dst;
-	end = ptr + size;
-
-	while(ptr < end && ((unsigned long) ptr & 3)) {
-		*(uint8_t *) ptr = *(uint8_t *) src;
-		++ptr, ++src;
-	}
-
-	if(!((unsigned long) src & 3))
-		while(ptr < end - 3) {
-			*(uint32_t *) ptr = *(uint32_t *) src;
-			ptr += 4, src += 4;
-		}
-
-	while(ptr < end) {
-		*(uint8_t *) ptr = *(uint8_t *) src;
-		++ptr, ++src;
-	}
-
-	return dst;
-}
-
 void *memmove(void *dst, const void *src, size_t size)
 {
 	assert(dst <= src || dst >= src + size);
@@ -94,38 +65,6 @@ void *memmove(void *dst, const void *src, size_t size)
 	// FIXME
 
 	return memcpy(dst, src, size);
-}
-
-void *memset(void *dst, int val, size_t size)
-{
-	void *ptr, *end;
-
-	if(!size)
-		return dst;
-
-	val &= 0xff;
-	val |= val << 8;
-	val |= val << 16;
-
-	ptr = dst;
-	end = ptr + size;
-
-	while(ptr < end && ((unsigned long) ptr & 3)) {
-		*(uint8_t *) ptr = val;
-		++ptr;
-	}
-
-	while(ptr < end - 3) {
-		*(uint32_t *) ptr = val;
-		ptr += 4;
-	}
-
-	while(ptr < end) {
-		*(uint8_t *) ptr = val;
-		++ptr;
-	}
-
-	return dst;
 }
 
 int memcmp(const void *mem1, const void *mem2, size_t size)
@@ -258,6 +197,32 @@ void putstring_safe(const void *str, int size)
 			putchar(chr);
 		else
 			printf("\\x%02x", chr);
+	}
+}
+
+int glob(const char *str, const char *pat)
+{
+	char chr;
+
+	for(;; ++str) {
+		chr = *pat++;
+		if(*str == '\0') {
+			while(chr == '*')
+				chr = *pat++;
+			return chr == '\0';
+		}
+		if(chr != '?') {
+			if(chr == '*') {
+				if(*pat == '\0')
+					return 1;
+				do
+					if(glob(str, pat))
+						return 1;
+				while(*++str != '\0');
+				return 0;
+			} else if(chr != *str)
+				return 0;
+		}
 	}
 }
 

@@ -509,6 +509,8 @@ static int atapi_read(struct ide_device *dev, const void *cmnd, void *data, unsi
 	IDE_REG_DATA = ((uint16_t *) cmnd)[4];
 	IDE_REG_DATA = ((uint16_t *) cmnd)[5];
 
+	udelay(5 * 1000);
+
 	for(blksz >>= 1;;) {
 
 		IDE_REG_STATUS_ALT;
@@ -703,38 +705,38 @@ int atapi_read_sectors(struct ide_device *dev, void *data, unsigned long addr, u
 
 			sense = atapi_sense(dev);
 
-			if(sense < 0)
+			if(sense < 0) {
 
 				ide_reset();
+				ide_select(dev);
 
-			else {
+			} else {
 
 				cause = emsg;
 
 				switch(sense) {
-					case 0x020401:
-						cause = "spinning up";
-						break;
 					case 0x023a00:
-						DPUTS("ide: error { medium not present }");
+						DPRINTF("ide.%s: error {No Medium}\n", dev->name);
 						return -1;
 					case 0x062800:
-						cause = "medium change";
+						cause = "Media Change";
 						break;
 					case 0x062900:
-						cause = "reset complete";
+						cause = "Reset Complete";
+						break;
+					case 0x020401:
+						cause = "Spinning Up";
 						break;
 					default:
 						sprintf(cause, "#%06x", sense);
 				}
 
-				DPRINTF("ide: error { %s }, retry\n", cause);
+				DPRINTF("ide: error {%s}, retry\n", cause);
 			}
 
 			for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE / 2;)
 				;
 		}
-
 
 		addr += work;
 		data += work * 2048;
@@ -829,10 +831,10 @@ void *ide_open(const char *name)
 	} __attribute__((packed));
 
 	static const char *prefix[] = { "/dev/hd", "hd" };
-	unsigned indx, size, drive, mode;
 	static struct part_table table;
+	int disk, cdrom, drive, part;
+	unsigned indx, size, mode;
 	char *ptr;
-	int part;
 
 	assert(sizeof(table) == 512);
 
@@ -848,50 +850,76 @@ void *ide_open(const char *name)
 			return NULL;
 		}
 
-		if(!(debug_flags & DFLAG_IDE_DISABLE_TIMING)) {
+		mode = 10;
+		for(indx = 0; indx < 2; ++indx)
+			if((ide_bus[indx].flags & FLAG_IDENTIFIED) && ide_bus[indx].mode < mode)
+					mode = ide_bus[indx].mode;
 
-			mode = 10;
-
-			if((ide_bus[0].flags & FLAG_IDENTIFIED) && ide_bus[0].mode < mode)
-				mode = ide_bus[0].mode;
-
-			if((ide_bus[1].flags & FLAG_IDENTIFIED) && ide_bus[1].mode < mode)
-				mode = ide_bus[1].mode;
-
+		if(!(debug_flags & DFLAG_IDE_DISABLE_TIMING))
 			ide_timing(mode);
-		}
 	}
 
-	drive = !(ide_bus[0].flags & FLAG_IDENTIFIED);
+	disk = -1;
+	cdrom = -1;
+
+	for(indx = 0; indx < 2; ++indx)
+		if(ide_bus[indx].flags & FLAG_IDENTIFIED) {
+			if(ide_bus[indx].flags & FLAG_ATAPI) {
+				if(cdrom < 0)
+					cdrom = indx;
+			} else if(disk < 0)
+				disk = indx;
+		}
+
+	drive = disk < 0 ? cdrom : disk;
 	part = -1;
 
 	if(name) {
 
-		for(indx = 0; indx < elements(prefix); ++indx) {
-			size = strlen(prefix[indx]);
-			if(!strncmp(name, prefix[indx], size)) {
-				name += size;
-				break;
+		size = strlen(name);
+
+		if(!strncasecmp(name, "disk", size))
+			
+			drive = disk;
+
+		else if(!strncasecmp(name, "cdrom", size))
+
+			drive = cdrom;
+
+		else {
+
+			drive = -1;
+
+			for(indx = 0; indx < elements(prefix); ++indx) {
+				size = strlen(prefix[indx]);
+				if(!strncasecmp(name, prefix[indx], size)) {
+
+					if(toupper(name[size]) == 'A' || toupper(name[size]) == 'B') {
+
+						part = 0;
+
+						ptr = (char *) &name[size + 1];
+						if(*ptr)
+							part = strtoul(ptr, &ptr, 10);
+
+						if(!*ptr)
+							drive = (name[size] - 'A') & 1;
+					}
+
+					break;
+				}
 			}
-		}
 
-		if(*name == 'a' || *name == 'b')
-			drive = (*name++ == 'b');
-
-		part = 0;
-
-		if(*name) {
-			part = evaluate(name, &ptr);
-			if(*ptr || !part) {
+			if(drive < 0) {
 				puts("invalid device specification");
 				return NULL;
 			}
 		}
+	}
 
-		if(!(ide_bus[drive].flags & FLAG_IDENTIFIED)) {
-			puts("no such device");
-			return NULL;
-		}
+	if(drive < 0 || !(ide_bus[drive].flags & FLAG_IDENTIFIED)) {
+		puts("no such device");
+		return NULL;
 	}
 
 	selected.dev = &ide_bus[drive];

@@ -21,6 +21,13 @@ typedef long long				__s64;
 
 #include "linux/elf.h"
 
+/* libmem.c */
+
+extern void *memcpy(void *, const void *, size_t);
+extern void *memset(void *, int, size_t);
+
+/* serial.c */
+
 extern void serial_init(void);
 extern void putstring(const char *);
 extern void puts(const char *);
@@ -49,73 +56,6 @@ static void __attribute__((noreturn)) fatal(void)
 
 		leds ^= LED_RAQ_WEB | LED_RAQ_POWER_OFF | LED_QUBE_LEFT | LED_QUBE_RIGHT;
 	}
-}
-
-/*
- * C library function 'memcpy'
- */
-void *memcpy(void *dst, const void *src, size_t size)
-{
-	void *ptr, *end;
-
-	if(!size)
-		return dst;
-
-	ptr = dst;
-	end = ptr + size;
-
-	while(ptr < end && ((unsigned long) ptr & 3)) {
-		*(uint8_t *) ptr = *(uint8_t *) src;
-		++ptr, ++src;
-	}
-
-	if(!((unsigned long) src & 3))
-		while(ptr < end - 3) {
-			*(uint32_t *) ptr = *(uint32_t *) src;
-			ptr += 4, src += 4;
-		}
-
-	while(ptr < end) {
-		*(uint8_t *) ptr = *(uint8_t *) src;
-		++ptr, ++src;
-	}
-
-	return dst;
-}
-
-/*
- * C library function 'memset'
- */
-static void *memset(void *dst, int val, size_t size)
-{
-	void *ptr, *end;
-
-	if(!size)
-		return dst;
-
-	val &= 0xff;
-	val |= val << 8;
-	val |= val << 16;
-
-	ptr = dst;
-	end = ptr + size;
-
-	while(ptr < end && ((unsigned long) ptr & 3)) {
-		*(uint8_t *) ptr = val;
-		++ptr;
-	}
-
-	while(ptr < end - 3) {
-		*(uint32_t *) ptr = val;
-		ptr += 4;
-	}
-
-	while(ptr < end) {
-		*(uint8_t *) ptr = val;
-		++ptr;
-	}
-
-	return dst;
 }
 
 /*
@@ -167,7 +107,7 @@ void memory_info(size_t *bank)
 /*
  * load boot loader from ELF image that follows
  */
-void chain(unsigned arg)
+void chain(unsigned arg, unsigned sp)
 {
 	extern char __data, __edata;
 	extern char __bss, __ebss;
@@ -189,6 +129,13 @@ void chain(unsigned arg)
 	serial_init();
 	puts("chain: running");
 	drain();
+
+	/* if loaded from "CoLo" launch.S will have stacked 64 bytes */
+
+	if((arg & 0xffff) || arg - sp == 64) {
+		puts("chain: LOADED FROM \"CoLo\" LOADER, HALTING");
+		fatal();
+	}
 
 	/* get memory bank sizes */
 
