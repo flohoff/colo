@@ -23,7 +23,7 @@ static const char *option[] =
 static const char *script[] =
 {
 	"mount\n-script /boot/default.colo\nload /boot/vmlinux.gz\nexecute",
-	NULL,
+	"net\ntftp {dhcp-next-server} {dhcp-boot-file}\nexecute",
 	NULL,
 	NULL,
 };
@@ -34,10 +34,11 @@ void boot(int which)
 		DPUTS("boot: running boot menu");
 		which = lcd_menu(option, elements(option), 0, MENU_TIMEOUT);
 		if(which < 0)
-			which = 0;
+			which = -which;
 	}
 
-	shell(which < elements(script) ? script[which] : NULL);
+	if((unsigned) which < elements(script))
+		script_exec(script[which]);
 }
 
 int cmnd_boot(int opsz)
@@ -64,8 +65,10 @@ int cmnd_boot(int opsz)
 			return E_NONE;
 		}
 
-		if(!strncasecmp(argv[1], "menu", size))
+		if(!strncasecmp(argv[1], "menu", size)) {
 			boot(-1);
+			return E_NONE;
+		}
 	}
 
 	which = evaluate(argv[argc - 1], &ptr);
@@ -82,6 +85,8 @@ int cmnd_boot(int opsz)
 	}
 
 	boot(which);
+
+	return E_NONE;
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

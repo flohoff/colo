@@ -278,12 +278,15 @@ int argv_add(const char *str)
  */
 static int split_line(char *line)
 {
+	static char pool[384];
+
+	unsigned indx, nout, size;
+	const char *value;
 	char delim, chr;
-	unsigned indx;
-	char *pool;
+	char *name;
 	int escp;
 
-	pool = line;
+	nout = 0;
 	argc = 0;
 
 	do {
@@ -294,18 +297,56 @@ static int split_line(char *line)
 		if(!*line)
 			break;
 
-		if(argc == elements(argv) - 1)
+		if(argc == elements(argv) - 1 || nout >= sizeof(pool))
 			return E_ARGS_OVER;
 
-		argv[argc] = pool;
+		argv[argc] = pool + nout;
 
-		for(escp = 0, delim = ' ';;)
-		{
+		delim = ' ';
+		escp = 0;
+		name = NULL;
+
+		for(;;) {
+
 			chr = *line++;
 
+			if(name) {
+
+				if(chr == '}') {
+
+					line[-1] = '\0';
+
+					value = env_get(name);
+					if(!value)
+						return E_NO_SUCH_VAR;
+
+					size = strlen(value);
+					if(nout + size >= sizeof(pool))
+						return E_ARGS_OVER;
+
+					memcpy(pool + nout, value, size);
+					nout += size;
+
+					name = NULL;
+
+					continue;
+
+				} else
+
+					if(!isalnum(chr) && chr != '-' && chr != '_') {
+						line = name;
+						name = NULL;
+						escp = 1;
+						chr = '{';
+					}
+			}
+
 			if(!chr) {
-				if(escp)
-					*pool++ = '\\';
+				if(escp) {
+					pool[nout++] = '\\';
+					if(nout >= sizeof(pool))
+						return E_ARGS_OVER;
+				}
 				break;
 			}
 
@@ -321,37 +362,38 @@ static int split_line(char *line)
 				continue;
 			}
 
-			if(delim == '"') {
+			if(delim != '\'') {
 
 				if(escp) {
 
-					switch(chr)
-					{
-						case 'a': chr = '\a'; break;
-						case 'b': chr = '\b'; break;
-						case 'f': chr = '\f'; break;
-						case 'n': chr = '\n'; break;
-						case 'r': chr = '\r'; break;
-						case 't': chr = '\t'; break;
-						case 'v': chr = '\v'; break;
-						case 'e': chr = 27; break;
+					if(delim == '"')
+						switch(chr)
+						{
+							case 'a': chr = '\a'; break;
+							case 'b': chr = '\b'; break;
+							case 'f': chr = '\f'; break;
+							case 'n': chr = '\n'; break;
+							case 'r': chr = '\r'; break;
+							case 't': chr = '\t'; break;
+							case 'v': chr = '\v'; break;
+							case 'e': chr = 27; break;
 
-						case '0':
-							chr = 0;
-							for(indx = 0; indx < 3 && line[indx] >= '0' && line[indx] <= '7'; ++indx)
-								chr = (chr << 3) | (line[indx] & 0xf);
-							line += indx;
-							break;
+							case '0':
+								chr = 0;
+								for(indx = 0; indx < 3 && line[indx] >= '0' && line[indx] <= '7'; ++indx)
+									chr = (chr << 3) | (line[indx] & 0xf);
+								line += indx;
+								break;
 
-						case 'x':
-							chr = 0;
-							for(indx = 0; indx < 2 && isxdigit(line[indx]); ++indx) {
-								chr = (chr << 4) | (line[indx] & 0xf);
-								if(line[indx] >= 'A')
-									chr += 9;
-							}
-							line += indx;
-					}
+							case 'x':
+								chr = 0;
+								for(indx = 0; indx < 2 && isxdigit(line[indx]); ++indx) {
+									chr = (chr << 4) | (line[indx] & 0xf);
+									if(line[indx] >= 'A')
+										chr += 9;
+								}
+								line += indx;
+						}
 
 					escp = 0;
 
@@ -361,15 +403,22 @@ static int split_line(char *line)
 						escp = 1;
 						continue;
 					}
+
+					if(chr == '{')
+						name = line;
 				}
 			}
 
-			*pool++ = chr;
+			if(!name) {
+				pool[nout++] = chr;
+				if(nout >= sizeof(pool))
+					return E_ARGS_OVER;
+			}
 		}
 
-		argsz[argc] = pool - argv[argc];
+		argsz[argc] = pool + nout - argv[argc];
 
-		*pool++ = '\0';
+		pool[nout++] = '\0';
 
 		++argc;
 
@@ -428,9 +477,17 @@ static int execute(void)
 }
 
 /*
+ * run script
+ */
+void script_exec(const char *run)
+{
+	script = run;
+}
+
+/*
  * loop reading command lines and dispatching
  */
-void shell(const char *run)
+void shell(void)
 {
 	static const char *msgs[] = {
 		[E_INVALID_CMND]	= "unrecognised command",
@@ -439,6 +496,7 @@ void shell(const char *run)
 		[E_ARGS_COUNT]		= "incorrect number of arguments",
 		[E_BAD_EXPR]		= "bad expression",
 		[E_BAD_VALUE]		= "invalid value",
+		[E_NO_SUCH_VAR]	= "no such variable",
 	};
 	static char line[256], hist[256];
 	unsigned indx;
@@ -446,7 +504,7 @@ void shell(const char *run)
 
 	assert(elements(argv) == elements(argsz));
 
-	for(script = run;;) {
+	for(;;) {
 
 		putstring("> ");
 
@@ -537,7 +595,7 @@ static int cmnd_script(int opsz)
 
 	buf[size] = '\0';
 
-	script = buf;
+	script_exec(buf);
 
 	return E_NONE;
 }

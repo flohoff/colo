@@ -44,16 +44,21 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	heap_reset();
 
-	env_put("console-speed", _STR(BAUD_RATE), 0);
+	env_put("console-speed", _STR(BAUD_RATE), VAR_OTHER);
 
 	if(!(nv_store.flags & NVFLAG_DISABLE_BOOT_MENU) || (switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
+
 		boot(-1);
 
-	for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE * 3 / 2;)
-		if(BREAK())
-			shell(NULL);
+	else
 
-	boot(0);
+		for(mark = MFC0(CP0_COUNT); !BREAK();)
+			if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE * 3 / 2) {
+				boot(0);
+				break;
+			}
+
+	shell();
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

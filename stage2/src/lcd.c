@@ -118,8 +118,8 @@ int lcd_menu(const char **options, unsigned count, unsigned which, unsigned time
 
 		for(done = 0;; done += BUTTON_DEBOUNCE) {
 
-			if(done > timeout)
-				return which;
+			if(timeout && done > timeout)
+				return -(top + row);
 
 			for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < ((CP0_COUNT_RATE + 500) / 1000) * BUTTON_DEBOUNCE;)
 				yield();

@@ -25,10 +25,11 @@ If the boot process is not intercepted the unit will boot using the default
 
 An example /boot/default.colo might look like this (just an example) :-
 
-	# load default kernel from hda2
+	# load default kernel from hda2 root volume
 	mount hda2
 	load /boot/vmlinux.gz
-	execute root=/dev/hda2 console=ttyS0,115200
+	lcd "Unzipping kernel"
+	execute root=/dev/{mounted-volume} console=ttyS0,{console-speed}
 
 GENERAL
 -------
@@ -44,6 +45,8 @@ history.
 The PAGE-UP/PAGE-DOWN keys are mapped to forward/backward word for terminals
 that support these keys.
 
+Variable names enclosed in '{' and '}' are replaced with the variable's value.
+
 If a line begins with a '#' the whole line is ignored. This can be used to
 include comments in script files.
 
@@ -52,6 +55,19 @@ the command fails.
 
 Some commands that can take a long time to execute can be aborted by hitting
 CTRL-C or the SPACE key.
+
+VARIABLES
+---------
+
+The following variables are set by the shell when appropriate :-
+
+console-speed			Set to the boot loader baud rate (currently 115200).
+mounted-volume			Set to the name of the currently mounted volume (eg hda2).
+dhcp-next-server		'next server' returned by DHCP server.
+dhcp-boot-file			'boot file' returned by DHCP server.
+dhcp-root-path			'root path' returned by DHCP server.
+
+See the 'variable' command for more information.
 
 SHELL COMMANDS
 --------------

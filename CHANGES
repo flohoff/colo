@@ -3,15 +3,19 @@
 CoLo 1.9 (xxxx-xx-xx)
 ---------------------
 
-*	Added non-volatile storage using RTC RAM.
+*	Made use of non-volatile storage on RTC.
 
-*	Renamed 'dflags' command 'nvflags' and made them non-volatile.
+*	Renamed 'dflags' command to 'nvflags' and made the flags non-volatile.
 
 *	Added boot menu and 'boot' command.
 
 *	Added 'variable' command.
 
-*	Added variables to hold DHCP parameters.
+*	Implemented variable substition in shell command lines.
+
+*	DHCP now sets variables with boot information.
+
+*	Added 'lcd' command.
 
 CoLo 1.8 (2004-04-26)
 ---------------------

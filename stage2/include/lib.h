@@ -130,10 +130,12 @@ enum {
 	E_ARGS_COUNT,
 	E_BAD_EXPR,
 	E_BAD_VALUE,
+	E_NO_SUCH_VAR,
 };
 
-extern void __attribute__((noreturn)) shell(const char *script);
+extern void __attribute__((noreturn)) shell(void);
 extern int argv_add(const char *);
+extern void script_exec(const char *);
 
 extern size_t argsz[];
 extern unsigned argc;
@@ -242,7 +244,7 @@ extern void env_remove_tag(unsigned);
 
 /* boot.c */
 
-extern void __attribute__((noreturn)) boot(int);
+extern void boot(int);
 
 /* nv.c */
 
@@ -256,9 +258,9 @@ extern void __attribute__((noreturn)) boot(int);
 
 struct nv_store
 {
+	uint8_t	crc;		/* must be first */
 	uint8_t	vers;
 	uint8_t	size;
-	uint8_t	crc;
 
 	uint8_t	flags;
 

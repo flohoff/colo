@@ -576,6 +576,8 @@ int cmnd_mount(int opsz)
 	if(argc > 2)
 		return E_ARGS_OVER;
 
+	env_put("mounted-volume", NULL, VAR_OTHER);
+
 	if(vol.mounted)
 		ext2_umount(&vol);
 
