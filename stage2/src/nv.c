@@ -85,7 +85,7 @@ void nv_get(void)
 		}
 	};
 	unsigned indx;
-	int select;
+	int disable;
 
 	memset(&nv_store, 0, sizeof(nv_store));
 	
@@ -100,14 +100,13 @@ void nv_get(void)
 
 	if(nv_store.vers < 2) {
 
+		disable = (pci_unit_id() == UNIT_ID_QUBE1);
+
+		if(lcd_menu(option[disable], 3, 0) == 1)
+			disable = !disable;
+
 		nv_store.flags &= ~NVFLAG_CONSOLE_DISABLE;
-
-		select = (pci_unit_id() == UNIT_ID_QUBE1);
-
-		if(lcd_menu(option[select], 3, 0) == 1)
-			select = !select;
-
-		if(select)
+		if(disable)
 			nv_store.flags |= NVFLAG_CONSOLE_DISABLE;
 
 		nv_store.vers = 2;
