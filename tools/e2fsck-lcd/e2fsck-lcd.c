@@ -318,8 +318,10 @@ int main(int argc, char *argv[])
 			next = !*++ptr;
 			if(next)
 				continue;
-		} else if(stat(ptr, &info) == 0 && S_ISBLK(info.st_mode))
+		} else if(strchr(ptr, '/') && !stat(ptr, &info) && S_ISBLK(info.st_mode)) {
 			devn = ptr;
+			continue;
+		}
 
 		if(!desc) {
 			strtoul(ptr, &end, 0);
