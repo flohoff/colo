@@ -6,7 +6,7 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-TARG= stage1
+TARG= colo-rom-image
 OBJS=	init.o\
 		main.o\
 		lcd.o\
@@ -14,6 +14,7 @@ OBJS=	init.o\
 		loader.o\
 		fast.o\
 		start.o\
+		../stage2/stage2.elf\
 
 CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&\
 	echo "-mcpu=r5000 -EL" ||\
@@ -33,14 +34,11 @@ binary: $(TARG).bin
 clean:
 	rm -f $(TARG){,.bin,.map,.lst} $(OBJS)
 
-$(TARG).lst: $(TARG)
-	objdump -Dx $^ > $@
-
 $(TARG).bin: $(TARG)
-	objcopy -O binary $(TARG) $@
+	objcopy -O binary $^ $@
 
 $(TARG): $(OBJS)
-	$(LD) -T $(TARG).lnk -Map $(TARG).map -o $@ $^
+	$(LD) -T $@.lnk -Map $@.map -o $@ $^
 
 fast.o: CFLAGS+= -Wa,--no-warn
 

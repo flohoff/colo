@@ -8,8 +8,6 @@
 
 __stack = 0x80100000;
 
-__stage2 = __etext + __edata - __data;
-
 SECTIONS
 {
 	. = __stack - 0x4000;
@@ -41,6 +39,8 @@ SECTIONS
 		start.o(.text)
 		*(.text)
 		*(.rodata)
+		__stage2 = .;
+		*(.stage2)
 		__etext = .;
 	}
 
