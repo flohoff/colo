@@ -590,6 +590,8 @@ int cmnd_mount(int opsz)
 
 	curdir = EXT2_ROOT_INO;
 
+	env_put("mounted-volume", ide_dev_name(vol.device), VAR_OTHER);
+
 	return E_NONE;
 }
 

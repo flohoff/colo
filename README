@@ -18,6 +18,11 @@ FEATURES
 
 * Support for booting from EXT2 formatted CDROMs.
 
+* Support for network booting via DHCP/TFTP.
+
+* Provides an LCD boot menu (hold the "ENTER" and "SELECT" buttons whilst
+  booting the unit).
+
 LIMITATIONS
 -----------
 
@@ -26,10 +31,10 @@ LIMITATIONS
 
 * Will not currently boot from logical (extended) partitions.
 
-* Network booting is currently not supported. To use the factory restore CD to
-  restore your unit you will have to restore the original boot loader first.
-  There is obviously a risk involved in doing this as it requires
-  reprogramming the Flash.  
+* Network booting over NFS is currently not supported. To use the factory
+  restore CD to restore your unit you will have to restore the original boot
+  loader first.  There is obviously a risk involved in doing this as it
+  requires reprogramming the Flash.  
 
 -- Peter Horton, pdh@colonel-panic.org --
 

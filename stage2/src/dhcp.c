@@ -30,15 +30,19 @@
 #define OPT_PAD								0
 #define OPT_NETMASK							1
 #define OPT_ROUTERS							3
+#define OPT_NAMESERVERS						6
+#define OPT_ROOT_PATH						17
 #define OPT_REQUESTED_IP					50
 #define OPT_MESSAGE_TYPE					53
 #define OPT_REQ_PARAM_LIST					55
 #define OPT_END								255
 
+static unsigned dhcp_xid;
+
 static uint32_t dhcp_mask;
 static uint32_t dhcp_gway;
 static uint32_t dhcp_addr;
-static unsigned dhcp_xid;
+static uint32_t dhcp_nsvr;
 
 /*
  * build DHCP request frame (DISCOVER/REQUEST)
@@ -70,9 +74,11 @@ static void dhcp_build(struct frame *frame)
 	NET_WRITE_BYTE(data + opts++, dhcp_addr ? DHCP_REQUEST : DHCP_DISCOVER);
 
 	NET_WRITE_BYTE(data + opts++, OPT_REQ_PARAM_LIST);
-	NET_WRITE_BYTE(data + opts++, 2);
+	NET_WRITE_BYTE(data + opts++, 4);
 	NET_WRITE_BYTE(data + opts++, OPT_NETMASK);
 	NET_WRITE_BYTE(data + opts++, OPT_ROUTERS);
+	NET_WRITE_BYTE(data + opts++, OPT_NAMESERVERS);
+	NET_WRITE_BYTE(data + opts++, OPT_ROOT_PATH);
 
 	if(dhcp_addr) {
 		NET_WRITE_BYTE(data + opts++, OPT_REQUESTED_IP);
@@ -109,9 +115,8 @@ static uint32_t mask_default(uint32_t ip)
  */
 static int dhcp_receive(int sock, struct frame *frame)
 {
-	uint32_t gway, mask, addr, peer;
 	unsigned opt, siz, msg;
-	void *data, *top;
+	void *data, *ptr, *top;
 
 	data = FRAME_PAYLOAD(frame);
 	top = data + FRAME_SIZE(frame);
@@ -127,88 +132,110 @@ static int dhcp_receive(int sock, struct frame *frame)
 		return -1;
 	}
 
-	peer = frame->ip_src;
-	addr = NET_READ_LONG(data + 0x10);
-
 	opt = OPT_PAD;
 	msg = 0;
-	gway = 0;
-	mask = mask_default(addr);
 
-	for(data += MESSAGE_SIZE_BASE + 4; data < top;) {
+	for(ptr = data + MESSAGE_SIZE_BASE + 4; ptr < top;) {
 
-		opt = NET_READ_BYTE(data++);
+		opt = NET_READ_BYTE(ptr++);
 		if(opt == OPT_PAD)
 			continue;
 		if(opt == OPT_END)
 			break;
 
-		if(data >= top)
+		if(ptr >= top)
 			break;
-		siz = NET_READ_BYTE(data++);
-		if(data + siz > top)
+		siz = NET_READ_BYTE(ptr++);
+		if(ptr + siz > top)
 			break;
 
-		switch(opt) {
+		if(opt == OPT_MESSAGE_TYPE && siz == 1)
+			msg = NET_READ_BYTE(ptr);
 
-			case OPT_NETMASK:
-				if(siz == 4)
-					mask = NET_READ_LONG(data);
-				break;
-
-			case OPT_ROUTERS:
-				if(siz >= 4 && !(siz % 4))
-					gway = NET_READ_LONG(data);
-				break;
-
-			case OPT_MESSAGE_TYPE:
-				if(siz == 1)
-					msg = NET_READ_BYTE(data);
-		}
-
-#if 0
-		{
-			unsigned idx;
-
-			DPRINTF("dhcp: option %02x)", opt);
-
-			for(idx = 0; idx < siz; ++idx)
-				DPRINTF(" %02x", NET_READ_BYTE(data + idx));
-			
-			DPUTCHAR('\n');
-		}
-#endif
-
-		data += siz;
+		ptr += siz;
 	}
+
+	if(opt == OPT_END)
+
+		switch(msg) {
+
+			case DHCP_OFFER:
+
+				if(!dhcp_addr) {
+
+					dhcp_addr = NET_READ_LONG(data + 0x10);
+					if(dhcp_addr) {
+
+						udp_connect(sock, frame->ip_src, DHCP_PORT_SERVER);
+						
+						DPRINTF("dhcp: OFFER %s <-- ", inet_ntoa(dhcp_addr));
+						DPUTS(inet_ntoa(frame->ip_src));
+
+						frame_free(frame);
+
+						return 0;
+					}
+				}
+
+				break;
+
+			case DHCP_ACK:
+
+				if(dhcp_addr && dhcp_addr == NET_READ_LONG(data + 0x10)) {
+
+					dhcp_mask = mask_default(dhcp_addr);
+
+					for(ptr = data + MESSAGE_SIZE_BASE + 4; ptr < top;) {
+
+						opt = NET_READ_BYTE(ptr++);
+						if(opt == OPT_PAD)
+							continue;
+						if(opt == OPT_END)
+							break;
+
+						siz = NET_READ_BYTE(ptr++);
+
+						switch(opt) {
+
+							case OPT_NETMASK:
+								if(siz == 4)
+									dhcp_mask = NET_READ_LONG(ptr);
+								break;
+
+							case OPT_ROUTERS:
+								if(siz >= 4 && !(siz % 4))
+									dhcp_gway = NET_READ_LONG(ptr);
+								break;
+
+							case OPT_NAMESERVERS:
+								if(siz >= 4 && !(siz % 4))
+									dhcp_nsvr = NET_READ_LONG(ptr);
+								break;
+
+							case OPT_ROOT_PATH:
+								opt = ((uint8_t *) ptr)[siz];
+								((uint8_t *) ptr)[siz] = '\0';
+								env_put("dhcp-root-path", ptr, VAR_DHCP);
+								((uint8_t *) ptr)[siz] = opt;
+						}
+
+						ptr += siz;
+					}
+
+					env_put("dhcp-next-server", inet_ntoa(NET_READ_LONG(data + 0x14)), VAR_DHCP);
+
+					((uint8_t *) data)[0x6c + 127] = '\0';
+					env_put("dhcp-boot-file", data + 0x6c, VAR_DHCP);
+
+					frame_free(frame);
+
+					DPUTS("dhcp: ACK");
+
+					return 1;
+				}
+		}
 
 	frame_free(frame);
-	
-	if(!addr || opt != OPT_END)
-		return -1;
-
-	switch(msg) {
-
-		case DHCP_OFFER:
-			if(dhcp_addr)
-				return -1;
-			dhcp_addr = addr;
-
-			udp_connect(sock, peer, DHCP_PORT_SERVER);
-			
-			DPRINTF("dhcp: OFFER %s <-- ", inet_ntoa(dhcp_addr));
-			DPUTS(inet_ntoa(peer));
-			return 0;
-
-		case DHCP_ACK:
-			if(dhcp_addr == addr) {
-				dhcp_mask = mask;
-				dhcp_gway = gway;
-
-				DPUTS("dhcp: ACK");
-				return 1;
-			}
-	}
 
 	return -1;
 }
@@ -221,8 +248,10 @@ static int dhcp_config(void)
 	ip_addr = dhcp_addr;
 	ip_mask = dhcp_mask;
 	ip_gway = dhcp_gway;
+	ip_nsvr = dhcp_nsvr;
 
 	if(!net_up()) {
+		env_remove_tag(VAR_DHCP);
 		puts("no interface");
 		return 0;
 	}
@@ -238,6 +267,8 @@ int dhcp(void)
 	unsigned mark, retries;
 	struct frame *frame;
 	int sock, stat;
+
+	env_remove_tag(VAR_DHCP);
 
 	net_down();
 
@@ -276,7 +307,7 @@ int dhcp(void)
 
 		for(mark = MFC0(CP0_COUNT);;) {
 
-			if(kbhit() && getch() == ' ') {
+			if(BREAK()) {
 
 				udp_close(sock);
 				net_down();

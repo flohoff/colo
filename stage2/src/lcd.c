@@ -76,8 +76,6 @@ void lcd_line(int row, const char *str)
 static void lcd_prog_chars(void)
 {
 	static uint8_t data[] = {
-		0x04, 0x0e, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00,		/* up arrow    */
-		0x00, 0x00, 0x00, 0x00, 0x1f, 0x0e, 0x04, 0x00,		/* down arrow  */
 		0x01, 0x03, 0x07, 0x0f, 0x07, 0x03, 0x01, 0x00,		/* right arrow */
 		0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10, 0x00,		/* left arrow  */
 	};
@@ -92,36 +90,36 @@ static void lcd_prog_chars(void)
 /*
  * run menu on front panel
  */
-int lcd_menu(const char **options, unsigned count, unsigned timeout)
+int lcd_menu(const char **options, unsigned count, unsigned which, unsigned timeout)
 {
 	unsigned mark, done, row, top, btn, prv;
-	char ind;
 
-	if(count < 2)
-		return count ? 0 : -1;
+	if(count < 2 || which >= count)
+		return -1;
 
 	lcd_prog_chars();
 
 	prv = BUTTONS();
 
-	top = 0;
-	row = 0;
+	row = (which == count - 1);
+	top = which - row;
 
 	for(;;) {
 
 		LCD_WRITE(0, LCD_DDRAM_ADDR);
-		ind = (top ? '\001' : ' ');
-		LCD_WRITE(1, row ? ind : '\004');
+		LCD_WRITE(1, row ? ' ' : '\002');
 		lcd_text(options[top], LCD_COLUMNS - 2);
-		LCD_WRITE(1, row ? ind : '\003');
+		LCD_WRITE(1, row ? ' ' : '\001');
 
 		LCD_WRITE(0, LCD_DDRAM_ADDR | LCD_ROW_OFFSET);
-		ind = (top + 1 < count ? '\002' : ' ');
-		LCD_WRITE(1, row ? '\004' : ind);
+		LCD_WRITE(1, row ? '\002' : ' ');
 		lcd_text(options[top + 1], LCD_COLUMNS - 2);
-		LCD_WRITE(1, row ? '\003' : ind);
+		LCD_WRITE(1, row ? '\001' : ' ');
 
 		for(done = 0;; done += BUTTON_DEBOUNCE) {
+
+			if(done > timeout)
+				return which;
 
 			for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < ((CP0_COUNT_RATE + 500) / 1000) * BUTTON_DEBOUNCE;)
 				yield();
@@ -135,19 +133,31 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 			if(btn & (BUTTON_RIGHT | BUTTON_ENTER | BUTTON_SELECT))
 				return top + row;
 
-			if((btn & BUTTON_LEFT) || done >= timeout)
+			if(btn & BUTTON_LEFT)
 				return -1;
 
-			if((btn & BUTTON_UP) && top + row > 0) {
-				top -= !row;
-				row = 0;
-				break;
+			if(btn & BUTTON_UP) {
+				if(top) {
+					--top;
+					row = 1;
+					break;
+				}
+				if(row) {
+					row = 0;
+					break;
+				}
 			}
 
-			if((btn & BUTTON_DOWN) && top + row + 1 < count) {
-				top += row;
-				row = 1;
-				break;
+			if(btn & BUTTON_DOWN) {
+				if(top + 2 < count) {
+					++top;
+					row = 0;
+					break;
+				} 
+				if(!row) {
+					row = 1;
+					break;
+				}
 			}
 		}
 	}

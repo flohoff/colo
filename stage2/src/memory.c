@@ -255,7 +255,7 @@ int cmnd_dump(int opsz)
 
 		putchar('\n');
 
-		if(kbhit() && getch() == ' ')
+		if(BREAK())
 			break;
 
 		count -= indx;

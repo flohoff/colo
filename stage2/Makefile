@@ -40,6 +40,8 @@ OBJS=	main.o\
 		dhcp.o\
 		tftp.o\
 		lcd.o\
+		env.o\
+		boot.o\
 		start.o\
 
 LOADADDR=0x80000000

@@ -84,6 +84,7 @@ extern void tulip_poll(void);
 extern uint32_t ip_addr;
 extern uint32_t ip_mask;
 extern uint32_t ip_gway;
+extern uint32_t ip_nsvr;
 
 extern void arp_in(struct frame *);
 extern void arp_ip_out(struct frame *, uint32_t);

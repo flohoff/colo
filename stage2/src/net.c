@@ -108,9 +108,12 @@ int net_up(void)
 
 	if(net_alive) {
 		DPUTS("net: interface up");
-		DPRINTF("  address %s\n", inet_ntoa(ip_addr));
-		DPRINTF("  netmask %s\n", inet_ntoa(ip_mask));
-		DPRINTF("  gateway %s\n", inet_ntoa(ip_gway));
+		if(ip_addr)
+			DPRINTF("  address %s\n", inet_ntoa(ip_addr));
+		if(ip_mask)
+			DPRINTF("  netmask %s\n", inet_ntoa(ip_mask));
+		if(ip_gway)
+			DPRINTF("  gateway %s\n", inet_ntoa(ip_gway));
 	}
 
 	return net_alive;

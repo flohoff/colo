@@ -19,6 +19,7 @@
 uint32_t	ip_addr;
 uint32_t ip_mask;
 uint32_t ip_gway;
+uint32_t ip_nsvr;
 
 static struct
 {

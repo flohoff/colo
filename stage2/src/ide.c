@@ -98,6 +98,7 @@ static struct
 	struct ide_device	*dev;
 	unsigned long		offset;
 	unsigned				block;
+	char					ident[8];
 
 } selected;
 
@@ -773,6 +774,16 @@ int ide_block_size(void *device)
 }
 
 /*
+ * get partition identification
+ */
+const char *ide_dev_name(void *device)
+{
+	assert(device == &selected);
+
+	return selected.ident;
+}
+
+/*
  * set timing for PIO mode
  */
 static void ide_timing(unsigned mode)
@@ -929,8 +940,10 @@ void *ide_open(const char *name)
 	selected.offset = 0;
 	selected.block = (ide_bus[drive].flags & FLAG_ATAPI) ? 2048 : 512;
 
-	if(!part)
+	if(!part) {
+		sprintf(selected.ident, "hd%c", drive + 'a');
 		return &selected;
+	}
 
 	if(selected.dev->flags & FLAG_ATAPI) {
 		if(part < 0)
@@ -997,6 +1010,8 @@ void *ide_open(const char *name)
 	}
 
 	selected.offset = table.p[part].start_lba;
+
+	sprintf(selected.ident, "hd%c%d", drive + 'a', part + 1);
 
 	return &selected;
 }

@@ -9,6 +9,7 @@
 #include "lib.h"
 #include "cpu.h"
 #include "pci.h"
+#include "cobalt.h"
 #include "galileo.h"
 
 #define VER_MAJOR					1
@@ -41,11 +42,14 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	heap_reset();
 
+	if((switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
+		boot(-1);
+
 	for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE * 3 / 2;)
-		if(kbhit() && getch() == ' ')
+		if(BREAK())
 			shell(NULL);
 
-	shell("mount\n-script /boot/default.colo\nload /boot/vmlinux.gz\nexecute");
+	boot(0);
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

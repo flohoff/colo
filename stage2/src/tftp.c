@@ -112,7 +112,7 @@ static size_t tftp_transfer(int sock, void *mem, size_t max, struct frame *frame
 
 		do {
 
-			if(kbhit() && getch() == ' ') {
+			if(BREAK()) {
 				puts("aborted   ");
 				return -1;
 			}
@@ -210,7 +210,7 @@ size_t tftp_get(uint32_t server, const char *path, void *mem, size_t max)
 
 		for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE * 2;) {
 
-			if(kbhit() && getch() == ' ') {
+			if(BREAK()) {
 				udp_close(sock);
 				puts("aborted");
 				return -1;

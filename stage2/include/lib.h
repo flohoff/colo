@@ -106,6 +106,8 @@ extern void putstring(const char *);
 extern void puts(const char *str);
 extern void drain(void);
 
+#define BREAK()							({ char c; kbhit() && ((c = getch()) == ' ' || c == '\003'); })
+
 /* history.c */
 
 extern int history_add(const char *);
@@ -147,6 +149,7 @@ extern void ide_init(void);
 extern int ide_read_sectors(void *, void *, unsigned long, unsigned);
 extern void *ide_open(const char *);
 extern int ide_block_size(void *);
+extern const char *ide_dev_name(void *);
 
 /* expr.c */
 
@@ -228,6 +231,23 @@ static inline void yield(void)
 	if(net_alive)
 		tulip_poll();
 }
+
+/* lcd.c */
+
+extern int lcd_menu(const char **, unsigned, unsigned, unsigned);
+
+/* env.c */
+
+#define VAR_OTHER								0
+#define VAR_DHCP								1
+
+extern int env_put(const char *, const char *, unsigned);
+extern const char *env_get(const char *);
+extern void env_remove_tag(unsigned);
+
+/* boot.c */
+
+extern void __attribute__((noreturn)) boot(int);
 
 #endif
 

@@ -114,7 +114,7 @@ int cmnd_ping(int opsz)
 	reply_out = 0;
 	reply_in = 0;
 
-	for(mark = MFC0(CP0_COUNT); !kbhit() || getch() != ' ';) {
+	for(mark = MFC0(CP0_COUNT); !BREAK();) {
 
 		diff = (MFC0(CP0_COUNT) - mark) / COUNTS_PER_TICK;
 		mark += diff * COUNTS_PER_TICK;

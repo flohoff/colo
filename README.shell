@@ -43,7 +43,7 @@ If a command begins with a '-' an executing script will not be aborted even if
 the command fails.
 
 Some commands that can take a long time to execute can be aborted by hitting
-the SPACE key.
+CTRL-C or the SPACE key.
 
 SHELL COMMANDS
 --------------
@@ -216,7 +216,8 @@ ping host
 ---------
 
 Sends ICMP echo request packets to the specified host and displays information
-from received replies. Pressing the SPACE key terminates the command.
+from received replies. Pressing the CTRL-C or the SPACE key terminates the
+command.
 
 pci[{.b|.h|.w}] [device[.function] register [value]]
 ----------------------------------------------------
@@ -227,6 +228,26 @@ register address must be correctly aligned for the size of the operation.
 
 If no arguments are passed the PCI bus is scanned and the PCI ID of each
 device found is displayed.
+
+boot [{[list] option} | menu]
+-----------------------------
+
+Boots the system using the specified script. If no option number is given the
+default boot script is used.
+
+If the first argument is the word "list" the command lists all available boot
+scripts or the actual script that will be executed for the given option
+number.
+
+If called with a single argument of "menu" the LCD boot menu is shown.
+
+variable [name [value]]
+-----------------------
+
+Set or delete a variable. If no value is specified the named variable is
+deleted.
+
+If called with no arguments all variables are listed with their values.
 
 -- Peter Horton, pdh@colonel-panic.org --
 
