@@ -17,11 +17,13 @@ CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&
 	echo "-mcpu=r5000 -EL" ||\
 	echo "-mtune=r5000 -G0")
 
+CC_INC:= $(shell dirname `$(CC) --print-libgcc-file-name`)/include
+
 MIPSFLAGS= -mno-abicalls -fno-pic -mips2 $(CC_DEP)
 
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-builtin -nostdlib -fno-strict-aliasing $(MIPSFLAGS)
 ASFLAGS= $(MIPSFLAGS)
-CPPFLAGS= -nostdinc -Iinclude -I../include -I$(shell dirname `$(CC) --print-libgcc-file-name`)/include -D_DEBUG
+CPPFLAGS= -nostdinc -Iinclude -I../include -I$(CC_INC) -D_DEBUG
 
 all:
 	$(MAKE) -C ..
