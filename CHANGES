@@ -1,6 +1,6 @@
 # $Id$
 
-CoLo 1.10 (xxxx-xx-xx)
+CoLo 1.10 (2004-05-23)
 ----------------------
 
 *	Fixed loading of files with sparse blocks.
@@ -14,7 +14,8 @@ CoLo 1.10 (xxxx-xx-xx)
 *	Removed debugging output from chain loader. Chain loader now uses LCD for
  	error messages.
 
-*	Added command 'serial' for changing serial baud rate.
+*	Added command 'serial' for changing serial baud rate. Baud rate setting is
+	non-volatile.
 
 CoLo 1.9 (2004-05-02)
 ---------------------
