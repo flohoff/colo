@@ -3,6 +3,8 @@
 CoLo 1.16 (xxxx-xx-xx)
 ----------------------
 
+*	Fix 'flash-tool' and 'flash' command to work with TMS29F040 Flash.
+
 CoLo 1.15 (2004-11-28)
 ----------------------
 
