@@ -11,7 +11,7 @@ TARGET2= colo-chain.elf
 STAGE1= stage1/$(TARGET1)
 CHAIN= chain/$(TARGET2)
 SUBDIRS= tools/elf2rfx stage2 stage1 chain
-TOOLDIRS= tools/flash-tool tools/lcdtools tools/colo-perm tools/md5rom
+TOOLDIRS= tools/flash-tool tools/lcdtools tools/colo-perm tools/md5rom tools/colo-ctrl
 BINDIR= binaries
 
 export CROSS_COMPILE
