@@ -6,30 +6,9 @@
 # This code is covered by the GNU General Public License. For details see the file "COPYING".
 #
 
-TARG= stage2
-OBJS=	main.o\
-		lib.o\
-		vsprintf.o\
+TARG= chain
+OBJS=	chain.o\
 		serial.o\
-		shell.o\
-		expr.o\
-		edit.o\
-		history.o\
-		memory.o\
-		srec.o\
-		ide.o\
-		block.o\
-		ext2.o\
-		md5.o\
-		pci.o\
-		cache.o\
-		elf.o\
-		inflate.o\
-		tulip.o\
-		keymap.o\
-		flash.o\
-		heap.o\
-		launch.o\
 		start.o\
 
 MIPSFLAGS= -mno-abicalls -fno-pic -EL -mips2 -mcpu=r5000
@@ -43,19 +22,19 @@ all:
 
 binary: $(TARG).strip
 
+$(TARG).stage2:
+	echo -e '\t.section .stage2\n\t.incbin "../stage2/stage2.strip"' | $(AS) -o $@
+
 $(TARG).strip: $(TARG)
 	strip -o $@ $^
 
 clean:
-	rm -f $(TARG){,.strip,.map,.lst} $(OBJS)
-
-dist: $(TARG)
-	rm -f $(TARG){.map,.lst} $(OBJS)
+	rm -f $(TARG){,.stage2,.strip,.map,.lst} $(OBJS)
 
 $(TARG).lst: $(TARG)
 	objdump -Dx $^ > $@
 
-$(TARG): $(OBJS)
+$(TARG): $(OBJS) $(TARG).stage2
 	$(LD) -T $(TARG).lnk -Map $(TARG).map -o $@ $^
 
 %.o: src/%.c
@@ -63,6 +42,11 @@ $(TARG): $(OBJS)
 
 %.o: src/%.S
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c -o $@ $^
+
+# pick up serial.c from stage2 source
+
+%.o: ../stage2/src/%.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
 
 .PHONY: all binary clean
 
