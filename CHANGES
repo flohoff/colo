@@ -1,6 +1,9 @@
 # $Id$
 
-CoLo 1.18 (xxxx-xx-xx)
+CoLo 1.19 (xxxx-xx-xx)
+----------------------
+
+CoLo 1.18 (2005-03-22)
 ----------------------
 
 *	Added UDP network console support. This adds a 'netcon' command and
