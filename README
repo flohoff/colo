@@ -1,0 +1,34 @@
+# $Header: /export1/cvs/cobalt-boot/boot-loader/README,v 1.1 2004/01/31 14:03:13 pdh Exp $
+
+REPLACEMENT COBALT Qube2/RaQ2 BOOT LOADER
+=========================================
+
+See the file INSTALL for installation instructions.
+
+FEATURES
+--------
+
+* Will boot from any primary Linux partition containing an EXT2/3 filing
+  system. The boot filing system is no longer required to be a formatted as an
+  EXT2 revision 0 filing system.
+
+* The maximum size of kernel that can be booted is only constrained by
+  available memory. A 16MB unit will be able to boot a 7MB uncompressed
+  kernel (the limit is less for a compressed kernel, probably around 5MB).
+
+LIMITATIONS
+-----------
+
+* The boot loader currently unconditionally outputs boot messages over the
+  serial port. This would probably upset attached modems etc.
+
+* Will not currently boot from logical (extended) partitions.
+
+* Network booting is currently not supported. To use the factory restore CD to
+  restore your unit you will have to restore the original boot loader first.
+  There is obviously a risk involved in doing this as it requires
+  reprogramming the Flash.  
+
+-- Peter Horton, pdh@colonel-panic.org --
+
+# vi:set ts=3 sw=3 tw=78:

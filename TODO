@@ -1,0 +1,16 @@
+# $Header: /export1/cvs/cobalt-boot/boot-loader/TODO,v 1.1 2004/01/31 14:03:13 pdh Exp $
+
+* Add support for passing a command line to the kernel [WORK IN PROGRESS].
+
+* Add support for network booting (TFTP and NFS) [WORK IN PROGRESS].
+
+* Add boot menu using LCD.
+
+* Don't output over the serial port unless the user requires the boot loader
+  shell.
+
+* Add support for booting from logical (extended) partitions.
+
+-- Peter Horton, pdh@colonel-panic.org --
+
+# vi:set ts=3 sw=3 tw=78:

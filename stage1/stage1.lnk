@@ -1,0 +1,51 @@
+/*
+ * (C) P.Horton 2004
+ *
+ * $Header: /export1/cvs/cobalt-boot/boot-loader/stage1/stage1.lnk,v 1.2 2004/02/15 12:45:18 pdh Exp $
+ *
+ * This code is covered by the GNU General Public License. For details see the file "COPYING".
+ */
+
+__stack = 0x80100000;
+
+__stage2 = __etext + __edata - __data;
+
+SECTIONS
+{
+	. = __stack - 0x4000;
+
+	.data : AT(__etext)
+	{
+		__data = .;
+		*(.data)
+		__edata = .;
+	}
+
+	.bss :	
+	{
+		__bss = .;
+		*(.scommon)
+		_gp = .;
+		*(.sbss)
+		*(COMMON)
+		*(.bss)
+		__ebss = .;
+	}
+
+
+	. = 0xbfc00000;
+
+	.text :
+	{
+		__text = .;
+		start.o(.text)
+		*(.text)
+		*(.rodata)
+		__etext = .;
+	}
+
+	/DISCARD/ :
+	{
+		*(.reginfo)
+	}
+}

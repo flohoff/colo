@@ -1,0 +1,85 @@
+# $Header: /export1/cvs/cobalt-boot/boot-loader/README.restore,v 1.1 2004/01/31 14:03:13 pdh Exp $
+
+RESTORING THE ORIGNAL BOOT LOADER
+=================================
+
+***********************************************************
+*                                                         *
+*                -------------------------                *
+*                !!!  BIG FAT WARNING  !!!                *
+*                -------------------------                *
+*                                                         *
+*  RESTORING THE ORIGINAL BOOT LOADER ON YOUR QUBE/RAQ    *
+*  MEANS ERASING AND REPROGRAMMING THE FLASH MEMORY CHIP  *
+*  THAT BOOTS YOUR UNIT. IF THE REPROGRAMMING FAILS YOU   *
+*  WILL HAVE TO REMOVE AND REPROGRAM THE FLASH CHIP WITH  *
+*  AN EXTERNAL PROGRAMMER. THIS MIGHT MEAN DESOLDERING    *
+*  THE CHIP AS WELL AS FINDING A SUITABLE PROGRAMMER !!   *
+*                                                         *
+***********************************************************
+
+FROM LINUX
+----------
+
+Dig out the original boot loader image and program it back into the Flash.
+Don't interrupt the programming process or you will probably land up with a
+unit that doesn't boot!
+
+	flash-tool -w cobalt-original-boot.bin
+
+FROM THE BOOT LOADER SHELL - FROM DISK
+--------------------------------------
+
+Read README.shell
+
+Load the image from disk into memory
+
+	mount
+	load /root/cobalt-original-boot.bin
+
+If you have the MD5 hash of the cobalt-original-boot.bin file you can verify
+it now, just to be sure before you commit it to Flash.
+
+	md5sum
+
+Program it into the Flash. Don't interrupt the programming process or you will
+probably land up with a unit that doesn't boot!
+
+	flash 0
+
+FROM THE BOOT LOADER SHELL - OVER SERIAL
+----------------------------------------
+
+Read README.shell
+
+Create an S-record version of the original boot loader code (this needs to
+be done on a Linux machine). I zip the image first to make the serial transfer
+faster.
+
+	gzip -9c cobalt-original-boot.bin > cobalt-original-boot.gz
+	objcopy -I binary -O srec cobalt-original-boot.gz cobalt-original-boot.srec
+
+Download the S-record file from the boot loader shell
+
+	download
+
+	<now transfer cobalt-original-boot.srec to the boot loader using you're
+	terminal program - transfer as ASCII text>
+
+Unzip the image
+
+	unzip
+
+If you have the MD5 hash of the cobalt-original-boot.bin file you can verify
+it now, just to be sure before you commit it to Flash.
+
+	md5sum
+
+Program it into the Flash. Don't interrupt the programming process or you will
+probably land up with a unit that doesn't boot!
+
+	flash 0
+
+-- Peter Horton, pdh@colonel-panic.org --
+
+# vi:set ts=3 sw=3 tw=78:

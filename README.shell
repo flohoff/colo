@@ -1,0 +1,163 @@
+# $Header: /export1/cvs/cobalt-boot/boot-loader/README.shell,v 1.1 2004/01/31 14:03:13 pdh Exp $
+
+REPLACEMENT COBALT Qube2/RaQ2 BOOT LOADER SHELL
+===============================================
+
+The replacement boot loader implements a command shell that can be entered by
+pressing SPACE on a serial terminal connected to the serial port on the unit,
+just before the unit starts the boot process.
+
+If no SPACE character is detected the boot loader starts the boot process
+using the default command sequence
+
+	mount
+	load /boot/vmlinux.gz
+	execute
+
+GENERAL
+-------
+
+The default radix for all numbers used in the shell is 16 (hexadecimal).
+Values are interpreted as decimal values if they are suffixed with a 't').
+
+The shell implements a command history which can be stepped through using the
+UP and DOWN cursor keys on the terminal (assuming the keymap is set
+correctly). TAB completes the current partial command from the command
+history.
+
+The PAGE-UP/PAGE-DOWN keys are mapped to forward/backward word for terminals
+that support these keys.
+
+SHELL COMMANDS
+--------------
+
+mount [partition]
+-----------------
+
+Mounts the selected partition as an EXT2/3 filing system. The partition
+argument is a number between 1 and 4. If omitted the first partition marked as
+a bootable Linux partition will be mounted. If no partition is marked bootable
+the first Linux partition will be mounted.
+
+ls [path ...]
+-------------
+
+List the directory information for the specified path(s). If no paths are
+specified the current directory is listed.
+
+cd [path]
+---------
+
+Change directory to the specified path. If no path is specified the current
+directory path is displayed.
+
+load path
+---------
+
+Load the specified file into memory.
+
+execute [arguments ...]
+-----------------------
+
+Starts executing the ELF image that is in memory. If the image is compressed
+with 'gzip' it will be uncompressed automatically.
+
+Any arguments given will be passed to the executed program (the kernel needs
+to be patched for this to work). The passed 'argc' value is the argument count
+ORed with the KSEG0 address of the top of memory (for compatibility with the
+kernel).
+
+reboot
+------
+
+Reboots the unit.
+
+unzip
+-----
+
+Decompresses the 'gzip' compressed image in memory.
+
+md5sum [address size]
+---------------------
+
+If used with no arguments the MD5 hash of the current image in memory is
+displayed, otherwise the MD5 hash of the specified memory block is displayed.
+
+download [base-address]
+-----------------------
+
+Load an S-record image sent over the serial port into memory. The
+<base-address> parameter is not usually required as it is worked out
+automatically (it specifies the lowest address in the S-record stream).
+
+*note*
+
+	Because of the way memory is allocated by the S-record loader it probably
+	won't be possible to boot an uncompressed kernel downloaded over the serial
+	port. A compressed kernel should however work.
+
+flash [address size] target
+---------------------------
+
+!!  WARNING: THIS COMMAND CAN MAKE YOUR UNIT UNBOOTABLE  !!
+
+Programs either the current image in memory or the memory block specified by
+<address> and <size> into the Flash starting at address <target>. The target
+address can be specified either as a memory address or an offset from the
+start of the Flash (ie 'flash 0' and 'flash 1fc00000' are equivalent).
+
+keymap [keymap]
+---------------
+
+Used with no arguments this command lists the available keymaps, otherwise the
+keymap is changed to <keymap>.
+
+read[{.b|.h|.w}] [address]
+--------------------------
+
+Read and display the value of the memory location <address>. If no address is
+specified the next address will be read.
+
+A .b/.h/.w suffix can be used to specify the size of the value as byte/half
+word/word respectively.
+
+write[{.b|.h|.w}] [address] data
+--------------------------------
+
+Write the specified value into the memory location <address>. If no address is
+specified the next address will be written.
+
+A .b/.h/.w suffix can be used to specify the size of the value as byte/half
+word/word respectively.
+
+dump[{.b|.h|.w}] [address [count]]
+----------------------------------
+
+Display <count> values from memory, starting with the specified address. If
+no address is specified the next address will be used. If no count is
+specified the last count will be used (the default count is the number of
+values that make up 256 bytes).
+
+A .b/.h/.w suffix can be used to specify the size of the value as byte/half
+word/word respectively.
+
+help
+----
+
+List available commands and their usage.
+
+dflags [number ...]
+-------------------
+
+Toggles the debug flags listed, and then lists the enabled flags. Flags
+currently defined are
+
+	0 - disable IDE drivers use of LBA (ie force CHS).
+	1 - disable IDE drivers use of LBA48 (ie force 24-bit LBA).
+	2 - disable IDE timing change (by default the IDE driver will set the IDE
+	    interface timing to PIO mode 4 timings if the drive supports PIO mode 4,
+		 this flag will leave the timings set at their default, slow, values).
+
+-- Peter Horton, pdh@colonel-panic.org --
+
+# vi:set ts=3 sw=3 tw=78:
