@@ -8,15 +8,15 @@
 
 __stack = __ebss + (32 << 10);
 
-. = 0x80000000;
-
 SECTIONS
 {
+	. = 0x80000000;
+
 	.text :
 	{
 		__text = .;
 		*(.text)
-		*(.rodata)
+		*(.rodata*)
 	}
 
 	.data :

@@ -9,7 +9,9 @@
 TARG= putlcd
 OBJS= putlcd.o
 
-CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
+include ../../../Rules.mak
+
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -fno-strict-aliasing $(CFLAGS_CPU)
 CPPFLAGS= -I../liblcd
 LOADLIBES= -L../liblcd -llcd
 

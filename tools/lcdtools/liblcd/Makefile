@@ -9,7 +9,9 @@
 TARG= liblcd.a
 OBJS= liblcd.o lcddev.o lcdraw.o
 
-CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
+include ../../../Rules.mak
+
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -fno-strict-aliasing $(CFLAGS_CPU)
 CPPFLAGS= -DBUILDING_LIBLCD
 
 $(TARG): $(OBJS)

@@ -18,33 +18,33 @@
 
 
 /*
- * change stack pointer and call function (with two arguments)
+ * change stack pointer and call function (with four arguments)
  *
  * this isn't necessary for calling the kernel, but it's handy
  * to be able to load and run other ELF images that can then
  * return to the shell
  *
  * arguments:
+ *	uint64_t *	parameters
+ *
+ * parameters:
  *	uint64_t	new stack pointer
  *	uint64_t	function address
  *	uint64_t	arg #1
  *	uint64_t	arg #2
+ *	uint64_t	arg #3
+ *	uint64_t	arg #4
  */
 
-launch:			move	t8, sp
+launch:			ld	t9, 0(a0)	// switch to new stack
+			move	t8, sp		
+			dsubu	sp, t9, 64
 
-			li	t9, 1
-			dsll	t9, t9, 32
-			dsubu	t9, t9, 1	// t9 - 0000.0000.ffff.ffff
-
-			dsll	a1, a1, 32	// a1.a0 - new stack pointer
-			dsll	a3, a3, 32	// a3.a2 - function address
-			and	a0, a0, t9
-			and	a2, a2, t9
-			or	a0, a0, a1
-			or	t9, a2, a3
-
-			dsubu	sp, a0, 64	// load new stack pointer (allocating space for context)
+			ld	t9, 8(a0)	// fetch parameters
+			ld	a3, 40(a0)
+			ld	a2, 32(a0)
+			ld	a1, 24(a0)
+			ld	a0, 16(a0)
 
 			sw	t8, 52(sp)	// save context
 			sw	ra, 60(sp)
@@ -58,9 +58,6 @@ launch:			move	t8, sp
 			sw	s2, 24(sp)
 			sw	s1, 20(sp)
 			sw	s0, 16(sp)
-
-			ld	a0, 16(t8)	// fetch arguments from original stack
-			ld	a1, 24(t8)
 
 			jal	t9		// go do the thing
 			 move	gp, zero
@@ -77,6 +74,10 @@ launch:			move	t8, sp
 			lw	fp, 56(sp)
 			lw	ra, 60(sp)
 			lw	sp, 52(sp)
+
+			// do we need to do anything with unsaved
+			// registers to ensure they work okay in
+			// 32-bit mode (r0 for example) ?
 
 			j	ra
 			 nop

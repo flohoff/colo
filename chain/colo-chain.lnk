@@ -16,7 +16,7 @@ SECTIONS
 	{
 		start.o(.text)
 		*(.text)
-		*(.rodata)
+		*(.rodata*)
 		__stage2 = .;
 		*(.stage2)
 	}

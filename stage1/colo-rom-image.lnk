@@ -38,7 +38,7 @@ SECTIONS
 		__text = .;
 		start.o(.text)
 		*(.text)
-		*(.rodata)
+		*(.rodata*)
 		__stage2 = .;
 		*(.stage2)
 		__etext = .;

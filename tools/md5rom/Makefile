@@ -10,13 +10,15 @@ TARG= md5rom
 OBJS= md5rom.o md5.o
 STAGE2= ../../stage2
 
-CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
-CPPFLAGS= -I$(STAGE2)/include
+include ../../Rules.mak
+
+CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -fno-strict-aliasing $(CFLAGS_CPU)
+CPPFLAGS= -I. -I$(STAGE2)/include
 
 $(TARG): $(OBJS)
 
 %.o: $(STAGE2)/src/%.c
-	$(CC) -I. $(CPPFLAGS) $(CFLAGS) -c -o $@ $^
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $^
 
 clean:
 	rm -rf $(TARG) $(OBJS)

@@ -9,7 +9,7 @@
 TARG= colo-perm
 OBJS= colo-perm.o
 
-include ../Rules.mak
+include ../../Rules.mak
 
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -fno-strict-aliasing $(CFLAGS_CPU)
 
