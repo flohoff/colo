@@ -22,17 +22,17 @@ static unsigned unit;
 
 static void fixup_count_rate(void)
 {
-	unsigned start, count;
+	unsigned count;
+
+	BRDG_REG_WORD(BRDG_REG_COUNTER_CTRL) = 0;
+
+	BRDG_REG_WORD(BRDG_REG_COUNTER_0) = (BRDG_TCK + 10) / 20;
 
 	BRDG_REG_WORD(BRDG_REG_COUNTER_CTRL) = (1 << 0);
 
-	udelay(1000);
-
-	start = BRDG_REG_WORD(BRDG_REG_COUNTER_0);
-
 	count = MFC0(CP0_COUNT);
 
-	while(start - BRDG_REG_WORD(BRDG_REG_COUNTER_0) < (BRDG_TCK + 10) / 20)
+	while(BRDG_REG_WORD(BRDG_REG_COUNTER_0));
 		;
 
 	count = MFC0(CP0_COUNT) - count;
