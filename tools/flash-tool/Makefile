@@ -4,7 +4,7 @@
 # $Id$
 #
 
-CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2
+CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -mips2
 
 flash-tool:
 

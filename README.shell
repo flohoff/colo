@@ -65,10 +65,11 @@ cd [path]
 Change directory to the specified path. If no path is specified the current
 directory path is displayed.
 
-load path
----------
+load path [path]
+----------------
 
-Load the specified file into memory.
+Load the specified file into memory. An optional second file can be specified
+that will also be loaded and used as an 'initrd' image.
 
 script path
 -----------
@@ -80,7 +81,9 @@ execute [arguments ...]
 -----------------------
 
 Starts executing the ELF image that is in memory. If the image is compressed
-with 'gzip' it will be uncompressed automatically.
+with 'gzip' it will be uncompressed automatically. If an 'initrd' image has
+been loaded with 'load' the command line argument 'initrd=<size>@<address>' is
+added to the effective command line arguments.
 
 Any arguments given will be passed to the executed program (the kernel needs
 to be patched for this to work). The passed 'argc' value is the argument count

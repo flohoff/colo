@@ -34,6 +34,8 @@ extern void puts(const char *);
 extern void drain(void);
 extern void putchar(int);
 
+int dummy;		/* ensure .bss is not an empty segment */
+
 /*
  * fatal error, hang
  */

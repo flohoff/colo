@@ -1,5 +1,11 @@
 # $Id$
 
+CoLo 1.6 (xxxx-xx-xx)
+---------------------
+
+*	Boot loader now sources the script '/boot/default.colo' by default, rather
+	than '/boot/default.boot'.
+
 CoLo 1.5 (2004-04-11)
 ---------------------
 

@@ -27,7 +27,6 @@ SECTIONS
 		*(.sbss)
 		*(COMMON)
 		*(.bss)
-		LONG(0);	/* "strip" doesn't like empty .bss */
 		__ebss = .;
 	}
 

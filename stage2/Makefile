@@ -61,7 +61,7 @@ $(TARG).lst: $(TARG)
 	objdump -Dx $^ > $@
 
 $(TARG): $(OBJS)
-	$(LD) -T $(TARG).lnk -Map $(TARG).map -o $@ $^
+	$(LD) -q -T $(TARG).lnk -Map $(TARG).map -o $@ $^
 
 %.o: src/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
