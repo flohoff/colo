@@ -48,10 +48,10 @@ SHELL COMMANDS
 mount [partition]
 -----------------
 
-Mounts the selected partition as an EXT2/3 filing system. The partition
-argument is a Linux style device name (eg "hda2"). If omitted the first
-partition marked as a bootable Linux partition will be mounted. If no
-partition is marked bootable the first Linux partition will be mounted.
+Mounts the selected partition as an EXT2/3 file system. The partition argument
+is a Linux style device name (eg "hda2"). If omitted the first partition
+marked as a bootable Linux partition will be mounted. If no partition is
+marked bootable the first Linux partition will be mounted.
 
 ls [path ...]
 -------------

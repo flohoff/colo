@@ -71,7 +71,7 @@ The new boot loader will attempt to load '/boot/vmlinux.gz' from the boot
 partition on the disk. If no partition is marked as bootable, or if the boot
 partition is not a Linux partition, it will attempt to boot from the first
 Linux partition it finds in the partition table. Booting will fail if the
-selected partition does not contain an EXT2/3 filing system.
+selected partition does not contain an EXT2/3 file system.
 
 You can ensure the correct partition is booted by using 'fdisk' to mark your
 boot partition bootable.
@@ -82,7 +82,7 @@ Step 4 - install the new boot loader
 Write the new boot loader into the Flash. Don't interrupt the programming
 process or you will probably land up with a unit that doesn't boot!
 
-	flash-tool -w boot.bin
+	flash-tool -w colo-rom-image.bin
 
 If for any reason programming fails you might just be able to write the
 original boot loader back into the Flash
