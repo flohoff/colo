@@ -3,8 +3,19 @@
 CoLo 1.12 (xxxx-xx-xx)
 ----------------------
 
-*	Added 'menu' command for implementing LCD menus in scripts. Makes it
-	possible to choose from a list of multiple kernels/configurations.
+*	The LCD tools 'putlcd', 'paneld' and 'e2fsck-lcd' are now built around a
+	common library. The library has support for using direct access to the LCD
+	via /dev/mem (the default) or driver access via the Cobalt LCD driver. To
+	make the library use the Cobalt LCD driver you need to export an
+	environment variable LCD_DEVICE with the name of the device. If LCD_DEVICE
+	is an empty string the library will use the default device name, /dev/lcd.
+
+*	Added a '-d' command line option to 'paneld' which makes it fork itself
+	into the background on startup.
+
+*	Added 'menu' boot shell command for implementing LCD menus in scripts.
+	This feature makes it possible to choose from a list of multiple
+	kernels/configurations to boot (see example in README.shell).
 
 *	Fixed a couple of off by one errors in the 'boot' command.
 

@@ -73,9 +73,9 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 		{ 0x01, 0x03, 0x07, 0x0f, 0x07, 0x03, 0x01, 0x00, },
 		{ 0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10, 0x00, },
 	};
-	static const char *symbol[] =
+	static char symbol[][2] =
 	{
-		" ", "\001", "\002",
+		" ", "]", "[",
 	};
 	unsigned exp, row, top, btn, prv;
 	struct timeval mark, now;
@@ -84,8 +84,10 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 	if(count < 2)
 		return -1;
 
-	lcd_prog(1, arrow[0]);
-	lcd_prog(2, arrow[1]);
+	if(lcd_prog(1, arrow[0]) && lcd_prog(2, arrow[1])) {
+		symbol[1][0] = '\001';
+		symbol[2][0] = '\002';
+	}
 
 	prv = btn_read();
 
@@ -158,18 +160,53 @@ int lcd_menu(const char **options, unsigned count, unsigned timeout)
 	}
 }
 
+static void usage(void)
+{
+	puts("usage: " APP_NAME " [ -d ]");
+	exit(1);
+}
+
 int main(int argc, char *argv[])
 {
 	static char text[32];
 
 	unsigned count, update, active, roller;
+	int opt, daemon, which;
 	time_t wall;
-	int which;
+
+	daemon = 0;
+
+	opterr = 0;
+
+	while((opt = getopt(argc, argv, "d")) != -1)
+		switch(opt) {
+			case 'd':
+				daemon = 1;
+				break;
+			default:
+				usage();
+		}
 
 	if(!lcd_open(NULL))
 		return -1;
 
-	for(roller = 0;;) {
+	if(daemon)
+
+		switch(fork()) {
+
+			case -1:
+				fprintf(stderr, APP_NAME ": failed to fork (%s)\n", strerror(errno));
+				return -1;
+
+			case 0:
+				setsid();
+				break;
+
+			default:
+				return 0;
+		}
+
+	for(roller = optind;;) {
 
 		active = MENU_SELECT_COUNT;
 		update = 0;
@@ -184,12 +221,12 @@ int main(int argc, char *argv[])
 				strftime(text, sizeof(text), "%a %b %d %H:%M", localtime(&wall));
 				lcd_puts(0, 0, LCD_WIDTH, text);
 
-				if(argc > 1) {
+				if(roller < argc) {
 
-					lcd_puts(1, 0, LCD_WIDTH, argv[++roller]);
+					lcd_puts(1, 0, LCD_WIDTH, argv[roller++]);
 
-					if(roller == argc - 1)
-						roller = 0;
+					if(roller == argc)
+						roller = optind;
 
 				} else
 

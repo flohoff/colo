@@ -28,7 +28,7 @@
 #define LCD_WRITE(r,v)			do{lcd[!!(r)*4]=(unsigned)(v)<<24;}while(0)
 
 #define LCD_BUSY					(1 << 7)
-#define LCD_CLEAR					0x0c
+#define LCD_CLEAR					0x01
 #define LCD_CGRAM_ADDR			0x40
 #define LCD_DDRAM_ADDR			0x80
 #define LCD_ROW_OFFSET			0x40
@@ -36,7 +36,7 @@
 static volatile uint32_t *btn;
 static volatile uint32_t *lcd;
 
-static void raw_write(int reg, unsigned val)
+static void lcd_write(int reg, unsigned val)
 {
 	while(LCD_READ(0) & LCD_BUSY)
 		usleep(1);
@@ -46,55 +46,55 @@ static void raw_write(int reg, unsigned val)
 	LCD_WRITE(reg, val);
 }
 
-static void raw_clear(void)
+static void exp_clear(void)
 {
-	raw_write(0, LCD_CLEAR);
+	lcd_write(0, LCD_CLEAR);
 }
 
-static void raw_prog(unsigned which, const void *data)
+static void exp_prog(unsigned which, const void *data)
 {
 	unsigned indx;
 
-	raw_write(0, LCD_CGRAM_ADDR | (which * 8));
+	lcd_write(0, LCD_CGRAM_ADDR | (which * 8));
 
 	for(indx = 0; indx < 8; ++indx)
-		raw_write(1, ((uint8_t *) data)[indx]);
+		lcd_write(1, ((uint8_t *) data)[indx]);
 
-	raw_write(0, LCD_DDRAM_ADDR);
+	lcd_write(0, LCD_DDRAM_ADDR);
 }
 
-static void raw_curs_move(unsigned row, unsigned col)
+static void exp_curs_move(unsigned row, unsigned col)
 {
-	raw_write(0, LCD_DDRAM_ADDR | (LCD_ROW_OFFSET * row + col));
+	lcd_write(0, LCD_DDRAM_ADDR | (LCD_ROW_OFFSET * row + col));
 }
 
-static void raw_text(const char *str, unsigned max)
+static void exp_text(const char *str, unsigned max)
 {
 	unsigned indx;
 
 	for(indx = 0; str[indx] && indx < max; ++indx)
-		raw_write(1, str[indx]);
+		lcd_write(1, str[indx]);
 }
 
-static void raw_puts(unsigned row, unsigned col, unsigned wid, const char *str)
+static void exp_puts(unsigned row, unsigned col, unsigned wid, const char *str)
 {
 	unsigned indx;
 
-	raw_curs_move(row, col);
+	exp_curs_move(row, col);
 
 	for(indx = 0; str[indx] && indx < wid; ++indx)
-		raw_write(1, str[indx]);
+		lcd_write(1, str[indx]);
 
 	for(; indx < wid; ++indx)
-		raw_write(1, ' ');
+		lcd_write(1, ' ');
 }
 
-int raw_buttons(void)
+static int exp_buttons(void)
 {
 	return BTN_READ() & BTN_MASK;
 }
 
-static void raw_close(void)
+static void exp_close(void)
 {
 	munmap((void *) lcd, LCD_PHYS_SIZE);
 	munmap((void *) btn, BTN_PHYS_SIZE);
@@ -102,13 +102,13 @@ static void raw_close(void)
 
 static const struct lcd_dispatch_table funcs =
 {
-	.close		= raw_close,
-	.clear		= raw_clear,
-	.prog_char	= raw_prog,
-	.puts			= raw_puts,
-	.text			= raw_text,
-	.curs_move	= raw_curs_move,
-	.buttons		= raw_buttons,
+	.close		= exp_close,
+	.clear		= exp_clear,
+	.prog_char	= exp_prog,
+	.puts			= exp_puts,
+	.text			= exp_text,
+	.curs_move	= exp_curs_move,
+	.buttons		= exp_buttons,
 };
 
 const struct lcd_dispatch_table *lcdraw_open(void)

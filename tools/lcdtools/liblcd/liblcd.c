@@ -7,16 +7,19 @@
  */
 
 #include <stdlib.h>
-#include <assert.h>
 
 #include "liblcd.h"
 
 static const struct lcd_dispatch_table *f;
 
-void lcd_prog(unsigned code, const void *data)
+int lcd_prog(unsigned code, const void *data)
 {
-	if(f && f->prog_char)
+	if(f && f->prog_char) {
 		f->prog_char(code, data);
+		return 1;
+	}
+
+	return 0;
 }
 
 void lcd_puts(unsigned row, unsigned col, unsigned wid, const char *str)
@@ -50,8 +53,19 @@ int btn_read(void)
 
 int lcd_open(const char *dev)
 {
-	f = lcddev_open(dev);
-	if(!f)
+	const char *str;
+
+	str = getenv("LCD_DEVICE");
+
+	if(dev || str) {
+
+		if(!dev && str[0])
+			dev = str;
+
+		f = lcddev_open(dev);
+
+	} else
+
 		f = lcdraw_open();
 
 	return f != NULL;

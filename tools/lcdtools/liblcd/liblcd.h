@@ -25,7 +25,7 @@ extern const char *getapp(void);
 
 extern int lcd_open(const char *);
 extern void lcd_close(void);
-extern void lcd_prog(unsigned, const void *);
+extern int lcd_prog(unsigned, const void *);
 extern void lcd_puts(unsigned, unsigned, unsigned, const char *);
 extern void lcd_clear(void);
 extern void lcd_curs_move(unsigned, unsigned);
