@@ -8,8 +8,8 @@ possible to use the original Cobalt boot loader to load the replacement boot
 loader - chain mode. This does away with the risk of trashing your unit,
 though it extends the time required to boot.
 
-Just copy 'chain.bin' to your boot directory, rename into 'vmlinux' and gzip
-it to 'vmlinux.gz'
+Just copy 'colo-chain.elf' to your boot directory, rename into 'vmlinux' and
+gzip it to 'vmlinux.gz'
 
 	cp -f /boot/vmlinux.gz /boot/backup.gz
 	cp colo-chain.elf /boot/vmlinux

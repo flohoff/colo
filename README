@@ -26,9 +26,6 @@ FEATURES
 LIMITATIONS
 -----------
 
-* The boot loader currently unconditionally outputs boot messages over the
-  serial port. This would probably upset attached modems etc.
-
 * Will not currently boot from logical (extended) partitions.
 
 * Network booting over NFS has not been checked to see whether it works with
