@@ -39,6 +39,7 @@ CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&
 
 MIPSFLAGS= -mno-abicalls -fno-pic -mips2 $(CC_DEP)
 
+LDFLAGS= -T $(TARG).lnk -Map $(TARG).map --emit-relocs
 CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-builtin -nostdlib $(MIPSFLAGS)
 ASFLAGS= $(MIPSFLAGS)
 CPPFLAGS= -nostdinc -Iinclude -I../include -I$(shell dirname `$(CC) --print-libgcc-file-name`)/include -D_DEBUG
@@ -55,10 +56,10 @@ $(TARG).strip: $(TARG)
 	strip -o $@ $^
 
 clean:
-	rm -f $(TARG){,.elf,.strip,.map,.lst} $(OBJS)
+	rm -f $(TARG){,.elf,.strip,.map} $(OBJS)
 
 $(TARG): $(OBJS)
-	$(LD) -T $(TARG).lnk -Map $(TARG).map -o $@ $^
+	$(LD) $(LDFLAGS) -o $@ $^
 
 %.o: src/%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^

@@ -123,7 +123,7 @@ void chain(unsigned arg, unsigned sp)
 	/* if loaded from "CoLo" launch.S will have stacked 64 bytes */
 
 	if((arg & 0xffff) || arg - sp == 64) {
-		puts("chain: LOADED FROM \"CoLo\" LOADER, HALTING");
+		puts("chain: LOADED FROM \"CoLo\" HALTING");
 		fatal();
 	}
 

@@ -26,7 +26,7 @@ $(TARGET2): $(CHAIN)
 	cp -f $^ $(BINDIR)
 
 subdirs:
-	for x in $(SUBDIRS); do $(MAKE) -C $$x binary; done
+	set -e; for x in $(SUBDIRS); do $(MAKE) -C $$x binary; done
 
 clean:
 	rm -f $(TARGET1) $(TARGET2)

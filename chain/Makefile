@@ -28,16 +28,13 @@ all:
 
 binary: $(TARG).elf
 
-$(TARG).elf: $(TARG).unstripped
+$(TARG).elf: $(TARG)
 	strip -o $@ $^
 
 clean:
-	rm -f $(TARG){,.elf,.map,.lst,.unstripped} $(OBJS)
+	rm -f $(TARG){,.elf,.map} $(OBJS)
 
-$(TARG).lst: $(TARG)
-	objdump -Dx $^ > $@
-
-$(TARG).unstripped: $(OBJS)
+$(TARG): $(OBJS)
 	$(LD) -T $(TARG).lnk -Map $(TARG).map -o $@ $^
 
 %.o: src/%.c

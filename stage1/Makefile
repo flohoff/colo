@@ -32,7 +32,7 @@ all:
 binary: $(TARG).bin
 
 clean:
-	rm -f $(TARG){,.bin,.map,.lst} $(OBJS)
+	rm -f $(TARG){,.bin,.map} $(OBJS)
 
 $(TARG).bin: $(TARG)
 	objcopy -O binary $^ $@
