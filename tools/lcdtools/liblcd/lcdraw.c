@@ -49,7 +49,7 @@ static void udelay(unsigned delay)
 
 		gettimeofday(&now, NULL);
 
-	while((now.tv_sec - mark.tv_usec) * 1000 * 1000 + now.tv_usec - mark.tv_usec < delay);
+	while((now.tv_sec - mark.tv_sec) * 1000 * 1000 + now.tv_usec - mark.tv_usec < delay);
 }
 
 static void lcd_write(int reg, unsigned val)
