@@ -62,7 +62,7 @@ ASFLAGS= $(MIPSFLAGS)
 CPPFLAGS= -nostdinc -Iinclude -I../include -I$(CC_INC) -D_DEBUG
 
 all:
-	$(MAKE) -C ..
+	$(MAKE) -C .. binary
 
 binary: $(TARG).elf
 

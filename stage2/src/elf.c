@@ -318,6 +318,11 @@ int cmnd_execute(int opsz)
 	if(!func)
 		return E_UNSPEC;
 
+	if(elfsz >= 12 && unaligned_load(targ + 8) == unaligned_load("CoLo")) {
+		puts("Refusing to load \"CoLo\" chain loader");
+		return E_UNSPEC;
+	}
+
 	net_down(0);
 
 	/* turn on the light bar on the Qube FIXME */

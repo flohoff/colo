@@ -7,6 +7,10 @@
  */
 
 #include <regdefs.h>
+#include <version.h>
+
+#define __STR(x)	#x
+#define _STR(x)		__STR(x)
 
 			.text
 
@@ -16,7 +20,17 @@
 
 			.globl	_start
 
-_start:			la	sp, __stack - 16
+_start:			b	1f
+			 nop
+
+			.ascii	"CoLo"
+
+			.ascii	" v", _STR(VER_MAJOR), ".", _STR(VER_MINOR)
+			.asciiz	" (C) P.Horton 2004"
+
+			.balign	4
+
+1:			la	sp, __stack - 16
 			lui	gp, %hi(_gp)
 			jal	chain
 			 addiu	gp, %lo(_gp)

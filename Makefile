@@ -14,7 +14,9 @@ SUBDIRS= tools/elf2rfx stage2 stage1 chain
 TOOLDIRS= tools/flash-tool tools/putlcd tools/e2fsck-lcd
 BINDIR= binaries
 
-all: subdirs $(TARGET1) $(TARGET2) tooldirs
+all: binary tooldirs
+
+binary: subdirs $(TARGET1) $(TARGET2)
 
 ci:
 	rm -f $(BINDIR)/$(TARGET1) $(BINDIR)/$(TARGET2)
@@ -38,4 +40,4 @@ clean:
 	rm -f $(TARGET1) $(TARGET2)
 	for x in $(SUBDIRS) $(TOOLDIRS); do $(MAKE) -C $$x clean; done
 
-.PHONY: all ci subdirs tooldirs clean
+.PHONY: all binary ci subdirs tooldirs clean

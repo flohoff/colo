@@ -3,6 +3,8 @@
 CoLo 1.11 (xxxx-xx-xx)
 ----------------------
 
+*	Build all the tools.
+
 *	You can now break out of the boot menu via the console.
 
 *	Added man pages for 'colo-perm' and 'md5rom'.
@@ -11,6 +13,8 @@ CoLo 1.11 (xxxx-xx-xx)
 *	Added 'e2fsck-lcd', file check progress bar on LCD.
 
 *	Fixed LCD second row offset (all over).
+
+*	Make shell refuse to load chain loader.
 
 CoLo 1.10 (2004-05-23)
 ----------------------
