@@ -32,10 +32,10 @@ static int usage(void)
 int main(int argc, char *argv[])
 {
 	struct MD5Context ctx;
-	unsigned indx, copy;
 	uint8_t dig[16];
+	unsigned indx;
+	int fd, copy;
 	void *rom;
-	int fd;
 
 	if(argc > 2)
 		return usage();
