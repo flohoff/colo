@@ -16,7 +16,7 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 
-#include "panel.h"
+#include "liblcd.h"
 
 #define APP_NAME					"paneld"
 
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	time_t wall;
 	int which;
 
-	if(!lcd_open())
+	if(!lcd_open(NULL))
 		return -1;
 
 	for(roller = 0;;) {

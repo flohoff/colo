@@ -7,9 +7,10 @@
 #
 
 TARG= liblcd.a
-OBJS= panel.o
+OBJS= liblcd.o lcddev.o lcdraw.o
 
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -mips2 -O2 -pipe -fno-strict-aliasing
+CPPFLAGS= -DBUILDING_LIBLCD
 
 $(TARG): $(OBJS)
 	$(AR) r $@ $^

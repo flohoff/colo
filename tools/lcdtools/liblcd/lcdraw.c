@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <sys/mman.h>
 
-#include "panel.h"
+#include "liblcd.h"
 
 #define BTN_PHYS_ADDR			0x1d000000
 #define BTN_PHYS_SIZE			4
@@ -36,7 +36,7 @@
 static volatile uint32_t *btn;
 static volatile uint32_t *lcd;
 
-static void lcd_write(int reg, unsigned val)
+static void raw_write(int reg, unsigned val)
 {
 	while(LCD_READ(0) & LCD_BUSY)
 		usleep(1);
@@ -46,64 +46,86 @@ static void lcd_write(int reg, unsigned val)
 	LCD_WRITE(reg, val);
 }
 
-void lcd_clear(void)
+static void raw_clear(void)
 {
-	lcd_write(0, LCD_CLEAR);
+	raw_write(0, LCD_CLEAR);
 }
 
-void lcd_prog(unsigned which, const void *data)
+static void raw_prog(unsigned which, const void *data)
 {
 	unsigned indx;
 
-	lcd_write(0, LCD_CGRAM_ADDR | (which * 8));
+	raw_write(0, LCD_CGRAM_ADDR | (which * 8));
 
 	for(indx = 0; indx < 8; ++indx)
-		lcd_write(1, ((uint8_t *) data)[indx]);
+		raw_write(1, ((uint8_t *) data)[indx]);
 
-	lcd_write(0, LCD_DDRAM_ADDR);
+	raw_write(0, LCD_DDRAM_ADDR);
 }
 
-void lcd_curs_move(unsigned row, unsigned col)
+static void raw_curs_move(unsigned row, unsigned col)
 {
-	lcd_write(0, LCD_DDRAM_ADDR | (LCD_ROW_OFFSET * row + col));
+	raw_write(0, LCD_DDRAM_ADDR | (LCD_ROW_OFFSET * row + col));
 }
 
-void lcd_text(const char *str, unsigned max)
+static void raw_text(const char *str, unsigned max)
 {
 	unsigned indx;
 
 	for(indx = 0; str[indx] && indx < max; ++indx)
-		lcd_write(1, str[indx]);
+		raw_write(1, str[indx]);
 }
 
-void lcd_puts(unsigned row, unsigned col, unsigned wid, const char *str)
+static void raw_puts(unsigned row, unsigned col, unsigned wid, const char *str)
 {
 	unsigned indx;
 
-	lcd_curs_move(row, col);
+	raw_curs_move(row, col);
 
 	for(indx = 0; str[indx] && indx < wid; ++indx)
-		lcd_write(1, str[indx]);
+		raw_write(1, str[indx]);
 
 	for(; indx < wid; ++indx)
-		lcd_write(1, ' ');
+		raw_write(1, ' ');
 }
 
-int lcd_open(void)
+int raw_buttons(void)
+{
+	return BTN_READ() & BTN_MASK;
+}
+
+static void raw_close(void)
+{
+	munmap((void *) lcd, LCD_PHYS_SIZE);
+	munmap((void *) btn, BTN_PHYS_SIZE);
+}
+
+static const struct lcd_dispatch_table funcs =
+{
+	.close		= raw_close,
+	.clear		= raw_clear,
+	.prog_char	= raw_prog,
+	.puts			= raw_puts,
+	.text			= raw_text,
+	.curs_move	= raw_curs_move,
+	.buttons		= raw_buttons,
+};
+
+const struct lcd_dispatch_table *lcdraw_open(void)
 {
 	int fd;
 
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
 	if(fd == -1) {
 		fprintf(stderr, "%s: failed to open /dev/mem (%s)\n", getapp(), strerror(errno));
-		return 0;
+		return NULL;
 	}
 
 	lcd = mmap(NULL, LCD_PHYS_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, LCD_PHYS_ADDR);
 	if(lcd == MAP_FAILED) {
 		fprintf(stderr, "%s: failed to map /dev/mem (%s)\n", getapp(), strerror(errno));
 		close(fd);
-		return 0;
+		return NULL;
 	}
 
 	btn = mmap(NULL, BTN_PHYS_SIZE, PROT_READ, MAP_SHARED, fd, BTN_PHYS_ADDR);
@@ -111,23 +133,12 @@ int lcd_open(void)
 		fprintf(stderr, "%s: failed to map /dev/mem (%s)\n", getapp(), strerror(errno));
 		munmap((void *) lcd, LCD_PHYS_SIZE);
 		close(fd);
-		return 0;
+		return NULL;
 	}
 
 	close(fd);
 
-	return 1;
-}
-
-void lcd_close(void)
-{
-	munmap((void *) lcd, LCD_PHYS_SIZE);
-	munmap((void *) btn, BTN_PHYS_SIZE);
-}
-
-int btn_read(void)
-{
-	return BTN_READ() & BTN_MASK;
+	return &funcs;
 }
 
 /* vi:set ts=3 sw=3 cin: */

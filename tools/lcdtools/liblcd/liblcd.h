@@ -23,7 +23,7 @@
 
 extern const char *getapp(void);
 
-extern int lcd_open(void);
+extern int lcd_open(const char *);
 extern void lcd_close(void);
 extern void lcd_prog(unsigned, const void *);
 extern void lcd_puts(unsigned, unsigned, unsigned, const char *);
@@ -31,6 +31,24 @@ extern void lcd_clear(void);
 extern void lcd_curs_move(unsigned, unsigned);
 extern void lcd_text(const char *, unsigned);
 extern int btn_read(void);
+
+#ifdef BUILDING_LIBLCD
+
+struct lcd_dispatch_table
+{
+	void (*close)(void);
+	void (*clear)(void);
+	void (*curs_move)(unsigned, unsigned);
+	void (*prog_char)(unsigned, const void *);
+	void (*puts)(unsigned, unsigned, unsigned, const char *);
+	void (*text)(const char *, unsigned);
+	int (*buttons)(void);
+};
+
+extern const struct lcd_dispatch_table *lcddev_open(const char *);
+extern const struct lcd_dispatch_table *lcdraw_open(void);
+
+#endif
 
 #endif
 

@@ -21,7 +21,7 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 
-#include "panel.h"
+#include "liblcd.h"
 
 #define APP_NAME						"e2fsck-lcd"
 #define EXTENSION						".distrib"
@@ -44,7 +44,7 @@ const char *getapp(void)
  */
 static void disp_init(const char *devn)
 {
-	lcd = lcd_open();
+	lcd = lcd_open(NULL);
 	if(!lcd)
 		return;
 

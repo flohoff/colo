@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <sys/mman.h>
 
-#include "panel.h"
+#include "liblcd.h"
 
 #define APP_NAME					"putlcd"
 
@@ -25,7 +25,7 @@ const char *getapp(void)
 
 int main(int argc, char *argv[])
 {
-	if(!lcd_open())
+	if(!lcd_open(NULL))
 		return -1;
 
 	lcd_puts(0, 0, LCD_WIDTH, argc > 1 ? argv[1] : "");
