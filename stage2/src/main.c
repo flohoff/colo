@@ -21,6 +21,11 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	unsigned long mark;
 
+	if(switches & BUTTON_CLEAR)
+		nv_get();
+	else
+		nv_put();
+
 	serial_init();
 
 	puts("\n-=<[ \"CoLo\" Qube2/RaQ2 boot loader v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " (" __DATE__ ") ]>=-");
@@ -31,9 +36,6 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	pci_init(bank0, bank1);
 
-	if(switches & BUTTON_CLEAR)
-		nv_get();
-
 	tulip_init();
 
 	ide_init();
@@ -42,7 +44,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	heap_reset();
 
-	env_put("console-speed", _STR(BAUD_RATE), VAR_OTHER);
+	env_put("console-speed", serial_baud(), VAR_OTHER);
 
 	if(!nv_store.boot || (switches & (BUTTON_ENTER | BUTTON_SELECT)) == 0)
 

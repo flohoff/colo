@@ -24,9 +24,9 @@ static const char *script[] =
 {
 	/* Disk (hda) */
 
-	"lcd 'Booting ...'\n"
+	"lcd 'Booting...'\n"
 	"mount\n"
-	"lcd 'Booting ...' /dev/{mounted-volume}\n"
+	"lcd 'Booting...' /dev/{mounted-volume}\n"
 	"-load /boot/default.colo\n"
 	"-script\n"
 	"load /boot/vmlinux.gz\n"
@@ -34,18 +34,18 @@ static const char *script[] =
 
 	/* Network (NFS) */
 
-	"lcd 'Booting ...'\n"
+	"lcd 'Booting...'\n"
 	"net\n"
-	"lcd 'Booting ...' {ip-address}\n"
+	"lcd 'Booting...' {ip-address}\n"
 	"nfs {dhcp-next-server} {dhcp-root-path} {dhcp-boot-file}\n"
 	"-script\n"
 	"execute",
 
 	/* Network (TFTP) */
 
-	"lcd 'Booting ...'\n"
+	"lcd 'Booting...'\n"
 	"net\n"
-	"lcd 'Booting ...' {ip-address}\n"
+	"lcd 'Booting...' {ip-address}\n"
 	"tftp {dhcp-next-server} {dhcp-boot-file}\n"
 	"-script\n"
 	"execute",

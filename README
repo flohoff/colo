@@ -33,7 +33,8 @@ LIMITATIONS
 
 * Network booting over NFS has not been checked to see whether it works with
   the original restore CD (I don't have a suitable network card). To test this
-  CoLo would have to be resident in Flash, so it's not for the faint hearted.
+  CoLo would have to be resident in Flash, so it's only for the brave and
+  fearless.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

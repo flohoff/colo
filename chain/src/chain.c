@@ -38,14 +38,25 @@ static void __attribute__((noreturn)) fatal(void)
 }
 
 /*
- * output value as decimal
+ * display error message and die
  */
-static void out_decimal(unsigned long val)
+static void loader_error(const char *msg)
 {
-	if(val >= 10)
-		out_decimal(val / 10);
+	lcd_line(0, "!RFX LOAD FAIL !");
+	lcd_line(1, msg);
+	fatal();
+}
 
-	putchar(val % 10 + '0');
+/*
+ * convert value to ASCII decimal
+ */
+static char *to_decimal(char *ptr, unsigned value)
+{
+	if(value > 9)
+		ptr = to_decimal(ptr, value / 10);
+	*ptr++ = value % 10 | '0';
+
+	return ptr;
 }
 
 /*
@@ -64,7 +75,7 @@ static void dcache_flush_all(void)
 /*
  * read memory bank sizes from Galileo
  */
-void memory_info(size_t *bank)
+static void memory_info(size_t *bank)
 {
 	unsigned lo, hi;
 
@@ -84,6 +95,25 @@ void memory_info(size_t *bank)
 }
 
 /*
+ * show memory configuration
+ */
+static const char *memory_config(size_t *bank)
+{
+	static char buf[16];
+	char *ptr;
+
+	ptr = to_decimal(buf, bank[0] >> 20);
+	*ptr++ = ',';
+	ptr = to_decimal(ptr, bank[1] >> 20);
+	*ptr++ = '-';
+	*ptr++ = '>';
+	ptr = to_decimal(ptr, (bank[0] + bank[1]) >> 20);
+	*ptr = '\0';
+
+	return buf;
+}
+
+/*
  * load boot loader from RFX image that follows
  */
 void chain(unsigned arg)
@@ -96,46 +126,38 @@ void chain(unsigned arg)
 	struct rfx_header *rfx;
 	size_t ram[2];
 
-	/* say hello */
-
-	serial_init();
-	puts("chain: v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " (" __DATE__ ")");
-	drain();
-
 	/* read state of buttons */
 
 	switches = *(volatile unsigned *) BRDG_NCS2_BASE >> 24;
+
+	/* all LEDs off */
+
+	*(volatile uint8_t *) BRDG_NCS0_BASE = 0;
 
 	/* get memory bank sizes */
 
 	memory_info(ram);
 
-	putstring("chain: bank 0 ");
-	out_decimal(ram[0] >> 20);
-	putstring("MB\nchain: bank 1 ");
-	out_decimal(ram[1] >> 20);
-	putchar('\n');
-
 	if(KSEG0(ram[0] + ram[1]) != (void *) arg) {
-		puts("chain: MEMORY SIZE MISMATCH");
+		lcd_line(0, "! MEMORY SIZE  !");
+		lcd_line(1, "!   MISMATCH   !");
 		fatal();
 	}
+
+	lcd_line(0, "Booting...");
+	lcd_line(1, memory_config(ram));
 
 	/* load stage2 */
 
 	rfx = (void *) &__stage2;
 	
-	if(memcmp(rfx->magic, RFX_HDR_MAGIC, RFX_HDR_MAGIC_SZ)) {
-		puts("chain: RFX header missing");
-		fatal();
-	}
+	if(memcmp(rfx->magic, RFX_HDR_MAGIC, RFX_HDR_MAGIC_SZ))
+		loader_error(" INVALID HEADER");
 
 	loadaddr = ram[0] + ram[1] - (32 << 10); // XXX
 
-	if(rfx->memsize > loadaddr) {
-		puts("chain: out of memory");
-		fatal();
-	}
+	if(rfx->memsize > loadaddr)
+		loader_error(" OUT OF MEMORY");
 
 	loadaddr = (unsigned long) KSEG0((loadaddr - rfx->memsize) & 0xffff0000);
 
@@ -158,10 +180,8 @@ void chain(unsigned arg)
 
 			case RFX_REL_26:
 				data += (loadaddr & 0x0fffffff) >> 2;
-				if((*pfix ^ data) & 0xfc000000) {
-					puts("chain: RFX_REL_26 relocation out of range");
-					fatal();
-				}
+				if((*pfix ^ data) & 0xfc000000)
+					loader_error(" BAD RELOCATION");
 				*pfix = data;
 				break;
 
@@ -170,8 +190,7 @@ void chain(unsigned arg)
 				break;
 
 			default:
-				puts("chain: unexpected RFX relocation");
-				fatal();
+				loader_error(" UNKNOWN RELOC");
 		}
 	}
 	
@@ -180,9 +199,6 @@ void chain(unsigned arg)
 	dcache_flush_all();
 
 	/* jump to it */
-
-	puts("chain: starting stage2");
-	drain();
 
 	((void (*)(size_t, size_t, unsigned))(rfx->entry + loadaddr))(ram[0], ram[1], switches);
 }

@@ -35,6 +35,10 @@ An example /boot/default.colo might look like this (just an example) :-
 GENERAL
 -------
 
+Non-volatile parameters (non-volatile flags, baud rate, default boot option
+etc) can be set back to their default values by pressing the recessed "CLEAR"
+switch whilst the unit is booting.
+
 The default radix for all numbers used in the shell is 16 (hexadecimal).
 Values are interpreted as decimal values if they are suffixed with a 't').
 
@@ -306,6 +310,17 @@ the contents of the directory will be listed.
 
 If no paths are given then the contents of the volume's root directory are
 listed.
+
+serial [rate | default]
+-----------------------
+
+Sets the baud rate for the boot shell to the nearest supported rate. The
+change will not take effect until the unit is rebooted.
+
+If called with an argument of 'default' the baud rate is set back to the
+default value set at compile time.
+
+If called with no arguments the saved baud rate setting is printed.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

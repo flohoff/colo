@@ -19,6 +19,7 @@
 			.set	noreorder
 
 			b	1f
+			 nop
 
 			.ascii	"CoLo"
 

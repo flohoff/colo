@@ -49,7 +49,7 @@ static unsigned nv_crc(struct nv_store *store)
 
 	crc = 0;
 
-	for(indx = 1; indx < sizeof(struct nv_store); ++indx) {
+	for(indx = 1; indx < store->size; ++indx) {
 
 		data = ((uint8_t *) store)[indx];
 
@@ -78,14 +78,11 @@ int nv_get(void)
 	for(indx = 0; indx < sizeof(copy); ++indx)
 		((uint8_t *) &copy)[indx] = rtc_read(RTC_ADDR_STORE + indx);
 
-	if(copy.vers != NV_STORE_VERSION || copy.size != sizeof(copy) || copy.crc != nv_crc(&copy)) {
-		DPUTS("nv: invalid");
+	if(copy.vers != NV_STORE_VERSION || copy.size < 3 || copy.size > sizeof(copy) || copy.crc != nv_crc(&copy))
 		return 0;
-	}
 
-	DPUTS("nv: loaded");
-
-	nv_store = copy;
+	memset(&nv_store, 0, sizeof(nv_store));
+	memcpy(&nv_store, &copy, copy.size);
 
 	return 1;
 }
@@ -103,8 +100,6 @@ void nv_put(void)
 
 	for(indx = 0; indx < sizeof(nv_store); ++indx)
 		rtc_write(RTC_ADDR_STORE + indx, ((uint8_t *) &nv_store)[indx]);
-
-	DPRINTF("nv: saved (%02x)\n", nv_store.crc);
 }
 
 /* vi:set ts=3 sw=3 cin path=include,../include: */

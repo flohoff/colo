@@ -12,8 +12,6 @@
 #define __STR(x)				#x
 #define _STR(x)				__STR(x)
 
-#define yield()
-
 typedef unsigned char		uint8_t;
 typedef unsigned short		uint16_t;
 typedef unsigned				uint32_t;
@@ -26,13 +24,10 @@ extern void *memcpy(void *, const void *, size_t);
 extern void *memset(void *, int, size_t);
 extern int memcmp(const void *, const void *, size_t);
 
-/* serial.c */
+/* lcd.c */
 
-extern void serial_init(void);
-extern void putstring(const char *);
-extern void puts(const char *);
-extern void drain(void);
-extern void putchar(int);
+extern void lcd_init(void);
+extern void lcd_line(int, const char *);
 
 #endif
 

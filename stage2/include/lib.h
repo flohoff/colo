@@ -126,6 +126,7 @@ extern void putchar(int);
 extern void putstring(const char *);
 extern void puts(const char *str);
 extern void drain(void);
+extern const char *serial_baud(void);
 
 #define BREAK()							({ char c; kbhit() && ((c = getch()) == ' ' || c == '\003'); })
 
@@ -286,6 +287,7 @@ struct nv_store
 
 	uint8_t	flags;
 	uint8_t	boot;
+	uint8_t	baud;
 
 } __attribute__((packed));
 

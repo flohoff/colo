@@ -17,7 +17,7 @@
 
 #define APP_NAME					"colo-perm"
 
-#define COLO_SIG_OFFSET			4
+#define COLO_SIG_OFFSET			8
 #define COLO_SIG_STRING			"CoLo"
 #define COLO_SIG_SIZE			(sizeof(COLO_SIG_STRING) - 1)
 

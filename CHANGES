@@ -11,6 +11,11 @@ CoLo 1.10 (xxxx-xx-xx)
 
 *	Added NFS support ('nfs' command).
 
+*	Removed debugging output from chain loader. Chain loader now uses LCD for
+ 	error messages.
+
+*	Added command 'serial' for changing serial baud rate.
+
 CoLo 1.9 (2004-05-02)
 ---------------------
 

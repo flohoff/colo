@@ -8,9 +8,9 @@
 
 TARG= colo-chain
 OBJS=	chain.o\
-		serial.o\
 		libmem.o\
 		start.o\
+		lcd.o\
 		../stage2/stage2.elf\
 
 CC_DEP:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/null &&\
@@ -43,9 +43,10 @@ $(TARG): $(OBJS)
 %.o: src/%.S
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c -o $@ $^
 
-# pick up libmem.c from stage2 source
+libmem.o: ../stage2/src/libmem.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
 
-%.o: ../stage2/src/%.c
+lcd.o: ../stage1/src/lcd.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
 
 .PHONY: all binary clean
