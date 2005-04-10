@@ -342,6 +342,40 @@ static void rx_filter_init(void)
 }
 
 /*
+ * poll transmit ring
+ */
+static int transmit_poll(void)
+{
+	unsigned curr;
+
+	while(tx_curr != tx_next) {
+
+		curr = tx_curr % TX_RING_SIZE;
+
+		if(tx_desc[curr].status & TX_DESC_STATUS_OWN)
+			break;
+
+		if(tx_frame[curr])
+			frame_free(tx_frame[curr]);
+
+		++tx_curr;
+	}
+
+	return tx_curr != tx_next;
+}
+
+/*
+ * drain transmit ring (for a maximum of 250ms)
+ */
+static void transmit_drain(void)
+{
+	unsigned mark;
+
+	for(mark = MFC0(CP0_COUNT); transmit_poll() && MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE / 4;)
+		;
+}
+
+/*
  * poll receive and transmit ring
  */
 void tulip_poll(void)
@@ -382,18 +416,7 @@ void tulip_poll(void)
 		}
 	}
 
-	while(tx_curr != tx_next) {
-
-		curr = tx_curr % TX_RING_SIZE;
-
-		if(tx_desc[curr].status & TX_DESC_STATUS_OWN)
-			break;
-
-		if(tx_frame[curr])
-			frame_free(tx_frame[curr]);
-
-		++tx_curr;
-	}
+	transmit_poll();
 
 	rx_ring_fill();
 }
@@ -729,6 +752,10 @@ int tulip_up(void)
 void tulip_down(void)
 {
 	assert(net_is_up());
+
+	/* drain transmitter */
+
+	transmit_drain();
 
 	/* stop transmitter and receiver */
 

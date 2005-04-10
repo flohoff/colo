@@ -185,6 +185,7 @@ static int cmnd_nvflags(int opsz)
 		"IDE slave enabled",
 		"Console disabled",
 		"Horizontal menus",
+		"Probe for PCI serial",
 	};
 	unsigned indx, mask;
 	unsigned long bit;

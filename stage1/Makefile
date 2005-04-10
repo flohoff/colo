@@ -14,13 +14,16 @@ OBJS=	init.o\
 		loader.o\
 		fast.o\
 		start.o\
-		../stage2/stage2.elf\
+
+XOBJS= ../stage2/stage2.elf\
 
 include ../Rules.mak
 
+DEPS=$(OBJS:.o=.d)
+
 LDFLAGS= -nostdlib -Wl,-T,$(TARG).lnk,-Map,$(TARG).map
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-strict-aliasing $(CFLAGS_CPU) $(CFLAGS_COLO)
-CPPFLAGS= -nostdinc -Iinclude -I../include -D_DEBUG $(CPPFLAGS_GCC)
+CPPFLAGS= -MD -nostdinc -Iinclude -I../include -D_DEBUG $(CPPFLAGS_GCC)
 
 all:
 	$(MAKE) -C .. binary
@@ -28,21 +31,23 @@ all:
 binary: $(TARG).bin
 
 clean:
-	rm -f $(TARG){,.bin,.map} $(OBJS)
+	rm -f $(TARG){,.bin,.map} $(OBJS) $(XOBJS) $(DEPS)
 
 $(TARG).bin: $(TARG)
-	$(OBJCOPY) -O binary $^ $@
+	$(OBJCOPY) -O binary $< $@
 
-$(TARG): $(OBJS)
+$(TARG): $(OBJS) $(XOBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 fast.o: CFLAGS+= -Wa,--no-warn
 
 %.o: src/%.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 %.o: src/%.S
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+-include $(DEPS)
 
 .PHONY: all binary clean
 
