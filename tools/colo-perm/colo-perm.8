@@ -1,23 +1,23 @@
 .\" $Id$
 .\"
-.\" Copyright (C) 2004  Martin Michlmayr <tbm@cyrius.com>
+.\" Copyright (C) 2004, 2005  Martin Michlmayr <tbm@cyrius.com>
 .\" This manual is freely distributable under the terms of the GPL.
 .\" It was originally written for Debian GNU/Linux (but may be used
 .\" by others).
 .\"
 
-.TH COLO-PERM 8 "May 2004"
+.TH COLO\-PERM 8 "May 2005"
 
 .SH NAME
-colo-perm \- check whether CoLo is resident in ROM
+colo\-perm \- check whether CoLo is resident in ROM
 
 .SH SYNOPSIS
-.B colo-perm
-[\fI-q\fR]
+.B colo\-perm
+[\fI\-q\fR]
 
 .SH DESCRIPTION
 .PP
-.B colo-perm
+.B colo\-perm
 is a tool which looks in the ROM of a Cobalt machine for a magic string
 identifying CoLo.  This way, it can be determined if the original Cobalt
 firmware is used or whether CoLo has been flashed to the ROM.
@@ -30,11 +30,11 @@ to be resident in the ROM.
 
 .SH RETURN VALUE
 
-.B colo-perm
+.B colo\-perm
 returns zero if CoLo has been found in the ROM or 1 if it has not been
 found.  255 is returned if an error occurred.
 
 .SH AUTHOR
 .PP
-Peter Horton <pdh@colonel-panic.org>
+Peter Horton <pdh@colonel\-panic.org>
 

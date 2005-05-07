@@ -1,19 +1,19 @@
 .\" $Id$
 .\"
-.\" Copyright (C) 2004  Martin Michlmayr <tbm@cyrius.com>
+.\" Copyright (C) 2004, 2005  Martin Michlmayr <tbm@cyrius.com>
 .\" This manual is freely distributable under the terms of the GPL.
 .\" It was originally written for Debian GNU/Linux (but may be used
 .\" by others).
 .\"
 
-.TH PUTLCD 8 "April 2004"
+.TH PUTLCD 8 "May 2005"
 
 .SH NAME
 putlcd \- display text on Cobalt's LCD display
 
 .SH SYNOPSIS
 .B putlcd
-[\fI-n\fR] [\fISTRING\fR] [\fISTRING\fR]
+[\fI\-n\fR] [\fISTRING\fR] [\fISTRING\fR]
 
 .SH DESCRIPTION
 .PP
@@ -30,12 +30,12 @@ will interpret the text as separate arguments.
 
 If
 .B putlcd
-is run with the \fI-n\fR switch the LCD line will not be cleared if the
+is run with the \fI\-n\fR switch the LCD line will not be cleared if the
 corresponding string is empty.
 
 .SH EXAMPLES
 
-Put "Hello" on the first line and "world" on the second:
+Put \[lq]Hello\[rq] on the first line and \[lq]world\[rq] on the second:
 .RS
 .ft CW
 putlcd Hello world
@@ -43,7 +43,7 @@ putlcd Hello world
 .RE
 .PP
 
-Put "Hello world" on the first line and clear the second:
+Put \[lq]Hello world\[rq] on the first line and clear the second:
 .RS
 .ft CW
 putlcd "Hello world"
@@ -51,7 +51,7 @@ putlcd "Hello world"
 .RE
 .PP
 
-Put "Hello world" on the second line and clear the first:
+Put \[lq]Hello world\[rq] on the second line and clear the first:
 .RS
 .ft CW
 putlcd "" "Hello world"
@@ -75,5 +75,5 @@ putlcd
 
 .SH AUTHOR
 .PP
-Peter Horton <pdh@colonel-panic.org>
+Peter Horton <pdh@colonel\-panic.org>
 

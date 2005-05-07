@@ -372,7 +372,7 @@ static void transmit_drain(void)
 	unsigned mark;
 
 	for(mark = MFC0(CP0_COUNT); transmit_poll() && MFC0(CP0_COUNT) - mark < CP0_COUNT_RATE / 4;)
-		;
+		netcon_poll();
 }
 
 /*

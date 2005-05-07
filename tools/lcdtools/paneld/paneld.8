@@ -1,6 +1,6 @@
 .\" $Id$
 .\"
-.\" Copyright (C) 2004  Martin Michlmayr <tbm@cyrius.com>
+.\" Copyright (C) 2004, 2005  Martin Michlmayr <tbm@cyrius.com>
 .\" This manual is freely distributable under the terms of the GPL.
 .\" It was originally written for Debian GNU/Linux (but may be used
 .\" by others).
@@ -13,7 +13,7 @@ paneld \- Cobalt admin menu for the LCD panel
 
 .SH SYNOPSIS
 .B paneld
-[-d] [-h] [--] [\fISTRINGs\fR]
+[\-d] [\-h] [\-\-] [\fISTRINGs\fR]
 
 .SH DESCRIPTION
 .PP
@@ -33,18 +33,18 @@ in the second line below the time.  It will proceed with the next argument
 and loop around when the last argument is reached.
 
 If called with the
-.B -d
+.B \-d
 option
 .B paneld
 will fork itself into the background immediately.
 
 The
-.B -h
+.B \-h
 option will make
 .B paneld
 use scrolling horizontal menus rather than the usual vertical menu.
 
 .SH AUTHOR
 .PP
-Peter Horton <pdh@colonel-panic.org>
+Peter Horton <pdh@colonel\-panic.org>
 

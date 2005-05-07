@@ -1,26 +1,26 @@
 .\" $Id$
 .\"
-.\" Copyright (C) 2004  Martin Michlmayr <tbm@cyrius.com>
+.\" Copyright (C) 2004, 2005  Martin Michlmayr <tbm@cyrius.com>
 .\" This manual is freely distributable under the terms of the GPL.
 .\" It was originally written for Debian GNU/Linux (but may be used
 .\" by others).
 .\"
 
-.TH FLASH-TOOL 8 "April 2004"
+.TH FLASH\-TOOL 8 "May 2005"
 
 .SH NAME
-flash-tool \- read or write Cobalt's flash
+flash\-tool \- read or write Cobalt's flash
 
 .SH SYNOPSIS
-.B flash-tool
-[\fI-w\fR] [\fI-o offset\fR] [\fI-f\fR] \fIfile\fR
+.B flash\-tool
+[\fI\-w\fR] [\fI\-o offset\fR] [\fI\-f\fR] \fIfile\fR
 
 .SH DESCRIPTION
 .PP
-.B flash-tool
+.B flash\-tool
 can be used to read the current content of Cobalt's flash and write it to a
 file, or to reprogram the flash with an image supplied by the user.
-.B flash-tool
+.B flash\-tool
 can therefore be used to first create a backup of Cobalt's original boot
 loader and then reprogram the flash with a tested image of colo,
 a replacement boot loader for Cobalt which offers more features than the
@@ -42,7 +42,7 @@ Take a copy of the original boot loader (or whatever your flash currently
 contains):
 .RS
 .ft CW
-flash-tool cobalt-original-boot.bin
+flash\-tool cobalt\-original\-boot.bin
 .ft R
 .RE
 .PP
@@ -50,7 +50,7 @@ flash-tool cobalt-original-boot.bin
 Reprogram your flash with another image (see the warning below):
 .RS
 .ft CW
-flash-tool -w rom-image.bin
+flash\-tool \-w rom\-image.bin
 .ft R
 .RE
 .PP
@@ -66,7 +66,7 @@ reprogramming fails, you will have to remove and reprogram the flash chip
 with an external programmer.  This might mean desoldering the chip as well
 as finding a suitable programmer.  Only use the reprogramming functionality
 of
-.B flash-tool
+.B flash\-tool
 with caution and if you know what you are doing.
 
 .SH SEE ALSO
@@ -78,10 +78,10 @@ current flash and reprogram it with colo can be found at
 
 .SH FILES
 .PP
-.IR /usr/lib/colo/rom-image.bin
+.IR /usr/lib/colo/rom\-image.bin
 - flashable ROM image of colo
 
 .SH AUTHOR
 .PP
-Peter Horton <pdh@colonel-panic.org>
+Peter Horton <pdh@colonel\-panic.org>
 
