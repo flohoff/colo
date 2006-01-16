@@ -69,6 +69,11 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 		lcd_line(0, "!  UNIT BOOT   !");
 		lcd_line(1, "!   FAILED     !");
+
+	} else {
+
+		lcd_line(0, "Boot shell...");
+		lcd_line(1, NULL);
 	}
 
 	if(!netcon_enabled())
