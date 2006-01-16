@@ -301,7 +301,7 @@ static inline void yield(void)
 
 #define LCD_MENU_TIMEOUT					(-1)
 #define LCD_MENU_CANCEL						(-2)
-#define LCD_MENU_ABORT						(-3)
+#define LCD_MENU_BREAK						(-3)
 #define LCD_MENU_BAD_ARGS					(-4)
 
 extern void lcd_init(void);
@@ -337,7 +337,7 @@ extern int boot(int);
 #define NVFLAG_HORZ_MENU					(1 << 5)
 #define NVFLAG_CONSOLE_PCI_SERIAL		(1 << 7)
 
-#define NV_STORE_VERSION					2
+#define NV_STORE_VERSION					3
 
 struct nv_store
 {
@@ -348,6 +348,7 @@ struct nv_store
 	uint8_t	flags;
 	uint8_t	boot;
 	uint8_t	baud;
+	uint8_t	keymap;	/* added in version 3 */
 
 } __attribute__((packed));
 

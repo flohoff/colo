@@ -41,7 +41,7 @@ static const struct keybind_t screen_vt100_bind[] =
 	{ "\r",			KEY_ENTER			},
 	{ "\025",		KEY_CLEAR			},
 	{ NULL,			0						}
-}
+};
 
 static const struct keybind_t minicom_vt102_bind[] =
 {
@@ -104,30 +104,33 @@ static const struct keymap_t keymaps[] =
 	{ "screen-vt100",			(struct keybind_t *) screen_vt100_bind			},
 };
 
-static const struct keymap_t *keymap = &keymaps[0];
-
 int kgetch(void)
 {
 	static char buf[MAX_BIND_CHARS];
+	const struct keybind_t *bind;
 	static unsigned fill;
 	unsigned long mark;
 	unsigned indx;
 	char chr;
+
+	bind = keymaps[0].map;
+	if(nv_store.keymap < elements(keymaps))
+		bind = keymaps[nv_store.keymap].map;
 
 	if(!fill)
 		buf[fill++] = getch();
 
 	for(;;) {
 
-		for(indx = 0; keymap->map[indx].keys && memcmp(buf, keymap->map[indx].keys, fill); ++indx)
+		for(indx = 0; bind[indx].keys && memcmp(buf, bind[indx].keys, fill); ++indx)
 			;
 
-		if(!keymap->map[indx].keys)
+		if(!bind[indx].keys)
 			break;
 
-		if(!keymap->map[indx].keys[fill]) {
+		if(!bind[indx].keys[fill]) {
 			fill = 0;
-			return keymap->map[indx].code;
+			return bind[indx].code;
 		}
 
 		for(mark = MFC0(CP0_COUNT); !kbhit() && MFC0(CP0_COUNT) - mark < INTER_KEY_TIMEOUT;)
@@ -193,7 +196,7 @@ int cmnd_keymap(int opsz)
 
 		for(indx = elements(keymaps); indx--;) {
 
-			putchar(keymap == &keymaps[indx] ? '*' : ' ');
+			putchar(nv_store.keymap == indx ? '*' : ' ');
 			putchar(' ');
 			puts(keymaps[indx].name);
 		}
@@ -205,7 +208,11 @@ int cmnd_keymap(int opsz)
 
 		if(!strncasecmp(argv[1], keymaps[indx].name, argsz[1])) {
 
-			keymap = &keymaps[indx];
+			if(indx != nv_store.keymap) {
+				nv_store.keymap = indx;
+				nv_put();
+			}
+
 			return E_NONE;
 		}
 

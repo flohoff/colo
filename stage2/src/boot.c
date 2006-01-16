@@ -83,14 +83,15 @@ int boot(int which)
 
 		switch(which) {
 
+			case LCD_MENU_BAD_ARGS:		/* should never happen */
+
 			case LCD_MENU_TIMEOUT:
 			case LCD_MENU_CANCEL:
 				which = 0;
 				break;
 
-			case LCD_MENU_ABORT:
-				puts("aborted");
-				return E_UNSPEC;
+			case LCD_MENU_BREAK:
+				return E_NONE;
 
 			default:
 				++which;

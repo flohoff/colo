@@ -11,8 +11,6 @@
 #include "galileo.h"
 #include "cobalt.h"
 
-extern void *initrd_image(size_t *);
-
 /*
  * launch the loaded image
  */

@@ -604,7 +604,7 @@ invalid:
 					memcpy(scratch.b, data + 3 * 4, nmsz);
 					scratch.b[nmsz] = '\0';
 
-					code = func(arg, scratch.b, &obj);
+					code = func(arg, (char *) scratch.b, &obj);
 					if(code)
 						return code;
 				}
@@ -735,7 +735,7 @@ static int dump_node(void *arg, const char *name, struct nfs_object *obj)
 	putstring_safe(name, -1);
 
 	if(S_ISLNK(mode)) {
-		if(size <= sizeof(scratch) && nfs_readlink((int) arg, scratch.b, obj)) {
+		if(size <= sizeof(scratch) && nfs_readlink((int) arg, (char *) scratch.b, obj)) {
 			putstring(" --> ");
 			putstring_safe(scratch.b, size);
 		} else

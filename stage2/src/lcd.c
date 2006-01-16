@@ -175,7 +175,7 @@ static int lcd_menu_horz(const char **options, unsigned count, unsigned timeout)
 	int dir;
 
 	if(count < 2)
-		return LCD_MENU_ABORT;
+		return LCD_MENU_BAD_ARGS;
 
 	lcd_centre(buf, options[0], sizeof(buf));
 	LCD_WRITE(0, LCD_DDRAM_ADDR);
@@ -193,7 +193,7 @@ static int lcd_menu_horz(const char **options, unsigned count, unsigned timeout)
 
 		for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < ((CP0_COUNT_RATE + 500) / 1000) * BUTTON_DEBOUNCE;)
 			if(BREAK())
-				return LCD_MENU_ABORT;
+				return LCD_MENU_BREAK;
 
 		btn = ~BUTTONS() & BUTTON_MASK;
 
@@ -240,7 +240,7 @@ static int lcd_menu_vert(const char **options, unsigned count, unsigned timeout)
 	int prv;
 
 	if(count < 2)
-		return LCD_MENU_ABORT;
+		return LCD_MENU_BAD_ARGS;
 
 	lcd_prog_chars();
 
@@ -268,7 +268,7 @@ static int lcd_menu_vert(const char **options, unsigned count, unsigned timeout)
 
 			for(mark = MFC0(CP0_COUNT); MFC0(CP0_COUNT) - mark < ((CP0_COUNT_RATE + 500) / 1000) * BUTTON_DEBOUNCE;)
 				if(BREAK())
-					return LCD_MENU_ABORT;
+					return LCD_MENU_BREAK;
 
 			btn = ~BUTTONS() & BUTTON_MASK;
 
@@ -363,7 +363,9 @@ int cmnd_menu(int opsz)
 
 	switch(which = lcd_menu((const char **) &argv[2], argc - 2, timeout * 100))
 	{
-		case LCD_MENU_ABORT:
+		case LCD_MENU_BAD_ARGS:		/* should never happen */
+
+		case LCD_MENU_BREAK:
 			env_put("menu-option", NULL, 0);
 			return E_UNSPEC;
 

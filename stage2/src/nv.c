@@ -117,6 +117,13 @@ void nv_get(int clear)
 		nv_store.vers = 2;
 	}
 
+	if(nv_store.vers < 3) {
+
+		nv_store.keymap = 0;
+
+		nv_store.vers = 3;
+	}
+
 	nv_put();
 }
 
