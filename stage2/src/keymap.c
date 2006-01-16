@@ -25,6 +25,24 @@ struct keymap_t
 	struct keybind_t	*map;
 };
 
+static const struct keybind_t screen_vt100_bind[] =
+{
+	{ "\033[A",		KEY_HISTORY_PREV	},
+	{ "\033[B",		KEY_HISTORY_NEXT	},
+	{ "\033[C",		KEY_CURSOR_RIGHT	},
+	{ "\033[D",		KEY_CURSOR_LEFT	},
+	{ "\033[1~",	KEY_HOME,			},
+	{ "\033[4~",	KEY_END,				},
+	{ "\033[5~",	KEY_WORD_LEFT,		},
+	{ "\033[6~",	KEY_WORD_RIGHT,	},
+	{ "\033[3~",	KEY_DELETE,			},
+	{ "\177",		KEY_BACKSPACE,		},
+	{ "\t",			KEY_HISTORY_MATCH	},
+	{ "\r",			KEY_ENTER			},
+	{ "\025",		KEY_CLEAR			},
+	{ NULL,			0						}
+}
+
 static const struct keybind_t minicom_vt102_bind[] =
 {
 	{ "\033[A",		KEY_HISTORY_PREV	},
@@ -83,6 +101,7 @@ static const struct keymap_t keymaps[] =
 	{ "minicom-vt102",		(struct keybind_t *) minicom_vt102_bind		},
 	{ "hyperterminal-ansi",	(struct keybind_t *) hyperterminal_ansi_bind	},
 	{ "teraterm-vt100",		(struct keybind_t *) teraterm_vt100_bind		},
+	{ "screen-vt100",			(struct keybind_t *) screen_vt100_bind			},
 };
 
 static const struct keymap_t *keymap = &keymaps[0];
