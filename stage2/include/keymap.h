@@ -1,5 +1,5 @@
 /*
- * (C) BitBox Ltd 2004
+ * (C) BitBox Ltd 2004,2005,2006
  *
  * $Id$
  *

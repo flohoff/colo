@@ -1,5 +1,5 @@
 /*
- * (C) P.Horton 2004
+ * (C) P.Horton 2004,2005,2006
  *
  * $Id$
  *
@@ -24,7 +24,7 @@
 			.ascii	"CoLo"
 
 			.ascii	" v", _STR(VER_MAJOR), ".", _STR(VER_MINOR)
-			.asciiz	" (C) P.Horton 2004"
+			.asciiz	" (C) P.Horton 2004,2005,2006"
 
 			.balign	4
 
