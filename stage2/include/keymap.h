@@ -22,6 +22,7 @@
 #define KEY_HISTORY_PREV				0x10a
 #define KEY_HISTORY_NEXT				0x10b
 #define KEY_HISTORY_MATCH				0x10c
+#define KEY_DELETE_WORD					0x10d
 
 extern int kgetch(void);
 

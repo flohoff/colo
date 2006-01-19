@@ -13,6 +13,8 @@
 #define INTER_KEY_TIMEOUT				(CP0_COUNT_RATE / 20)
 #define MAX_BIND_CHARS					16
 
+#define screen_vt100_bind				minicom_vt102_bind
+
 struct keybind_t
 {
 	const char	*keys;
@@ -23,24 +25,6 @@ struct keymap_t
 {
 	const char			*name;
 	struct keybind_t	*map;
-};
-
-static const struct keybind_t screen_vt100_bind[] =
-{
-	{ "\033[A",		KEY_HISTORY_PREV	},
-	{ "\033[B",		KEY_HISTORY_NEXT	},
-	{ "\033[C",		KEY_CURSOR_RIGHT	},
-	{ "\033[D",		KEY_CURSOR_LEFT	},
-	{ "\033[1~",	KEY_HOME,			},
-	{ "\033[4~",	KEY_END,				},
-	{ "\033[5~",	KEY_WORD_LEFT,		},
-	{ "\033[6~",	KEY_WORD_RIGHT,	},
-	{ "\033[3~",	KEY_DELETE,			},
-	{ "\177",		KEY_BACKSPACE,		},
-	{ "\t",			KEY_HISTORY_MATCH	},
-	{ "\r",			KEY_ENTER			},
-	{ "\025",		KEY_CLEAR			},
-	{ NULL,			0						}
 };
 
 static const struct keybind_t minicom_vt102_bind[] =
@@ -54,10 +38,12 @@ static const struct keybind_t minicom_vt102_bind[] =
 	{ "\033[4~",	KEY_END				},
 	{ "\033[5~",	KEY_WORD_LEFT		},
 	{ "\033[6~",	KEY_WORD_RIGHT		},
-	{ "\b",			KEY_BACKSPACE		},
+	{ "\177",		KEY_BACKSPACE		},			/* screen */
+	{ "\b",			KEY_BACKSPACE		},			/* minicom */
 	{ "\t",			KEY_HISTORY_MATCH	},
 	{ "\r",			KEY_ENTER			},
 	{ "\025",		KEY_CLEAR			},
+	{ "\027",		KEY_DELETE_WORD	},
 	{ NULL,			0						}
 };
 
@@ -75,6 +61,7 @@ static const struct keybind_t hyperterminal_ansi_bind[] =
 	{ "\t",			KEY_HISTORY_MATCH	},
 	{ "\r",			KEY_ENTER			},
 	{ "\025",		KEY_CLEAR			},
+	{ "\027",		KEY_DELETE_WORD	},
 	{ NULL,			0						}
 };
 
@@ -93,6 +80,7 @@ static const struct keybind_t teraterm_vt100_bind[] =
 	{ "\t",			KEY_HISTORY_MATCH	},
 	{ "\r",			KEY_ENTER			},
 	{ "\025",		KEY_CLEAR			},
+	{ "\027",		KEY_DELETE_WORD	},
 	{ NULL,			0						}
 };
 
