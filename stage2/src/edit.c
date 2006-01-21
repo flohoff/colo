@@ -21,24 +21,25 @@ static void update_eol(int erase)
 	for(indx = next; indx < buffsz; ++indx)
 		putchar(buff[indx]);
 
-	if(erase)
-		putstring(" \b");
+	for(indx = 0; indx < erase; ++indx)
+		putchar(' ');
 
-	for(indx = next; indx < buffsz; ++indx)
+	erase += buffsz;
+	for(indx = next; indx < erase; ++indx)
 		putchar('\b');
 }
 
-static void move_left(void)
+static void move_left(unsigned count)
 {
-	if(curr) {
+	while(curr && count--) {
 		putchar('\b');
 		buff[--next] = buff[--curr];
 	}
 }
 
-static void move_right(void)
+static void move_right(unsigned count)
 {
-	if(next < buffsz) {
+	while(next < buffsz && count--) {
 		putchar(buff[next]);
 		buff[curr++] = buff[next++];
 	}
@@ -144,8 +145,37 @@ static int history(int chr)
 	}
 }
 
+static unsigned word_left(void)
+{
+	unsigned mark;
+
+	mark = curr;
+
+	while(mark && isspace(buff[mark - 1]))
+		--mark;
+	while(mark && !isspace(buff[mark - 1]))
+		--mark;
+
+	return curr - mark;
+}
+
+static unsigned word_right(void)
+{
+	unsigned mark;
+
+	mark = next;
+	
+	while(mark < buffsz && !isspace(buff[mark + 1]))
+		++mark;
+	while(mark < buffsz && isspace(buff[mark + 1]))
+		++mark;
+
+	return mark - next;
+}
+
 void line_edit(char *line, size_t size)
 {
+	unsigned count;
 	int chr;
 
 	buff = line;
@@ -159,21 +189,19 @@ void line_edit(char *line, size_t size)
 		switch(chr) {
 
 			case KEY_HOME:
-				while(curr)
-					move_left();
+				move_left(buffsz);
 				break;
 
 			case KEY_END:
-				while(next < buffsz)
-					move_right();
+				move_right(buffsz);
 				break;
 
 			case KEY_CURSOR_LEFT:
-				move_left();
+				move_left(1);
 				break;
 
 			case KEY_CURSOR_RIGHT:
-				move_right();
+				move_right(1);
 				break;
 
 			case KEY_CLEAR:
@@ -202,23 +230,23 @@ void line_edit(char *line, size_t size)
 				continue;
 
 			case KEY_ENTER:
-				while(next < buffsz)
-					move_right();
+				move_right(buffsz - next);
 				buff[curr] = '\0';
 				return;
 
 			case KEY_WORD_RIGHT:
-				while(next < buffsz && !isspace(buff[next]))
-					move_right();
-				while(next < buffsz && isspace(buff[next]))
-					move_right();
+				move_right(word_right());
 				break;
 
 			case KEY_WORD_LEFT:
-				while(curr && isspace(buff[curr - 1]))
-					move_left();
-				while(curr && !isspace(buff[curr - 1]))
-					move_left();
+				move_left(word_left());
+				break;
+
+			case KEY_DELETE_WORD:
+				count = word_left();
+				move_left(count);
+				next += count;
+				update_eol(count);
 				break;
 
 			default:
