@@ -42,19 +42,22 @@ void heap_reset(void)
 	env_remove_tag(VAR_INITRD);
 }
 
-void heap_initrd_vars(void)
+void heap_set_initrd(void *base, size_t size)
 {
 	char text[16];
 
-	if(image_size_mark) {
+	sprintf(text, "%lx", (unsigned long) base);
+	env_put("initrd-start", text, VAR_INITRD);
+	sprintf(text, "%lx", (unsigned long) base + size);
+	env_put("initrd-end", text, VAR_INITRD);
+	sprintf(text, "%x", size);
+	env_put("initrd-size", text, VAR_INITRD);
+}
 
-		sprintf(text, "%lx", (unsigned long) image_base_mark);
-		env_put("initrd-start", text, VAR_INITRD);
-		sprintf(text, "%lx", (unsigned long) image_base_mark + image_size_mark);
-		env_put("initrd-end", text, VAR_INITRD);
-		sprintf(text, "%x", image_size_mark);
-		env_put("initrd-size", text, VAR_INITRD);
-	}
+void heap_initrd_vars(void)
+{
+	if(image_size_mark)
+		heap_set_initrd(image_base_mark, image_size_mark);
 }
 
 size_t heap_space(void)

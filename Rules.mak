@@ -16,6 +16,6 @@ CFLAGS_CPU:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/nul
 	echo "-mcpu=r5000 -mips2 -EL" ||\
 	echo "-march=r5000")
 
-CFLAGS_COLO= -ffreestanding -mno-abicalls -fno-PIC -G0
+CFLAGS_COLO= -ffreestanding -mno-abicalls -fno-pic -G0
 
 CPPFLAGS_GCC:= -I$(shell dirname `$(CC) --print-libgcc-file-name`)/include

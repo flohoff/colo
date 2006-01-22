@@ -5,7 +5,10 @@ CoLo 1.21 (xxxx-xx-xx)
 
 *	Merged "screen" and "minicom" keymaps.
 
-*	Added delete word to line editor ('ctrl-w').
+*	Added "delete word" to line editor ('<ctrl>w').
+
+*	Relocate 'initrd' to end of kernel image. Required by current 2.6.x
+	kernels. This behaviour can be disabled by NV flag 6.
 
 CoLo 1.20 (2006-01-16)
 ----------------------

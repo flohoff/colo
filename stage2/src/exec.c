@@ -37,6 +37,8 @@ static int launch_kernel(uint64_t *parm)
 
 	printf("\nprogram exited (%d)\n", code);
 
+	heap_reset();
+
 	return code;
 }
 
@@ -53,7 +55,7 @@ int cmnd_execute(int opsz)
 		unsigned long			w[1];
 	} args;
 
-	void *image, *load, *initrd;
+	void *image, *load, *initrd, *reloc;
 	size_t imagesz, initrdsz;
 	struct elf_info info;
 	unsigned long memsz;
@@ -106,6 +108,19 @@ int cmnd_execute(int opsz)
 	if(info.load_size >= 12 && unaligned_load(load + 8) == unaligned_load("CoLo")) {
 		puts("refusing to load \"CoLo\" chain loader");
 		return E_UNSPEC;
+	}
+
+	/* relocate initrd */
+
+	if(initrdsz && !(nv_store.flags & NVFLAG_NO_INITRD_RELOC)) {
+
+		reloc = align_up(load + info.load_size, 4096);
+
+		printf("relocating initrd (%08lx)\n", (unsigned long) reloc);
+
+		memmove(reloc, initrd, initrdsz);
+
+		heap_set_initrd(reloc, initrdsz);
 	}
 
 	/* no more network */

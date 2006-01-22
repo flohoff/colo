@@ -53,6 +53,8 @@ UP and DOWN cursor keys on the terminal (assuming the keymap is set
 correctly). TAB completes the current partial command from the command
 history.
 
+The key combination '<ctrl>w' deletes the word under/behind the cursor.
+
 The PAGE-UP/PAGE-DOWN keys are mapped to forward/backward word for terminals
 that support these keys.
 
@@ -252,6 +254,7 @@ The flags currently defined are
 		 set before the first 'mount' command for slave detection to work.
 	4 - disable serial console boot messages.
 	5 - use horizontal scrolling menus rather than vertical menus.
+	6 - disable relocation of "initrd" image to end of kernel.
 
 net [{address netmask [gateway]} | down]
 ----------------------------------------

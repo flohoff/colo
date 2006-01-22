@@ -43,6 +43,8 @@
 # define DPUTCHAR(c)
 #endif
 
+#define align_up(p,n)		({ unsigned long a=(n), b=(unsigned long)(p); (__typeof(p))((b+a-1)&-a); })
+
 #define isspace(c)			(!!((c)==' '))
 #define isdigit(c)			({unsigned _c=(unsigned char)(c);_c>='0'&&_c<='9';})
 #define isxdigit(c)			({unsigned _c=(unsigned char)(c);(_c>='0'&&_c<='9')||(_c>='A'&&_c<='F')||(_c>='a'&&_c<='f');})
@@ -275,6 +277,7 @@ extern void *heap_image(size_t *);
 extern void heap_mark(void);
 extern void *heap_mark_image(size_t *);
 extern void heap_initrd_vars(void);
+extern void heap_set_initrd(void *, size_t);
 
 /* ext2.c */
 
@@ -335,6 +338,7 @@ extern int boot(int);
 #define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
 #define NVFLAG_CONSOLE_DISABLE			(1 << 4)
 #define NVFLAG_HORZ_MENU					(1 << 5)
+#define NVFLAG_NO_INITRD_RELOC			(1 << 6)
 #define NVFLAG_CONSOLE_PCI_SERIAL		(1 << 7)
 
 #define NV_STORE_VERSION					3

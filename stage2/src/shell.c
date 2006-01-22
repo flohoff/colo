@@ -186,6 +186,7 @@ static int cmnd_nvflags(int opsz)
 		"Console disabled",
 		"Horizontal menus",
 		"Probe for PCI serial",
+		"No initrd relocation",
 	};
 	unsigned indx, mask;
 	unsigned long bit;
