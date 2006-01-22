@@ -254,7 +254,6 @@ The flags currently defined are
 		 set before the first 'mount' command for slave detection to work.
 	4 - disable serial console boot messages.
 	5 - use horizontal scrolling menus rather than vertical menus.
-	6 - disable relocation of "initrd" image to end of kernel.
 
 net [{address netmask [gateway]} | down]
 ----------------------------------------
@@ -443,6 +442,14 @@ kernel command line :-
 
 	The 'net' command unconditionally disables the net console functionality,
 	so it shouldn't be used whilst the net console is enabled.
+
+relocate
+--------
+
+Prepare for relocating a loaded initrd image to follow the kernel in memory.
+The actual relocation is done by the 'exec' command. This command examines the
+kernel image (uncompressing it if necessary) and calculates where the initrd
+image should be relocated to and flags that relocation is required.
 
 -- Peter Horton, pdh@colonel-panic.org --
 

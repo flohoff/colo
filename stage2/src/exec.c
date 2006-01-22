@@ -11,6 +11,81 @@
 #include "galileo.h"
 #include "cobalt.h"
 
+static void *initrd_reloc;
+
+/*
+ * clear initrd relocation
+ */
+void clear_reloc(void)
+{
+	initrd_reloc = NULL;
+}
+
+/*
+ * 'relocate' command
+ */
+int cmnd_reloc(int opsz)
+{
+	extern char __text;
+
+	void *image, *initrd, *load;
+	size_t imagesz, initrdsz;
+	struct elf_info info;
+	int elf32;
+
+	if(argc > 1)
+		return E_ARGS_OVER;
+
+	initrd = heap_mark_image(&initrdsz);
+
+	if(!initrdsz) {
+		puts("no initrd loaded");
+		return E_UNSPEC;
+	}
+
+	image = heap_image(&imagesz);
+
+	if(!imagesz) {
+		puts("no image loaded");
+		return E_UNSPEC;
+	}
+
+	if(gzip_check(image, imagesz) && !unzip(image, imagesz))
+		return E_UNSPEC;
+
+	image = heap_image(&imagesz);
+
+	elf32 = elf32_validate(image, imagesz, &info);
+
+	if(!elf32 && !elf64_validate(image, imagesz, &info)) {
+		puts("ELF image invalid");
+		return E_UNSPEC;
+	}
+
+	load = KSEG0(info.load_phys);
+
+	if(load < KSEG0(0) || load + info.load_size > (void *) &__text) {
+		puts("ELF loads outside available memory");
+		return E_UNSPEC;
+	}
+
+	if(load < image + imagesz && load + info.load_size > image) {
+		puts("ELF loads over ELF image");
+		return E_UNSPEC;
+	}
+
+	if(initrdsz && load < initrd + initrdsz && load + info.load_size > initrd) {
+		puts("ELF loads over initrd image");
+		return E_UNSPEC;
+	}
+
+	initrd_reloc = align_up(load + info.load_size, 4096);
+
+	heap_set_initrd(initrd_reloc, initrdsz);
+
+	return E_NONE;
+}
+
 /*
  * launch the loaded image
  */
@@ -55,7 +130,7 @@ int cmnd_execute(int opsz)
 		unsigned long			w[1];
 	} args;
 
-	void *image, *load, *initrd, *reloc;
+	void *image, *load, *initrd;
 	size_t imagesz, initrdsz;
 	struct elf_info info;
 	unsigned long memsz;
@@ -100,6 +175,24 @@ int cmnd_execute(int opsz)
 		return E_UNSPEC;
 	}
 
+	/* relocate initrd */
+
+	if(initrd_reloc) {
+
+		/* this should never happen */
+
+		if(!initrdsz || (unsigned long) initrd_reloc - (unsigned long) load - info.load_size >= 4096) {
+			puts("initrd relocation mismatch");
+			return E_UNSPEC;
+		}
+
+		printf("exec: relocating initrd (%08lx)\n", (unsigned long) initrd_reloc);
+
+		memcpy(initrd_reloc, initrd, initrdsz);
+	}
+
+	/* relocate kernel image */
+
 	if(elf32)
 		elf32_load(image);
 	else
@@ -108,19 +201,6 @@ int cmnd_execute(int opsz)
 	if(info.load_size >= 12 && unaligned_load(load + 8) == unaligned_load("CoLo")) {
 		puts("refusing to load \"CoLo\" chain loader");
 		return E_UNSPEC;
-	}
-
-	/* relocate initrd */
-
-	if(initrdsz && !(nv_store.flags & NVFLAG_NO_INITRD_RELOC)) {
-
-		reloc = align_up(load + info.load_size, 4096);
-
-		printf("relocating initrd (%08lx)\n", (unsigned long) reloc);
-
-		memmove(reloc, initrd, initrdsz);
-
-		heap_set_initrd(reloc, initrdsz);
 	}
 
 	/* no more network */

@@ -5,8 +5,6 @@ In no particular order ...
 *	Document radix of shell parameters. Add default radix parameter to
 	evaluate() to tidy this up.
 
-*	Allow break from IDE reset busy loop.
-
 *	Remove excess debugging messages.
 
 *	Add support for booting from LVM setups.

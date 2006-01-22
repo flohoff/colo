@@ -46,6 +46,7 @@ extern int cmnd_onerror(int);
 extern int cmnd_exit(int);
 extern int cmnd_abort(int);
 extern int cmnd_netcon(int);
+extern int cmnd_reloc(int);
 
 static int cmnd_arguments(int);
 static int cmnd_help(int);
@@ -108,6 +109,7 @@ static struct
 	{ "noop",			cmnd_noop,			0,					"[arguments ...]",										},
 	{ "sleep",			cmnd_sleep,			0,					"sleep period",											},
 	{ "netcon",			cmnd_netcon,		0,					"[host [port [port]]]",									},
+	{ "relocate",		cmnd_reloc,			0,					NULL,															},
 
 #ifdef _DEBUG
 	{ "arguments",		cmnd_arguments,	0,					"[arguments ...]",										},

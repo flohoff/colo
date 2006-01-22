@@ -338,7 +338,6 @@ extern int boot(int);
 #define NVFLAG_IDE_ENABLE_SLAVE			(1 << 3)
 #define NVFLAG_CONSOLE_DISABLE			(1 << 4)
 #define NVFLAG_HORZ_MENU					(1 << 5)
-#define NVFLAG_NO_INITRD_RELOC			(1 << 6)
 #define NVFLAG_CONSOLE_PCI_SERIAL		(1 << 7)
 
 #define NV_STORE_VERSION					3
@@ -368,6 +367,10 @@ extern void netcon_disable(void);
 extern unsigned netcon_read(void *, unsigned);
 extern unsigned netcon_write(const void *, unsigned);
 extern int netcon_enabled(void);
+
+/* exec.c */
+
+extern void clear_reloc(void);
 
 #endif
 

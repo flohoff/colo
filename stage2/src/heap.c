@@ -40,6 +40,8 @@ void heap_reset(void)
 	image_size_mark = 0;
 
 	env_remove_tag(VAR_INITRD);
+
+	clear_reloc();
 }
 
 void heap_set_initrd(void *base, size_t size)

@@ -206,6 +206,8 @@ int unzip(const void *base, size_t size)
 		return 0;
 	}
 
+	puts("inflate: decompressing");
+
 	error = decompress(base, targ, uncomp);
 
 	if(error < 0) {

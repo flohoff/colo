@@ -1,14 +1,16 @@
 # $Id$
 
-CoLo 1.21 (xxxx-xx-xx)
+CoLo 1.21 (2006-01-22)
 ----------------------
 
 *	Merged "screen" and "minicom" keymaps.
 
 *	Added "delete word" to line editor ('<ctrl>w').
 
-*	Relocate 'initrd' to end of kernel image. Required by current 2.6.x
-	kernels. This behaviour can be disabled by NV flag 6.
+*	Added 'relocate' command which relocates the initrd image to follow the
+	kernel image. Required to use initrd images with current 2.6.x kernels.
+
+*	'mount' command can now be aborted.
 
 CoLo 1.20 (2006-01-16)
 ----------------------

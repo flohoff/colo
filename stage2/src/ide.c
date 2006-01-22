@@ -163,7 +163,7 @@ static int ide_reset(void)
 
 	ide_select(&ide_bus[drive]);
 
-	for(mark = MFC0(CP0_COUNT);;)
+	for(mark = MFC0(CP0_COUNT);;) {
 
 		if(MFC0(CP0_COUNT) - mark >= CP0_COUNT_RATE / 100) {
 
@@ -183,6 +183,12 @@ static int ide_reset(void)
 
 			mark += CP0_COUNT_RATE / 100;
 		}
+
+		if(BREAK()) {
+			ide_reset_async();
+			return -1;
+		}
+	}
 
 	return 0;
 }
@@ -711,7 +717,8 @@ int atapi_read_sectors(struct ide_device *dev, void *data, unsigned long addr, u
 
 			if(sense < 0) {
 
-				ide_reset();
+				if(ide_reset() < 0)
+					return -1;
 				ide_select(dev);
 
 			} else {
@@ -854,7 +861,11 @@ void *ide_open(const char *name)
 
 	if(!((ide_bus[0].flags | ide_bus[1].flags) & FLAG_IDENTIFIED)) {
 
-		ide_reset();
+		if(ide_reset() < 0) {
+			puts("aborted");
+			return NULL;
+		}
+
 		ide_identify(&ide_bus[0]);
 		if(nv_store.flags & NVFLAG_IDE_ENABLE_SLAVE)
 			ide_identify(&ide_bus[1]);
