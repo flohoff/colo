@@ -12,8 +12,8 @@
 
 extern size_t mem_bank[2];
 
-static void *(*memcpy_w)(void *, const void *, size_t)	= _memcpy_w;
-static void *(*memset_w)(void *, int, size_t)				= _memset_w;
+void *(*memcpy_w)(void *, const void *, size_t)	= _memcpy_w;
+void *(*memset_w)(void *, int, size_t)				= _memset_w;
 
 /*
  * flush entire D-cache
