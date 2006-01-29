@@ -42,7 +42,7 @@
 
 #define CSR0_SWR							(1 << 0)
 #define CSR0_PBL							(0 << 8)			/* unlimited burst length */
-#define CSR0_CAL							(3 << 14)		/* 32 byte cache line     */
+#define CSR0_CAL							(1 << 14)		/* 32 byte cache line     */
 #define CSR0_21143_RME					(1 << 21)
 #define CSR0_21143_RLE					(1 << 23)
 #define CSR0_21143_WIE					(1 << 24)
