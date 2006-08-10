@@ -374,7 +374,7 @@ static int ide_ata_identify(struct ide_device *dev, const void *info)
 	dev->flags = 0;
 	dev->select &= REG_HEAD_SLAVE;
 
-	if(data.h[0] & (1 << 15)) {
+	if((data.h[0] & (1 << 15)) && data.h[0] != 0x848a) {
 		puts("ide: not ATA device");
 		return -1;
 	}

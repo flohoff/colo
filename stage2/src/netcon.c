@@ -258,14 +258,14 @@ int cmnd_netcon(int opsz)
 	if(!net_is_up())
 		return E_NET_DOWN;
 
+	if(udp_sock >= 0)
+		udp_close(udp_sock);
+
+	udp_sock = udp_socket();
+
 	if(udp_sock < 0) {
-
-		udp_sock = udp_socket();
-
-		if(udp_sock < 0) {
-			puts("no socket available");
-			return E_UNSPEC;
-		}
+		puts("no socket available");
+		return E_UNSPEC;
 	}
 
 	src = udp_bind(udp_sock, src);

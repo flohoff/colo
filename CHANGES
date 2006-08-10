@@ -1,5 +1,17 @@
 # $Id$
 
+CoLo 1.22 (xxxx-xx-xx)
+----------------------
+
+*	Fix build failure on GCC 4.1.
+
+*	Tweaked INSTALL.
+	[Martin Michlmayr]
+
+*	Fixed 'netcon' to not cause an assert in UDP code.
+
+*	Added support for CF cards in CF/IDE adapters (not tested).
+
 CoLo 1.21 (2006-01-22)
 ----------------------
 

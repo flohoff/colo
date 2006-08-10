@@ -12,8 +12,7 @@ Just copy 'colo-chain.elf' to your boot directory, rename into 'vmlinux' and
 gzip it to 'vmlinux.gz'
 
 	cp -f /boot/vmlinux.gz /boot/backup.gz
-	cp colo-chain.elf /boot/vmlinux
-	gzip -9 /boot/vmlinux
+	gzip -9 -c colo-chain.elf > /boot/vmlinux.gz
 	reboot
 
 If booting fails you'll need to boot using the backup kernel.
