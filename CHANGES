@@ -1,6 +1,6 @@
 # $Id$
 
-CoLo 1.22 (xxxx-xx-xx)
+CoLo 1.22 (2006-08-10)
 ----------------------
 
 *	Fix build failure on GCC 4.1.

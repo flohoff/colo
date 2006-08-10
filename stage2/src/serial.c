@@ -13,6 +13,13 @@
  * either :-(
  */
 
+/*
+ * TO ADD :-
+ *
+ * IntaShield 2 port card has two UARTS at offset 0 and offset 8 from the
+ * BAR at config address 0x18. The baud clock is 18.432MHz.
+ */
+
 #include "lib.h"
 #include "galileo.h"
 #include "cobalt.h"
