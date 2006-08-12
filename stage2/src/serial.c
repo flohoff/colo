@@ -13,13 +13,6 @@
  * either :-(
  */
 
-/*
- * TO ADD :-
- *
- * IntaShield 2 port card has two UARTS at offset 0 and offset 8 from the
- * BAR at config address 0x18. The baud clock is 18.432MHz.
- */
-
 #include "lib.h"
 #include "galileo.h"
 #include "cobalt.h"
@@ -28,11 +21,10 @@
 
 #define TIMEDIA_VND_ID				0x1409
 #define TIMEDIA_DEV_ID				0x7168
+#define INTASHIELD_VND_ID			0x135a
+#define INTASHIELD_DEV_ID			0x0d80
 
-#define TIMEDIA_BASE					0x10108000
-#define TIMEDIA_CLOCK				14745600
-
-#define TIMEDIA_REGISTER			((volatile uint8_t *) KSEG1(TIMEDIA_BASE))
+#define PCI_BASE_ADDR				0x10108000
 
 #define UART_REGISTER				((volatile uint8_t *) BRDG_NCS1_BASE)
 #define UART_CLOCK					18432000
@@ -140,6 +132,36 @@ static void flush_ring(void)
 		queue_out += copy;
 }
 
+static void serial_pci_scan(void)
+{
+	unsigned base_reg;
+
+	switch(pcicfg_read_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x00)) {
+
+		case ((TIMEDIA_DEV_ID << 16) | TIMEDIA_VND_ID):
+
+			base_reg		= 0x10;
+			uart_base	= KSEG1(PCI_BASE_ADDR);
+			uart_clock	= 14745600;
+			break;
+
+		case ((INTASHIELD_DEV_ID << 16) | INTASHIELD_VND_ID):
+
+			base_reg		= 0x18;
+			uart_base	= KSEG1(PCI_BASE_ADDR);
+			uart_clock	= 1843200;
+			break;
+
+		default:
+			return;
+	}
+
+	pcicfg_write_word(PCI_DEV_SLOT, PCI_FNC_SLOT, base_reg, PCI_BASE_ADDR);
+
+	pcicfg_write_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04,
+		pcicfg_read_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04) | (1 << 0));
+}
+
 void serial_enable(int enable)
 {
 	static char buf[16];
@@ -160,17 +182,8 @@ void serial_enable(int enable)
 		uart_base = UART_REGISTER;
 		uart_clock = UART_CLOCK;
 
-		if((nv_store.flags & NVFLAG_CONSOLE_PCI_SERIAL) &&
-			pcicfg_read_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x00) == ((TIMEDIA_DEV_ID << 16) | TIMEDIA_VND_ID))
-		{
-			pcicfg_write_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x10, TIMEDIA_BASE);
-
-			pcicfg_write_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04,
-				pcicfg_read_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04) | (1 << 0));
-
-			uart_base = TIMEDIA_REGISTER;
-			uart_clock = TIMEDIA_CLOCK;
-		}
+		if(nv_store.flags & NVFLAG_CONSOLE_PCI_SERIAL)
+			serial_pci_scan();
 
 		baud = stored_baud();
 		div = (uart_clock + baud * 8) / (baud * 16);
