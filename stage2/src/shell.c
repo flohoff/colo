@@ -181,14 +181,14 @@ static int cmnd_noop(int opsz)
 static int cmnd_nvflags(int opsz)
 {
 	static const char *msg[] = {
-		"IDE LBA disabled",
-		"IDE LBA48 disabled",
-		"IDE timing disabled",
-		"IDE slave enabled",
-		"Console disabled",
-		"Horizontal menus",
-		"Probe for PCI serial",
-		"No initrd relocation",
+		"IDE LBA disabled",			/* 0 */
+		"IDE LBA48 disabled",		/* 1 */
+		"IDE timing disabled",		/* 2 */
+		"IDE slave enabled",			/* 3 */
+		"Console disabled",			/* 4 */
+		"Horizontal menus",			/* 5 */
+		NULL,								/* 6 */
+		"Probe for PCI serial",		/* 7 */
 	};
 	unsigned indx, mask;
 	unsigned long bit;
@@ -212,15 +212,10 @@ static int cmnd_nvflags(int opsz)
 		nv_put();
 	}
 
-	for(indx = 0; indx < sizeof(nv_store.flags) * 8; ++indx) {
+	for(indx = 0; indx < sizeof(nv_store.flags) * 8; ++indx)
 
-		mask = 1 << indx;
-
-		if(indx < elements(msg))
-			printf("%x: %c %s\n", indx, (nv_store.flags & mask) ? '*' : '.', msg[indx]);
-		else if(nv_store.flags & mask)
-			printf("%x: *\n", indx);
-	}
+		printf("%x: %c %s\n", indx, (nv_store.flags & (1 << indx)) ? '*' : '.',
+			(indx < elements(msg) && msg[indx]) ? msg[indx] : "<unused>");
 
 	return E_NONE;
 }

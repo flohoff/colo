@@ -1,5 +1,12 @@
 # $Id$
 
+CoLo 1.23 (xxxx-xx-xx)
+----------------------
+
+*	Added support for another PCI serial card.
+
+*	Fixed small bug in 'nvflags' command.
+
 CoLo 1.22 (2006-08-10)
 ----------------------
 

@@ -7,7 +7,7 @@
  *
  * NOTE
  *
- * There is support for Timedia PCI serial I/O cards, however the cards
+ * There is support for some PCI serial I/O cards, however the cards
  * will probably not work without hardware modification. The Qube2 does
  * not supply -12v to the PCI bus, and the Qube doesn't supply +12v
  * either :-(
@@ -148,7 +148,7 @@ static void serial_pci_scan(void)
 		case ((INTASHIELD_DEV_ID << 16) | INTASHIELD_VND_ID):
 
 			base_reg		= 0x18;
-			uart_base	= KSEG1(PCI_BASE_ADDR);
+			uart_base	= KSEG1(PCI_BASE_ADDR);		/* second port is at +8 */
 			uart_clock	= 1843200;
 			break;
 
