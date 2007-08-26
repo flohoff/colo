@@ -42,10 +42,11 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 
 	nv_get(!(switches & BUTTON_CLEAR));
 
+	puts("\n[ \"CoLo\" v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]");
+
+	serial_scan();
 	if(!(nv_store.flags & NVFLAG_CONSOLE_DISABLE))
 		serial_enable(1);
-
-	puts("\n[ \"CoLo\" v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]");
 
 	printf("stage2: %08lx-%08lx\n", (unsigned long) &__text, (unsigned long) KSEG0(ram_size));
 

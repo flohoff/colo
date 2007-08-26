@@ -74,20 +74,7 @@ static unsigned nv_crc(struct nv_store *store)
  */
 void nv_get(int clear)
 {
-	static const char *option[][3] = {
-		{
-/*			 |------------| */
-			"CONSOLE STATE",
-			"Console on",
-			"Console off",
-		}, {
-			"CONSOLE STATE",
-			"Console off",
-			"Console on",
-		}
-	};
 	unsigned indx;
-	int disable;
 
 	memset(&nv_store, 0, sizeof(nv_store));
 	
@@ -101,20 +88,6 @@ void nv_get(int clear)
 
 		if(nv_store.vers == NV_STORE_VERSION)
 			return;
-	}
-
-	if(nv_store.vers < 2) {
-
-		disable = (pci_unit_id() == UNIT_ID_QUBE1);
-
-		if(lcd_menu(option[disable], 3, MENU_TIMEOUT) == 1)
-			disable = !disable;
-
-		nv_store.flags &= ~NVFLAG_CONSOLE_DISABLE;
-		if(disable)
-			nv_store.flags |= NVFLAG_CONSOLE_DISABLE;
-
-		nv_store.vers = 2;
 	}
 
 	if(nv_store.vers < 3) {

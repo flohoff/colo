@@ -29,25 +29,42 @@
 #define UART_REGISTER				((volatile uint8_t *) BRDG_NCS1_BASE)
 #define UART_CLOCK					18432000
 
-#define UART_THR						(uart_base[0])
-#define UART_RHR						(uart_base[0])
-#define UART_FCR						(uart_base[2])
+#define _UART_THR(p)					((p)->base[0])
+#define _UART_RHR(p)					((p)->base[0])
+#define _UART_BRL(p)					((p)->base[0])
+#define _UART_BRH(p)					((p)->base[1])
+#define _UART_FCR(p)					((p)->base[2])
+#define _UART_LCR(p)					((p)->base[3])
+#define _UART_MCR(p)					((p)->base[4])
+#define _UART_LSR(p)					((p)->base[5])
+#define _UART_SCR(p)					((p)->base[7])
+
+#define UART_THR						_UART_THR(uart_port)
+#define UART_RHR						_UART_RHR(uart_port)
+#define UART_BRL						_UART_BRL(uart_port)
+#define UART_BRH						_UART_BRH(uart_port)
+#define UART_FCR						_UART_FCR(uart_port)
 # define UART_FCR_FIFO_EN			(1 << 0)
-#define UART_LCR						(uart_base[3])
+#define UART_LCR						_UART_LCR(uart_port)
 # define UART_LCR_DATA8				(3 << 0)
 # define UART_LCR_STOP2				(1 << 2)
 # define UART_LCR_DL_EN				(1 << 7)
-#define UART_MCR						(uart_base[4])
+#define UART_MCR						_UART_MCR(uart_port)
 # define UART_MCR_DTR				(1 << 0)
 # define UART_MCR_RTS				(1 << 1)
 # define UART_MCR_OP1				(1 << 2)
-#define UART_LSR						(uart_base[5])
+#define UART_LSR						_UART_LSR(uart_port)
 # define UART_LSR_RDR				(1 << 0)
 # define UART_LSR_THRE				(1 << 5)
 # define UART_LSR_TEMPTY			(1 << 6)
+#define UART_SCR						_UART_SCR(uart_port)
 
-#define UART_BRL						(uart_base[0])
-#define UART_BRH						(uart_base[1])
+struct uart_info
+{
+	char const			*name;
+	uint8_t volatile	*base;
+	unsigned				clock;
+};
 
 static const unsigned rates[] =
 {
@@ -76,8 +93,98 @@ static unsigned queue_in, queue_out;
 static char out_queue[2048];
 static unsigned baud;
 static enum { ST_UNINIT = 0, ST_DISABLED, ST_ENABLED } state;
-static volatile uint8_t *uart_base;
-static unsigned uart_clock;
+static struct uart_info uart_ports[4];
+static struct uart_info const *uart_port;
+static unsigned num_ports;
+
+static int port_verify(struct uart_info const *port)
+{
+	unsigned token;
+
+	token = 0;
+
+	do {
+
+		_UART_SCR(port) = token;
+		_UART_LSR(port);
+		_UART_MCR(port) = UART_MCR_OP1 | UART_MCR_RTS | UART_MCR_DTR;
+		if (_UART_SCR(port) != token)
+			return 0;
+
+		token = (token + 111) & 0xff;
+
+	} while(token);
+
+	return 1;
+}
+
+static void port_add(struct uart_info const *info)
+{
+	if (num_ports < elements(uart_ports) && port_verify(info)) {
+		printf("serial: port %u, %s\n", num_ports, info->name);
+		uart_ports[num_ports++] = *info;
+	}
+}
+
+static void scan_onboard(void)
+{
+	static struct uart_info const onboard =
+	{
+		.name		= "on-board",
+		.base		= (volatile uint8_t *) BRDG_NCS1_BASE,
+		.clock	= 18432000,
+	};
+
+	port_add(&onboard);
+}
+
+static void slot_enable(unsigned bar)
+{
+	pcicfg_write_word(PCI_DEV_SLOT, PCI_FNC_SLOT, bar, PCI_BASE_ADDR);
+
+	pcicfg_write_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04,
+		pcicfg_read_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04) | (1 << 0));
+}
+
+static void scan_pci_slot(void)
+{
+	static struct uart_info const intashield[2] =
+	{
+		{
+			.name		= "Intashield #1",
+			.base		= (volatile uint8_t *) KSEG1(PCI_BASE_ADDR),
+			.clock	= 1843200,
+		},
+		{
+			.name		= "Intashield #2",
+			.base		= (volatile uint8_t *) KSEG1(PCI_BASE_ADDR) + 8,
+			.clock	= 1843200,
+		},
+	};
+	static struct uart_info const timedia =
+	{
+		.name		= "Timedia",
+		.base		= (volatile uint8_t *) KSEG1(PCI_BASE_ADDR),
+		.clock	= 14745600,
+	};
+
+	switch(pcicfg_read_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x00)) {
+
+		case ((TIMEDIA_DEV_ID << 16) | TIMEDIA_VND_ID):
+			slot_enable(0x10);
+			port_add(&timedia);
+			break;
+
+		case ((INTASHIELD_DEV_ID << 16) | INTASHIELD_VND_ID):
+			slot_enable(0x18);
+			port_add(&intashield[0]);
+			port_add(&intashield[1]);
+			break;
+
+		default:
+			return;
+	}
+}
 
 static unsigned stored_baud(void)
 {
@@ -132,34 +239,17 @@ static void flush_ring(void)
 		queue_out += copy;
 }
 
-static void serial_pci_scan(void)
+void serial_scan(void)
 {
-	unsigned base_reg;
+	num_ports = 0;
 
-	switch(pcicfg_read_word(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x00)) {
-
-		case ((TIMEDIA_DEV_ID << 16) | TIMEDIA_VND_ID):
-
-			base_reg		= 0x10;
-			uart_base	= KSEG1(PCI_BASE_ADDR);
-			uart_clock	= 14745600;
-			break;
-
-		case ((INTASHIELD_DEV_ID << 16) | INTASHIELD_VND_ID):
-
-			base_reg		= 0x18;
-			uart_base	= KSEG1(PCI_BASE_ADDR);		/* second port is at +8 */
-			uart_clock	= 1843200;
-			break;
-
-		default:
-			return;
+	if(nv_store.flags & NVFLAG_CONSOLE_PCI_SERIAL) {
+		scan_pci_slot();
+		scan_onboard();
+	} else {
+		scan_onboard();
+		scan_pci_slot();
 	}
-
-	pcicfg_write_word(PCI_DEV_SLOT, PCI_FNC_SLOT, base_reg, PCI_BASE_ADDR);
-
-	pcicfg_write_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04,
-		pcicfg_read_half(PCI_DEV_SLOT, PCI_FNC_SLOT, 0x04) | (1 << 0));
 }
 
 void serial_enable(int enable)
@@ -179,14 +269,13 @@ void serial_enable(int enable)
 	
 	if(state == ST_UNINIT) {
 
-		uart_base = UART_REGISTER;
-		uart_clock = UART_CLOCK;
+		if (!num_ports)
+			return;
 
-		if(nv_store.flags & NVFLAG_CONSOLE_PCI_SERIAL)
-			serial_pci_scan();
+		uart_port = &uart_ports[0];
 
 		baud = stored_baud();
-		div = (uart_clock + baud * 8) / (baud * 16);
+		div = (uart_port->clock + baud * 8) / (baud * 16);
 
 		UART_MCR = UART_MCR_OP1 | UART_MCR_RTS | UART_MCR_DTR;
 		UART_LCR = UART_LCR_DL_EN | UART_LCR_STOP2 | UART_LCR_DATA8;

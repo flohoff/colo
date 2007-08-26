@@ -144,6 +144,7 @@ extern void putchar(int);
 extern void putstring(const char *);
 extern void puts(const char *str);
 extern void drain(void);
+extern void serial_scan(void);
 
 #define BREAK()							({ char c; kbhit() && ((c = getch()) == ' ' || c == '\003'); })
 
