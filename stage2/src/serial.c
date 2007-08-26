@@ -26,9 +26,6 @@
 
 #define PCI_BASE_ADDR				0x10108000
 
-#define UART_REGISTER				((volatile uint8_t *) BRDG_NCS1_BASE)
-#define UART_CLOCK					18432000
-
 #define _UART_THR(p)					((p)->base[0])
 #define _UART_RHR(p)					((p)->base[0])
 #define _UART_BRL(p)					((p)->base[0])
