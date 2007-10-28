@@ -7,6 +7,8 @@ CoLo 1.23 (xxxx-xx-xx)
 
 *	Fixed small bug in 'nvflags' command.
 
+*	Use UMOUNT in preference to UMOUNT_ALL (NFS).
+
 CoLo 1.22 (2006-08-10)
 ----------------------
 
