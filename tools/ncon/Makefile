@@ -4,6 +4,8 @@
 # $Id$
 #
 
+include ../../Rules.mak
+
 CFLAGS= -Wall -Wstrict-prototypes -fomit-frame-pointer -O2
 
 ncon:

@@ -19,3 +19,7 @@ CFLAGS_CPU:= $(shell $(CC) -mcpu=r5000 -xc -c -o /dev/null /dev/null 2> /dev/nul
 CFLAGS_COLO= -ffreestanding -mno-abicalls -fno-pic -G0
 
 CPPFLAGS_GCC:= -I$(shell dirname `$(CC) --print-libgcc-file-name`)/include
+
+ifneq ($(CCACHE),)
+CC:= $(CCACHE) $(CC)
+endif

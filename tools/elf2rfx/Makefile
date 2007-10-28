@@ -9,6 +9,8 @@
 TARG= elf2rfx
 OBJS= elf2rfx.o
 
+include ../../Rules.mak
+
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -pipe -fno-strict-aliasing
 
 binary: $(TARG)
