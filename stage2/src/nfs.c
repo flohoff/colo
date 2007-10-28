@@ -31,6 +31,7 @@
 #define RPC_MOUNT_PROG					100005
 #define RPC_MOUNT_VERS					1
 #define RPC_MOUNT_MNT					1
+#define RPC_MOUNT_UMNT					3
 #define RPC_MOUNT_UMNT_ALL				4
 
 #define RPC_VERSION						2
@@ -325,6 +326,32 @@ static int nfs_mount(int sock, const char *path, struct nfs_object *obj)
 	frame_free(frame);
 	
 	return 0;
+}
+
+/*
+ * unmount NFS volume
+ */
+static int nfs_umount(int sock, const char *path)
+{
+	struct frame *frame;
+	unsigned size;
+
+	size = strlen(path);
+	if(4 + size > sizeof(scratch)) {
+		puts("path too long");
+		return 0;
+	}
+
+	NET_WRITE_LONG(&scratch.w[0], size);
+	scratch.w[1 + size / 4] = 0;
+	memcpy(&scratch.w[1], path, size);
+
+	frame = rpc_make_call(sock, RPC_MOUNT_PROG, RPC_MOUNT_VERS, RPC_MOUNT_MNT, scratch.w, (4 + size + 3) & ~3);
+	if(!frame)
+		return 0;
+
+	frame_free(frame);
+	return 1;
 }
 
 /*
@@ -895,7 +922,7 @@ int cmnd_nfs(int opsz)
 umount:
 	udp_connect(sock, server, port_mnt);
 
-	if(nfs_umount_all(sock))
+	if(nfs_umount(sock, argv[2]) || nfs_umount_all(sock))
 		DPRINTF("nfs: unmounted \"%s\"\n", argv[2]);
 
 	udp_close(sock);
