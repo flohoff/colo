@@ -191,7 +191,7 @@ static struct frame *rpc_make_call(int sock, unsigned prog, unsigned vers, unsig
 					if(hdsz > size) {
 						printf("RPC call %u/%u.%u failed (invalid verifier)\n", prog, vers, proc);
 						frame_free(frame);
-						return 0;
+						return NULL;
 					}
 
 					stat = NET_READ_LONG(data + hdsz - 4);
