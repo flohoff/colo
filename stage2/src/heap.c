@@ -25,16 +25,16 @@ static size_t next_size;
 void heap_reset(void)
 {
 	extern char __text;
-	void *restrict;
+	void *r;
 
 	assert(!((unsigned long) &__text & 15));
 
 	free_lo = KSEG0(0);
 	free_hi = KSEG0(&__text) - (32 << 10);			// XXX
 
-	restrict = KSEG0(ram_restrict) - (16 << 10);	// XXX
-	if(free_hi > restrict)
-		free_hi = restrict;
+	r = KSEG0(ram_restrict) - (16 << 10);	// XXX
+	if(free_hi > r)
+		free_hi = r;
 
 	image_size = 0;
 	image_size_mark = 0;
