@@ -60,9 +60,7 @@ unsigned long strtoul(const char *str, char **end, int base)
 
 char *strcpy(char *dst, const char *src)
 {
-	char *ptr;
-
-	for(ptr = dst; (*dst++ = *src++);)
+	for(;(*dst++ = *src++);)
 		;
 
 	return dst;
