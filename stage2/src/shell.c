@@ -238,6 +238,8 @@ static int cmnd_reboot(int opsz)
 		*(volatile uint8_t *) BRDG_NCS0_BASE = leds;
 		udelay(400000);
 	}
+
+	return 0;
 }
 
 /*
