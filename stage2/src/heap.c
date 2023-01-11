@@ -24,13 +24,13 @@ static size_t next_size;
 
 void heap_reset(void)
 {
-	extern char __text;
+	extern char __executable_start;
 	void *r;
 
-	assert(!((unsigned long) &__text & 15));
+	assert(!((unsigned long) &__executable_start & 15));
 
 	free_lo = KSEG0(0);
-	free_hi = KSEG0(&__text) - (32 << 10);			// XXX
+	free_hi = KSEG0(&__executable_start) - (32 << 10);			// XXX
 
 	r = KSEG0(ram_restrict) - (16 << 10);	// XXX
 	if(free_hi > r)

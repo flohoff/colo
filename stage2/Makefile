@@ -8,7 +8,8 @@
 
 TARG= stage2
 TOOLDIR= ../tools
-OBJS=	main.o\
+OBJS= start.o\
+		main.o\
 		lib.o\
 		libmem.o\
 		vsprintf.o\
@@ -47,14 +48,13 @@ OBJS=	main.o\
 		boot.o\
 		nv.o\
 		nfs.o\
-		netcon.o\
-		start.o\
+		netcon.o
 
 include ../Rules.mak
 
 DEPS=$(OBJS:.o=.d)
 
-LDFLAGS= -nostdlib -Wl,-T,$(TARG).lnk,-Map,$(TARG).map,--emit-relocs
+LDFLAGS= -nostdlib -Wl,-T,$(TARG).lnk,-Map,$(TARG).map --static
 CFLAGS= -Werror -Wall -Wstrict-prototypes -fomit-frame-pointer -O2 -fno-strict-aliasing $(CFLAGS_CPU) $(CFLAGS_COLO)
 CPPFLAGS= -MD -nostdinc -Iinclude -I../include -D_DEBUG $(CPPFLAGS_GCC)
 

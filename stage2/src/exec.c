@@ -26,7 +26,7 @@ void clear_reloc(void)
  */
 int cmnd_reloc(int opsz)
 {
-	extern char __text;
+	extern char __executable_start;
 
 	void *image, *initrd, *load;
 	size_t imagesz, initrdsz;
@@ -64,7 +64,7 @@ int cmnd_reloc(int opsz)
 
 	load = KSEG0(info.load_phys);
 
-	if(load < KSEG0(0) || load + info.load_size > (void *) &__text) {
+	if(load < KSEG0(0) || load + info.load_size > (void *) &__executable_start) {
 		puts("ELF loads outside available memory");
 		return E_UNSPEC;
 	}
@@ -122,7 +122,7 @@ static int launch_kernel(uint64_t *parm)
  */
 int cmnd_execute(int opsz)
 {
-	extern char __text;
+	extern char __executable_start;
 
 	static union
 	{
@@ -160,7 +160,7 @@ int cmnd_execute(int opsz)
 
 	load = KSEG0(info.load_phys);
 
-	if(load < KSEG0(0) || load + info.load_size > (void *) &__text) {
+	if(load < KSEG0(0) || load + info.load_size > (void *) &__executable_start) {
 		puts("ELF loads outside available memory");
 		return E_UNSPEC;
 	}
@@ -230,7 +230,7 @@ int cmnd_execute(int opsz)
 	if(argc > 1)
 		memsz |= argc;
 
-	parm[0] = info.data_sect | (unsigned long) KPHYS(&__text);
+	parm[0] = info.data_sect | (unsigned long) KPHYS(&__executable_start);
 	parm[1] = info.entry_point;
 	parm[2] = memsz;
 	parm[3] = info.data_sect | (unsigned long) KPHYS(&args);

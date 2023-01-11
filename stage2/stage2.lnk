@@ -10,11 +10,11 @@ __stack = __ebss + (32 << 10);
 
 SECTIONS
 {
-	. = 0x80000000;
+	. = 0x80080000;
 
 	.text :
 	{
-		__text = .;
+		__executable_start = .;
 		*(.text)
 		*(.rodata*)
 	}

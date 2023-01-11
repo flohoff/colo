@@ -14,12 +14,17 @@
 
 			.set	noreorder
 
-			.globl	_start
+			.globl	__start
+__start:		 bal     1f
+			 nop
+			.word   _gp
 
-_start:			la	sp, __stack - 16
-			lui	gp, %hi(_gp)
-			jal	loader
-			 addiu	gp, %lo(_gp)
+1:			lw      gp, 0(ra)
+			la	sp, __stack - 16
+
+			la	t9,loader
+			jalr	t9
+			 nop
 
 			b	.
 			 nop

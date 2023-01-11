@@ -32,14 +32,13 @@ static int do_boot(unsigned switches)
 
 void loader(size_t bank0, size_t bank1, unsigned switches)
 {
-	extern char __text;
+	extern char __executable_start;
 	unsigned clock;
 
 	ram_size = bank0 + bank1;
 	ram_restrict = ram_size;
 
 	pci_init(bank0, bank1);
-
 	nv_get(!(switches & BUTTON_CLEAR));
 
 	puts("\n[ \"CoLo\" v" _STR(VER_MAJOR) "." _STR(VER_MINOR) " ]");
@@ -48,7 +47,7 @@ void loader(size_t bank0, size_t bank1, unsigned switches)
 	if(!(nv_store.flags & NVFLAG_CONSOLE_DISABLE))
 		serial_enable(1);
 
-	printf("stage2: %08lx-%08lx\n", (unsigned long) &__text, (unsigned long) KSEG0(ram_size));
+	printf("stage2: %08lx-%08lx\n", (unsigned long) &__executable_start, (unsigned long) KSEG0(ram_size));
 
 	clock = cpu_clock_khz();
 
